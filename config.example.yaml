@@ -115,6 +115,10 @@ search:
   highlight_matches: true
   save_latest_results: true
 
+vectors:
+  backend: "sqlite_scan"
+  shard_strategy: "none"
+
 ai:
   enabled: false
   provider: "openai"

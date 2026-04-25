@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import sys
 from importlib.util import find_spec
 from pathlib import Path
@@ -14,8 +15,9 @@ from kgfs.cli.shared import console, optional_config_runtime, read_schema_versio
 from kgfs.core.platform_utils import platform_diagnostics
 from kgfs.core.resources import executable_path, is_frozen
 from kgfs.core.safety import risk_warning
-from kgfs.db import check_fts5_available
+from kgfs.db import check_fts5_available, connect_database
 from kgfs.search.semantic import get_semantic_status
+from kgfs.vectors.status import get_vector_status
 
 
 def register(app: typer.Typer) -> None:
@@ -37,6 +39,20 @@ def doctor(
     diagnostics = platform_diagnostics()
     database_exists = resolved_database_path.exists()
     schema_version = read_schema_version_if_present(resolved_database_path) if database_exists else "not initialized"
+    vector_summary = "not initialized"
+    if database_exists:
+        try:
+            conn = connect_database(resolved_database_path)
+            try:
+                vector_status = get_vector_status(conn, config)
+                vector_summary = (
+                    f"{vector_status.backend_name}, chunks={vector_status.chunk_count}, "
+                    f"ready={vector_status.chunks_ready and vector_status.backend_available}"
+                )
+            finally:
+                conn.close()
+        except sqlite3.Error as exc:
+            vector_summary = f"unreadable ({exc})"
     table = Table(title="KGFS Doctor")
     table.add_column("Check")
     table.add_column("Value")
@@ -58,6 +74,7 @@ def doctor(
     table.add_row("Reveal files", diagnostics["reveal_files"])
     table.add_row("SQLite FTS5", "available" if check_fts5_available() else "missing")
     table.add_row("Semantic", get_semantic_status(config.semantic).message)
+    table.add_row("Vector backend", vector_summary)
     table.add_row("PDF support", "available" if find_spec("pypdf") else "missing optional dependency")
     table.add_row("DOCX support", "available" if find_spec("docx") else "missing optional dependency")
     table.add_row("OpenAI SDK", "available" if find_spec("openai") else "missing unless using AI Assist")

@@ -22,7 +22,7 @@ def stats(
 ) -> None:
     """Show index statistics."""
 
-    _, _, resolved_database_path, _, conn = connect_runtime(config_path, database_path, project_local)
+    _, _, resolved_database_path, config, conn = connect_runtime(config_path, database_path, project_local)
     try:
         stats_data = get_database_stats(conn, resolved_database_path)
     finally:
@@ -36,6 +36,7 @@ def stats(
     table.add_row("Extracted text size", format_bytes(stats_data["total_extracted_text_size"]))
     table.add_row("Last indexed time", str(stats_data["last_indexed"]))
     table.add_row("Semantic chunks", str(stats_data["total_chunks"]))
+    table.add_row("Vector backend", config.vectors.backend)
     table.add_row("Embedding storage", format_bytes(stats_data["embedding_bytes"]))
     table.add_row("Extraction successes", str(stats_data["extraction_successes"]))
     table.add_row("Extraction failures", str(stats_data["extraction_failures"]))

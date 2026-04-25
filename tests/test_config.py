@@ -71,6 +71,8 @@ def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
     assert loaded.search.default_limit == 10
     assert loaded.search.highlight_matches is True
     assert loaded.search.save_latest_results is True
+    assert loaded.vectors.backend == "sqlite_scan"
+    assert loaded.vectors.shard_strategy == "none"
     assert loaded.ai.enabled is False
     assert loaded.ai.api_key_env == "OPENAI_API_KEY"
     assert loaded.ai.send_file_paths is False

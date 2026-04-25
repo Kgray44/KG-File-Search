@@ -26,6 +26,7 @@ class HybridSearchEngine:
             query,
             embedder=embedder,
             model_name=context.config.semantic.model_name,
+            backend_name=context.config.vectors.backend,
             limit=options.limit,
             filters=options.filters,
             highlight=options.highlight,

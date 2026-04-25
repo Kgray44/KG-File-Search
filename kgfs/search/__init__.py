@@ -1,6 +1,13 @@
 """Search package compatibility exports."""
 
 from kgfs.db.latest_results import get_latest_result_path, save_latest_results
+from kgfs.search.backends import (
+    BackendAvailability,
+    VectorIndexStatus,
+    VectorSearchHit,
+    VectorSearchOptions,
+    get_vector_backend,
+)
 from kgfs.search.engine import SearchAvailability, SearchContext, SearchEngine
 from kgfs.search.filters import SearchFilters
 from kgfs.search.keyword import search, semantic_search, hybrid_search
@@ -31,6 +38,10 @@ __all__ = [
     "SearchResult",
     "SearchRegistry",
     "UnknownSearchMode",
+    "BackendAvailability",
+    "VectorIndexStatus",
+    "VectorSearchHit",
+    "VectorSearchOptions",
     "build_fts_query",
     "build_default_search_registry",
     "exact_phrase_relevance",
@@ -41,4 +52,5 @@ __all__ = [
     "save_latest_results",
     "search",
     "semantic_search",
+    "get_vector_backend",
 ]

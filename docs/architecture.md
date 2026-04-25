@@ -13,7 +13,9 @@ kgfs/
   indexing/            Discovery, filters, hashing, indexing, pruning
   extractors/          Text extraction by file type
   search/              Query parsing, filters, ranking, snippets, keyword/semantic/hybrid search, engines
+  search/backends/     Vector backend interfaces and the sqlite_scan backend
   search/modes/        Registry engine wrappers for keyword, semantic, hybrid, and auto fallback
+  vectors/             Vector status, chunk lifecycle, and rebuild helpers
   web/                 FastAPI dashboard, Jinja templates, static CSS
 ```
 
@@ -84,7 +86,8 @@ flowchart TD
     Explicit --> Semantic["SemanticSearchEngine"]
     Explicit --> Hybrid
     Keyword --> FTS["SQLite FTS5\nfiles_fts"]
-    Semantic --> Chunks["SQLite chunks\ncosine similarity"]
+    Semantic --> Backend["VectorBackend\nsqlite_scan"]
+    Backend --> Chunks["SQLite chunks\ncosine similarity"]
     Hybrid --> FTS
     Hybrid --> Chunks
     FTS --> Results["SearchResult list"]
@@ -128,17 +131,27 @@ Semantic indexing:
 3. Vectors are packed as little-endian float32 BLOBs.
 4. Chunks are stored with file ID, chunk index, text, embedding dimension, offsets, model name, and created timestamp.
 
+Vector backend foundation:
+
+1. `kgfs/search/backends/base.py` defines the vector backend protocol and
+   `VectorSearchHit` / `VectorSearchOptions` / `VectorIndexStatus`.
+2. `kgfs/search/backends/sqlite_scan.py` is the default backend. It scans
+   SQLite `chunks`, unpacks BLOB vectors, computes cosine similarity in Python,
+   and applies search filters.
+3. `kgfs/vectors/` owns vector status, clearing, and rebuild lifecycle helpers.
+4. `kgfs vector status`, `kgfs vector rebuild`, and `kgfs vector clear --yes`
+   manage semantic vector data only.
+
 Semantic search:
 
 1. Embeds the query.
-2. Loads chunks for the selected model.
-3. Applies search filters.
-4. Computes cosine similarity.
-5. Returns the best chunk per file.
+2. Routes the query vector through the configured vector backend.
+3. Converts vector hits into `SearchResult` rows.
+4. Returns the best chunk per file.
 
 Hybrid search combines semantic score, keyword score, filename/path relevance, and recency.
 
-Sources: `kgfs/search/semantic.py`, `kgfs/search/keyword.py`, `kgfs/search/modes/semantic.py`, `kgfs/search/modes/hybrid.py`, `tests/test_semantic.py`.
+Sources: `kgfs/search/semantic.py`, `kgfs/search/keyword.py`, `kgfs/search/backends/*.py`, `kgfs/search/modes/semantic.py`, `kgfs/search/modes/hybrid.py`, `kgfs/vectors/*.py`, `tests/test_semantic.py`, `tests/test_vector_backend.py`, `tests/test_vector_status.py`.
 
 ## Database Architecture
 
@@ -206,6 +219,7 @@ Sources: `kgfs/ai.py`, `kgfs/cli/commands/search.py`, `kgfs/cli/shared.py`, `tes
 | FTS query operational error | Keyword search returns an empty result list. | `kgfs/search/keyword.py` |
 | Unknown search mode | Raises `UnknownSearchMode`; CLI reports bad parameter. | `kgfs/search/registry.py`, `kgfs/cli/commands/search.py` |
 | Semantic unavailable | Raises `SearchModeUnavailable` for explicit semantic/hybrid search. Auto falls back to keyword with warning. | `kgfs/search/registry.py`, `kgfs/search/modes/semantic.py` |
+| Unknown vector backend | Vector status reports unavailable; semantic/hybrid modes report a helpful unavailable message. | `kgfs/search/backends/__init__.py`, `kgfs/vectors/status.py` |
 | AI disabled, missing SDK, missing API key, unsupported provider | Raises `AIError`; CLI reports bad parameter. | `kgfs/ai.py`, `kgfs/cli/commands/search.py` |
 | Newer DB schema | Raises `RuntimeError`. | `kgfs/db/migrations.py` |
 

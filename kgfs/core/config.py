@@ -112,6 +112,11 @@ class SearchSettings(BaseModel):
     save_latest_results: bool = True
 
 
+class VectorSettings(BaseModel):
+    backend: str = "sqlite_scan"
+    shard_strategy: str = "none"
+
+
 class AISettings(BaseModel):
     enabled: bool = False
     provider: str = "openai"
@@ -143,6 +148,7 @@ class KGFSConfig(BaseModel):
     extraction: ExtractionSettings = Field(default_factory=ExtractionSettings)
     semantic: SemanticSettings = Field(default_factory=SemanticSettings)
     search: SearchSettings = Field(default_factory=SearchSettings)
+    vectors: VectorSettings = Field(default_factory=VectorSettings)
     ai: AISettings = Field(default_factory=AISettings)
 
     @field_validator("indexed_folders", mode="before")
@@ -299,6 +305,10 @@ search:
   default_limit: 10
   highlight_matches: true
   save_latest_results: true
+
+vectors:
+  backend: "sqlite_scan"
+  shard_strategy: "none"
 
 ai:
   enabled: false

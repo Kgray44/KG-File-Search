@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import sqlite3
-
 from kgfs.search.engine import SearchAvailability, SearchContext
 from kgfs.search.keyword import semantic_search
 from kgfs.search.options import SearchMode, SearchOptions
 from kgfs.search.result import SearchResult
 from kgfs.search.semantic import get_embedder, get_semantic_status
+from kgfs.vectors.status import get_vector_status
 
 
 class SemanticSearchEngine:
@@ -24,6 +23,7 @@ class SemanticSearchEngine:
             query,
             embedder=embedder,
             model_name=context.config.semantic.model_name,
+            backend_name=context.config.vectors.backend,
             limit=options.limit,
             filters=options.filters,
             highlight=options.highlight,
@@ -41,15 +41,15 @@ def semantic_availability(context: SearchContext) -> SearchAvailability:
         status = get_semantic_status(settings)
         if not status.available:
             return SearchAvailability(False, status.message)
-    chunk_count = _semantic_chunk_count(context.conn, settings.model_name)
-    if chunk_count <= 0:
+    vector_status = get_vector_status(context.conn, context.config)
+    if not vector_status.backend_available:
+        return SearchAvailability(
+            False,
+            "; ".join(vector_status.warnings) or f"Vector backend {vector_status.backend_name} is unavailable.",
+        )
+    if vector_status.chunk_count <= 0:
         return SearchAvailability(
             False,
             "No semantic chunks are indexed for this model. Run kgfs semantic-index --rebuild.",
         )
     return SearchAvailability(True, "Semantic search is available.")
-
-
-def _semantic_chunk_count(conn: sqlite3.Connection, model_name: str) -> int:
-    row = conn.execute("SELECT COUNT(*) AS count FROM chunks WHERE model_name = ?", (model_name,)).fetchone()
-    return int(row["count"] if row is not None else 0)

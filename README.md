@@ -265,6 +265,10 @@ search:
   highlight_matches: true
   save_latest_results: true
 
+vectors:
+  backend: "sqlite_scan"
+  shard_strategy: "none"
+
 ai:
   enabled: false
   provider: "openai"
@@ -480,12 +484,14 @@ Build or rebuild embeddings:
 ```bash
 kgfs index --rebuild-embeddings
 kgfs semantic-index --rebuild
+kgfs vector rebuild
 ```
 
 Check semantic index status:
 
 ```bash
 kgfs semantic-index
+kgfs vector status
 ```
 
 Run semantic-only search:
@@ -505,6 +511,24 @@ Hybrid search combines SQLite FTS5 keyword score, semantic chunk similarity, fil
 Embeddings are stored wherever the KGFS SQLite database is stored. Run `kgfs doctor` to see the database path and `kgfs stats` to see semantic chunk count and embedding storage size.
 
 Expected embedding disk usage depends on chunk count and vector dimensions. With MiniLM-style 384-dimensional float32 vectors, the raw vector payload is about 1.5 KB per chunk, plus SQLite row overhead and stored chunk text. A few thousand chunks are usually tens of MB rather than GB.
+
+## Vector Foundation
+
+Semantic search goes through a local vector backend interface. The default backend is `sqlite_scan`, which reads the existing SQLite `chunks` table, unpacks stored embedding BLOBs, and computes similarity in Python. It is simple and dependency-light; it does not use FAISS, hnswlib, sqlite-vec, cloud APIs, OCR, or a separate vector database.
+
+Vector commands manage only KGFS vector/chunk data:
+
+```bash
+kgfs vector status
+kgfs vector rebuild
+kgfs search "motor torque" --mode semantic
+kgfs search "motor torque" --mode hybrid
+kgfs vector clear --yes
+```
+
+`kgfs vector rebuild` uses extracted text already stored in the KGFS database, so it does not need to re-read or modify source files. `kgfs vector clear --yes` deletes semantic chunks for the configured model only; it leaves source files, file records, and keyword FTS rows intact. Keyword search remains independent and works without semantic dependencies.
+
+Advanced vector backends are planned for a later phase.
 
 ## OpenAI AI Assist
 

@@ -126,3 +126,25 @@ def test_explicit_semantic_mode_reports_unavailable_when_not_ready(tmp_path: Pat
 
     with pytest.raises(SearchModeUnavailable, match="Semantic search is unavailable"):
         registry.search("motor torque", SearchOptions(mode=SearchMode.SEMANTIC), context)
+
+
+def test_semantic_mode_uses_configured_vector_backend(tmp_path: Path, monkeypatch) -> None:
+    conn, config = _make_index(tmp_path, semantic_enabled=True, build_chunks=True)
+    registry = build_default_search_registry()
+    context = SearchContext(conn=conn, config=config, semantic_embedder=FakeEmbedder())
+    calls = {"count": 0}
+
+    from kgfs.search.backends.sqlite_scan import SqliteScanVectorBackend
+
+    original_search = SqliteScanVectorBackend.search
+
+    def wrapped_search(self, query_vector, options, backend_context):
+        calls["count"] += 1
+        return original_search(self, query_vector, options, backend_context)
+
+    monkeypatch.setattr(SqliteScanVectorBackend, "search", wrapped_search)
+
+    execution = registry.search("motor torque", SearchOptions(mode=SearchMode.SEMANTIC), context)
+
+    assert calls["count"] == 1
+    assert execution.results[0].file_name == "motor torque.md"

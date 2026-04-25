@@ -32,6 +32,7 @@ def test_cli_exposes_required_mvp_commands() -> None:
         "reset-index",
         "rebuild",
         "semantic-index",
+        "vector",
     }.issubset(command.commands.keys())
 
 

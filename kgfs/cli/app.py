@@ -15,6 +15,7 @@ from kgfs.cli.commands import (
     search,
     semantic,
     stats,
+    vector,
     web,
 )
 
@@ -33,6 +34,7 @@ def _register_commands() -> None:
         folders,
         open_reveal,
         stats,
+        vector,
         web,
     ):
         module.register(app)

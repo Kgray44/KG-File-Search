@@ -8,9 +8,12 @@ import typer
 from rich.table import Table
 
 from kgfs.cli.shared import connect_runtime, console
-from kgfs.search.backends import UnknownVectorBackend, get_vector_backend
+from kgfs.search.backends import UnknownVectorBackend, get_vector_backend, list_vector_backend_names
 from kgfs.search.engine import SearchContext
+from kgfs.search.semantic import SemanticUnavailableError, get_embedder
+from kgfs.vectors.benchmark import benchmark_vector_backends
 from kgfs.vectors.index_manager import rebuild_vector_index
+from kgfs.vectors.recommend import recommend_vector_backend
 from kgfs.vectors.status import get_vector_status
 
 
@@ -57,6 +60,7 @@ def vector_rebuild_cmd(
     database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
     project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
     force: bool = typer.Option(True, "--force/--no-force", help="Rebuild chunks even when chunks already exist."),
+    backend_name: str | None = typer.Option(None, "--backend", help="Backend to rebuild. Defaults to vectors.backend."),
 ) -> None:
     """Rebuild semantic chunks from already indexed extracted text."""
 
@@ -64,10 +68,18 @@ def vector_rebuild_cmd(
     try:
         if not config.semantic.enabled:
             raise typer.BadParameter("Semantic search is disabled. Set semantic.enabled: true before rebuilding vectors.")
+        selected_backend = backend_name or config.vectors.backend
         try:
-            get_vector_backend(config.vectors.backend)
+            backend = get_vector_backend(selected_backend)
         except UnknownVectorBackend as exc:
             raise typer.BadParameter(str(exc)) from exc
+        if selected_backend != "sqlite_scan":
+            availability = backend.available(SearchContext(conn=conn, config=config))
+            if not availability.available:
+                message = availability.message
+                if availability.install_hint:
+                    message = f"{message} {availability.install_hint}"
+                raise typer.BadParameter(message)
         with console.status("Rebuilding local vector index..."):
             summary = rebuild_vector_index(config, conn, force=force)
         console.print(
@@ -85,6 +97,8 @@ def vector_clear_cmd(
     database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
     project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
     yes: bool = typer.Option(False, "--yes", help="Confirm clearing KGFS vector/chunk data only."),
+    backend_name: str | None = typer.Option(None, "--backend", help="Clear artifacts for one backend. Defaults to chunks."),
+    all_backends: bool = typer.Option(False, "--all-backends", help="Clear backend artifacts for all optional backends."),
 ) -> None:
     """Clear KGFS vector/chunk data only."""
 
@@ -92,12 +106,100 @@ def vector_clear_cmd(
         raise typer.BadParameter("Pass --yes to clear KGFS vector/chunk data.")
     _, _, _, config, conn = connect_runtime(config_path, database_path, project_local)
     try:
+        if all_backends:
+            removed = 0
+            for name in list_vector_backend_names():
+                if name == "sqlite_scan":
+                    continue
+                removed += get_vector_backend(name).clear(SearchContext(conn=conn, config=config), model_name=config.semantic.model_name)
+            console.print(f"Removed {removed} backend artifact entries for optional vector backends.")
+            console.print("Source files, file records, chunks, and keyword FTS rows were left unchanged.")
+            return
+
+        selected_backend = backend_name or config.vectors.backend
         try:
-            backend = get_vector_backend(config.vectors.backend)
+            backend = get_vector_backend(selected_backend)
         except UnknownVectorBackend as exc:
             raise typer.BadParameter(str(exc)) from exc
         removed = backend.clear(SearchContext(conn=conn, config=config), model_name=config.semantic.model_name)
-        console.print(f"Removed {removed} vector chunks for model {config.semantic.model_name}.")
+        if selected_backend == "sqlite_scan" and backend_name is None:
+            console.print(f"Removed {removed} vector chunks for model {config.semantic.model_name}.")
+        elif selected_backend == "sqlite_scan":
+            console.print(f"Removed {removed} vector chunks for model {config.semantic.model_name}.")
+        else:
+            console.print(f"Removed {removed} backend artifact entries for {selected_backend}.")
         console.print("Source files, file records, and keyword FTS rows were left unchanged.")
     finally:
         conn.close()
+
+
+@vector_app.command("benchmark")
+def vector_benchmark_cmd(
+    config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
+    database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
+    project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
+    backend_names: list[str] | None = typer.Option(None, "--backend", help="Benchmark one backend. Can be repeated."),
+    queries: list[str] | None = typer.Option(None, "--query", "--queries", help="Query text to embed for benchmarking."),
+    limit: int = typer.Option(10, "--limit", help="Vector hit limit per benchmark query."),
+) -> None:
+    """Benchmark available vector backends against local vector data."""
+
+    _, _, _, config, conn = connect_runtime(config_path, database_path, project_local)
+    try:
+        embedder = None
+        if queries:
+            try:
+                embedder = get_embedder(config.semantic)
+            except SemanticUnavailableError as exc:
+                raise typer.BadParameter(str(exc)) from exc
+        results = benchmark_vector_backends(
+            conn,
+            config,
+            backend_names=backend_names,
+            query_texts=queries,
+            embedder=embedder,
+            limit=limit,
+        )
+    finally:
+        conn.close()
+
+    table = Table(title="KGFS Vector Benchmark")
+    table.add_column("Backend")
+    table.add_column("Available")
+    table.add_column("Chunks", justify="right")
+    table.add_column("Queries", justify="right")
+    table.add_column("Avg Query Time", justify="right")
+    table.add_column("Notes")
+    for item in results:
+        avg = "n/a" if item.average_query_seconds is None else f"{item.average_query_seconds:.4f}s"
+        table.add_row(
+            item.backend_name,
+            "yes" if item.available else "no",
+            str(item.chunk_count),
+            str(item.query_count),
+            avg,
+            "; ".join(item.notes),
+        )
+    console.print(table)
+
+
+@vector_app.command("recommend")
+def vector_recommend_cmd(
+    config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
+    database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
+    project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
+) -> None:
+    """Recommend a vector backend for the current local index."""
+
+    _, _, _, config, conn = connect_runtime(config_path, database_path, project_local)
+    try:
+        recommendation = recommend_vector_backend(conn, config)
+    finally:
+        conn.close()
+
+    console.print(f"[bold]Recommended backend:[/bold] {recommendation.backend_name}")
+    for reason in recommendation.reasons:
+        console.print(f"- {reason}")
+    for warning in recommendation.warnings:
+        if warning:
+            console.print(f"[yellow]Warning:[/yellow] {warning}")

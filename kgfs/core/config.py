@@ -112,9 +112,53 @@ class SearchSettings(BaseModel):
     save_latest_results: bool = True
 
 
+class SqliteVecSettings(BaseModel):
+    enabled: bool = False
+    experimental: bool = True
+
+
+class HnswSettings(BaseModel):
+    enabled: bool = False
+    space: str = "cosine"
+    m: int = 16
+    ef_construction: int = 200
+    ef_search: int = 50
+
+    @field_validator("m", "ef_construction", "ef_search", mode="before")
+    @classmethod
+    def _positive_int(cls, value: Any, info) -> int:
+        defaults = {"m": 16, "ef_construction": 200, "ef_search": 50}
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return defaults[info.field_name]
+        return number if number > 0 else defaults[info.field_name]
+
+    @field_validator("space", mode="before")
+    @classmethod
+    def _normalize_space(cls, value: Any) -> str:
+        text = str(value or "cosine").strip().lower()
+        return text if text in {"cosine", "l2", "ip"} else "cosine"
+
+
+class FaissSettings(BaseModel):
+    enabled: bool = False
+    index_type: str = "flat"
+    use_gpu: bool = False
+
+    @field_validator("index_type", mode="before")
+    @classmethod
+    def _normalize_index_type(cls, value: Any) -> str:
+        text = str(value or "flat").strip().lower()
+        return text if text in {"flat"} else "flat"
+
+
 class VectorSettings(BaseModel):
     backend: str = "sqlite_scan"
     shard_strategy: str = "none"
+    sqlite_vec: SqliteVecSettings = Field(default_factory=SqliteVecSettings)
+    hnsw: HnswSettings = Field(default_factory=HnswSettings)
+    faiss: FaissSettings = Field(default_factory=FaissSettings)
 
 
 class HybridSettings(BaseModel):
@@ -344,6 +388,19 @@ search:
 vectors:
   backend: "sqlite_scan"
   shard_strategy: "none"
+  sqlite_vec:
+    enabled: false
+    experimental: true
+  hnsw:
+    enabled: false
+    space: "cosine"
+    m: 16
+    ef_construction: 200
+    ef_search: 50
+  faiss:
+    enabled: false
+    index_type: "flat"
+    use_gpu: false
 
 hybrid:
   keyword_weight: 0.35

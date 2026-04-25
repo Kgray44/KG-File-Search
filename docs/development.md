@@ -30,6 +30,9 @@ Install optional extras only when needed:
 python -m pip install -e ".[semantic]"
 python -m pip install -e ".[openai]"
 python -m pip install -e ".[package]"
+python -m pip install -e ".[hnsw]"
+python -m pip install -e ".[sqlite-vec]"
+python -m pip install -e ".[faiss]"
 ```
 
 Sources: `pyproject.toml`, `README.md`.
@@ -153,15 +156,20 @@ Sources: `kgfs/search/engine.py`, `kgfs/search/registry.py`, `kgfs/search/modes/
 ## Add a New Vector Backend
 
 1. Implement the `VectorBackend` protocol from `kgfs/search/backends/base.py`.
-2. Register the backend name in `get_vector_backend()` in `kgfs/search/backends/__init__.py`.
+2. Register the backend descriptor in `kgfs/search/backends/registry.py`.
 3. Implement clear/status behavior that preserves source files and non-vector index rows.
-4. Decide whether `vectors.backend` should document the backend as user-facing.
-5. Add tests in `tests/test_vector_backend.py`, `tests/test_vector_status.py`, and search-kernel tests if semantic/hybrid routing changes.
-6. Update [Settings](settings.md), [Features](features.md), [Architecture](architecture.md), and [Integrations](integrations.md).
+4. Keep optional dependency imports lazy; registry import must not import heavy packages.
+5. Store backend artifacts under KGFS data/cache/project-local paths, never indexed source folders.
+6. Decide whether `vectors.backend` should document the backend as user-facing.
+7. Add tests in `tests/test_vector_backend_registry.py`, backend-specific tests, `tests/test_vector_status.py`, and search-kernel tests if semantic/hybrid routing changes.
+8. Update [Settings](settings.md), [Features](features.md), [Architecture](architecture.md), and [Integrations](integrations.md).
 
 Current vector backend support:
 
 - `sqlite_scan`
+- `sqlite_vec` scaffold
+- `hnsw` scaffold
+- `faiss` scaffold
 
 Sources: `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`.
 
@@ -215,6 +223,7 @@ The spec excludes:
 - pytest tooling
 - sentence-transformers, transformers, torch, tensorflow
 - openai
+- sqlite_vec, hnswlib, faiss, numpy
 
 Sources: `packaging/pyinstaller/kgfs.spec`.
 

@@ -125,6 +125,17 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `get_semantic_status(settings)` | Report enabled/dependency status. | `kgfs/search/semantic.py` |
 | `get_embedder(settings, embedder=None)` | Return injected embedder or create sentence-transformers embedder. | `kgfs/search/semantic.py` |
 
+### Vector Backends
+
+| API | Purpose | Source |
+|---|---|---|
+| `get_vector_backend(name)` | Resolve a registered vector backend lazily. | `kgfs/search/backends/registry.py` |
+| `list_vector_backend_names()` | Return known backend names. | `kgfs/search/backends/registry.py` |
+| `backend_availability_by_name(context)` | Report availability for all registered backends. | `kgfs/search/backends/registry.py` |
+| `get_vector_status(conn, config)` | Report semantic/vector readiness. | `kgfs/vectors/status.py` |
+| `benchmark_vector_backends(conn, config, ...)` | Run bounded local vector backend timings. | `kgfs/vectors/benchmark.py` |
+| `recommend_vector_backend(conn, config)` | Recommend a backend from local index state and availability. | `kgfs/vectors/recommend.py` |
+
 ### AI Assist
 
 | API | Purpose | Source |

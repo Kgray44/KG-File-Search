@@ -154,19 +154,33 @@ hybrid:
 
 Sources: `kgfs/cli/commands/semantic.py`, `kgfs/search/semantic.py`.
 
-## Example 8: Vector Status and Rebuild
+## Example 8: Vector Backend Lab
 
 After enabling semantic search and indexing files:
 
 ```bash
 kgfs vector status
 kgfs vector rebuild
+kgfs vector benchmark
+kgfs vector recommend
 kgfs vector clear --yes
 ```
 
-`vector clear --yes` removes KGFS chunk/vector rows for the configured model only. It does not delete source files or keyword index rows.
+`sqlite_scan` is the default backend and does not need extra packages. Optional
+backend names can be inspected without installing them:
 
-Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`.
+```bash
+kgfs vector benchmark --backend sqlite_scan
+kgfs vector rebuild --backend hnsw
+kgfs vector clear --backend hnsw --yes
+```
+
+Missing optional dependencies produce install hints. `vector clear --yes` removes
+KGFS chunk/vector rows for the configured model only; `vector clear --backend`
+clears backend artifacts only. Neither form deletes source files or keyword
+index rows.
+
+Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`.
 
 ## Example 9: AI Preview Without API Call
 

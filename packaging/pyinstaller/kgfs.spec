@@ -47,6 +47,10 @@ excludes = [
     "torch",
     "tensorflow",
     "openai",
+    "sqlite_vec",
+    "hnswlib",
+    "faiss",
+    "numpy",
 ]
 
 a = Analysis(

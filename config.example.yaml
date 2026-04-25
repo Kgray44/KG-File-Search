@@ -118,6 +118,19 @@ search:
 vectors:
   backend: "sqlite_scan"
   shard_strategy: "none"
+  sqlite_vec:
+    enabled: false
+    experimental: true
+  hnsw:
+    enabled: false
+    space: "cosine"
+    m: 16
+    ef_construction: 200
+    ef_search: 50
+  faiss:
+    enabled: false
+    index_type: "flat"
+    use_gpu: false
 
 hybrid:
   keyword_weight: 0.35

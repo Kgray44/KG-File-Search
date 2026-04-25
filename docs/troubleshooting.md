@@ -31,7 +31,10 @@ Sources: `kgfs/cli/commands/doctor.py`, `kgfs/cli/commands/stats.py`.
 | DOCX support is missing | `python-docx` not installed. | Install base package dependencies with `python -m pip install -e ".[dev]"` or install `python-docx`. | `pyproject.toml`, `kgfs/extractors/docx.py` |
 | `kgfs search --mode semantic` reports unavailable | `semantic.enabled` false, dependency missing, model unavailable, or no chunks indexed for model. | Enable semantic config, install `.[semantic]`, ensure local model availability, run `kgfs semantic-index --rebuild`. | `kgfs/search/modes/semantic.py`, `kgfs/cli/commands/semantic.py` |
 | Auto mode warns and uses keyword search | Semantic is enabled but hybrid is unavailable. | Run `kgfs semantic-index --rebuild` and check `kgfs doctor`. | `kgfs/search/registry.py`, `kgfs/search/modes/auto.py` |
-| `kgfs vector status` warns about unknown backend | `vectors.backend` is not `sqlite_scan`. | Set `vectors.backend: "sqlite_scan"` or add/register a backend before using it. | `kgfs/search/backends/__init__.py`, `kgfs/vectors/status.py` |
+| `kgfs vector status` warns about unknown backend | `vectors.backend` is not one of the registered names. | Use `sqlite_scan`, `sqlite_vec`, `hnsw`, or `faiss`; prefer `sqlite_scan` unless testing advanced backends. | `kgfs/search/backends/registry.py`, `kgfs/vectors/status.py` |
+| Optional vector backend reports unavailable | Optional dependency is missing, backend is disabled, or the scaffold is not fully implemented. | Use `sqlite_scan`, or install the relevant extra such as `.[hnsw]`, `.[sqlite-vec]`, or `.[faiss]` and check `kgfs vector status`. | `kgfs/search/backends/registry.py`, `kgfs/search/backends/hnsw.py`, `kgfs/search/backends/sqlite_vec.py`, `kgfs/search/backends/faiss.py` |
+| `kgfs vector benchmark` has no query timings | No semantic chunks/vectors exist. | Enable semantic search and rebuild vectors, then rerun the benchmark. | `kgfs/vectors/benchmark.py`, `kgfs/vectors/index_manager.py` |
+| `kgfs vector recommend` suggests building vectors first | The database has no chunks for the configured model. | Run `kgfs vector rebuild` after enabling semantic search and ensuring local embedding dependencies/model are available. | `kgfs/vectors/recommend.py` |
 | `kgfs vector rebuild` says semantic is disabled | `semantic.enabled` is false. | Set `semantic.enabled: true`, ensure semantic dependencies/model are available, then rebuild. | `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py` |
 | `kgfs vector rebuild --no-force` skips files | Chunks already exist for the configured model. | Use the default `--force` behavior when you intentionally want to rebuild existing chunks. | `kgfs/vectors/index_manager.py` |
 | `kgfs vector clear` fails without `--yes` | Clear requires explicit confirmation. | Run `kgfs vector clear --yes` after verifying the database/config target. | `kgfs/cli/commands/vector.py` |
@@ -96,6 +99,8 @@ Check semantic state:
 ```bash
 kgfs semantic-index
 kgfs vector status
+kgfs vector benchmark
+kgfs vector recommend
 ```
 
 Preview AI context without API calls:
@@ -151,7 +156,7 @@ Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 - `max_file_size_mb` is too low.
 - `follow_symlinks` is false when your files live behind symlinks.
 - `semantic.enabled` is true but chunks have not been rebuilt.
-- `vectors.backend` is not `sqlite_scan`.
+- `vectors.backend` is not a registered backend name, or an optional backend is selected without its dependency/implementation.
 - `vectors.shard_strategy` is changed even though no behavior beyond the `none` placeholder was found.
 - `search.default_mode` is invalid.
 - `ai.enabled` is true but the API key env var is missing.
@@ -163,5 +168,5 @@ Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 - No structured logging pipeline is implemented.
 - No lint/typecheck tooling is configured.
 - AI query expansion has a config key (`ai.allow_query_expansion`) but no implemented command path was found.
-- Backend selection has a runtime field but is not exposed in CLI/web. Use `kgfs why` for user-facing result explanations.
+- Backend selection is exposed for vector management commands, but `kgfs search` does not expose a `--backend` flag at this commit.
 - Base packaged builds exclude semantic dependencies and OpenAI SDK.

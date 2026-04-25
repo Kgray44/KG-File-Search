@@ -80,6 +80,16 @@ def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
     assert loaded.hybrid.candidate_limit_multiplier == 5
     assert loaded.vectors.backend == "sqlite_scan"
     assert loaded.vectors.shard_strategy == "none"
+    assert loaded.vectors.sqlite_vec.enabled is False
+    assert loaded.vectors.sqlite_vec.experimental is True
+    assert loaded.vectors.hnsw.enabled is False
+    assert loaded.vectors.hnsw.space == "cosine"
+    assert loaded.vectors.hnsw.m == 16
+    assert loaded.vectors.hnsw.ef_construction == 200
+    assert loaded.vectors.hnsw.ef_search == 50
+    assert loaded.vectors.faiss.enabled is False
+    assert loaded.vectors.faiss.index_type == "flat"
+    assert loaded.vectors.faiss.use_gpu is False
     assert loaded.ai.enabled is False
     assert loaded.ai.api_key_env == "OPENAI_API_KEY"
     assert loaded.ai.send_file_paths is False
@@ -87,6 +97,22 @@ def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
     assert '#  - "~/Documents"' in text
     assert '#  - "~/Downloads"' in text
     assert '#  - "~/Desktop"' in text
+
+
+def test_vector_config_validates_bad_optional_backend_values() -> None:
+    config = KGFSConfig.model_validate(
+        {
+            "vectors": {
+                "hnsw": {"m": -5, "ef_construction": 0, "ef_search": "bad"},
+                "faiss": {"index_type": "unknown"},
+            }
+        }
+    )
+
+    assert config.vectors.hnsw.m == 16
+    assert config.vectors.hnsw.ef_construction == 200
+    assert config.vectors.hnsw.ef_search == 50
+    assert config.vectors.faiss.index_type == "flat"
 
 
 def test_existing_config_without_hybrid_section_uses_defaults(tmp_path: Path) -> None:

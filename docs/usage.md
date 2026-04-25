@@ -223,9 +223,12 @@ kgfs stats
 
 Sources: `kgfs/cli/commands/semantic.py`, `kgfs/search/semantic.py`, `kgfs/search/modes/semantic.py`, `tests/test_semantic.py`.
 
-## Vector Index Management
+## Vector Backend Lab
 
-Semantic and hybrid search use the configured vector backend. At this commit, the supported backend is `sqlite_scan`.
+Semantic and hybrid search use the configured vector backend. `sqlite_scan` is
+the default and remains part of the base install. Optional backend names are
+registered for `sqlite_vec`, `hnsw`, and `faiss`, but they stay disabled and
+lazy unless their optional dependency and backend implementation are available.
 
 Check vector readiness:
 
@@ -238,12 +241,30 @@ Rebuild vectors from already indexed extracted text:
 ```bash
 kgfs vector rebuild
 kgfs vector rebuild --no-force
+kgfs vector rebuild --backend sqlite_scan
 ```
 
-Clear only KGFS vector/chunk rows for the configured model:
+Benchmark local backends using existing stored vectors:
+
+```bash
+kgfs vector benchmark
+kgfs vector benchmark --backend sqlite_scan
+kgfs vector benchmark --query "motor torque" --query "op amp gain"
+```
+
+Ask KGFS for a conservative backend recommendation:
+
+```bash
+kgfs vector recommend
+```
+
+Clear only KGFS vector/chunk rows for the configured model, or clear optional
+backend artifacts without deleting chunks:
 
 ```bash
 kgfs vector clear --yes
+kgfs vector clear --backend hnsw --yes
+kgfs vector clear --all-backends --yes
 ```
 
 Important behavior:
@@ -251,9 +272,22 @@ Important behavior:
 - `vector rebuild` requires `semantic.enabled: true`.
 - `vector clear` requires `--yes`.
 - Vector clear does not delete source files, `files` rows, or keyword FTS rows.
-- Unknown `vectors.backend` values make vector rebuild/clear fail and semantic/hybrid search unavailable.
+- Benchmarking does not call cloud APIs and can run against existing vectors without loading sentence-transformers.
+- Unknown `vectors.backend` values make vector rebuild/clear fail and semantic/hybrid search unavailable with known-backend guidance.
 
-Sources: `kgfs/cli/commands/vector.py`, `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`.
+Optional advanced backend extras:
+
+```bash
+python -m pip install -e ".[hnsw]"
+python -m pip install -e ".[sqlite-vec]"
+python -m pip install -e ".[faiss]"
+```
+
+The optional backend scaffolds currently report availability and safe artifact
+clearing. They do not fake successful search when a dependency or full backend
+implementation is missing.
+
+Sources: `kgfs/cli/commands/vector.py`, `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`.
 
 ## AI Assist
 

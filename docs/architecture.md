@@ -13,7 +13,7 @@ kgfs/
   indexing/            Discovery, filters, hashing, indexing, pruning
   extractors/          Text extraction by file type
   search/              Query parsing, filters, ranking, snippets, keyword/semantic/hybrid search, engines
-  search/backends/     Vector backend interfaces and the sqlite_scan backend
+  search/backends/     Vector backend interfaces, registry, sqlite_scan, and optional backend scaffolds
   search/modes/        Registry engine wrappers for keyword, semantic, hybrid, and auto fallback
   vectors/             Vector status, chunk lifecycle, and rebuild helpers
   web/                 FastAPI dashboard, Jinja templates, static CSS
@@ -86,7 +86,7 @@ flowchart TD
     Explicit --> Semantic["SemanticSearchEngine"]
     Explicit --> Hybrid
     Keyword --> FTS["SQLite FTS5\nfiles_fts"]
-    Semantic --> Backend["VectorBackend\nsqlite_scan"]
+    Semantic --> Backend["VectorBackend\nsqlite_scan / optional backends"]
     Backend --> Chunks["SQLite chunks\ncosine similarity"]
     Hybrid --> FTS
     Hybrid --> Chunks
@@ -153,12 +153,19 @@ Vector backend foundation:
 
 1. `kgfs/search/backends/base.py` defines the vector backend protocol and
    `VectorSearchHit` / `VectorSearchOptions` / `VectorIndexStatus`.
-2. `kgfs/search/backends/sqlite_scan.py` is the default backend. It scans
+2. `kgfs/search/backends/registry.py` registers known backend names and keeps
+   optional dependencies lazy.
+3. `kgfs/search/backends/sqlite_scan.py` is the default backend. It scans
    SQLite `chunks`, unpacks BLOB vectors, computes cosine similarity in Python,
    and applies search filters.
-3. `kgfs/vectors/` owns vector status, clearing, and rebuild lifecycle helpers.
-4. `kgfs vector status`, `kgfs vector rebuild`, and `kgfs vector clear --yes`
-   manage semantic vector data only.
+4. `sqlite_vec`, `hnsw`, and `faiss` are optional advanced backend scaffolds.
+   They report clear unavailable/not-implemented status without making the base
+   install import heavy packages.
+5. `kgfs/vectors/` owns vector status, clearing, rebuild lifecycle helpers,
+   artifact paths, benchmarking, and recommendation logic.
+6. `kgfs vector status`, `kgfs vector rebuild`, `kgfs vector clear --yes`,
+   `kgfs vector benchmark`, and `kgfs vector recommend` manage or inspect local
+   vector data only.
 
 Semantic search:
 
@@ -181,7 +188,7 @@ prints one fallback warning and uses keyword.
 search, and formats a `SearchExplanation`. It does not open files, reveal
 folders, call AI, or modify indexed source files.
 
-Sources: `kgfs/search/semantic.py`, `kgfs/search/keyword.py`, `kgfs/search/backends/*.py`, `kgfs/search/modes/semantic.py`, `kgfs/search/modes/hybrid.py`, `kgfs/vectors/*.py`, `tests/test_semantic.py`, `tests/test_vector_backend.py`, `tests/test_vector_status.py`.
+Sources: `kgfs/search/semantic.py`, `kgfs/search/keyword.py`, `kgfs/search/backends/*.py`, `kgfs/search/modes/semantic.py`, `kgfs/search/modes/hybrid.py`, `kgfs/vectors/*.py`, `tests/test_semantic.py`, `tests/test_vector_backend.py`, `tests/test_vector_backend_registry.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`, `tests/test_vector_status.py`.
 
 ## Database Architecture
 
@@ -249,7 +256,7 @@ Sources: `kgfs/ai.py`, `kgfs/cli/commands/search.py`, `kgfs/cli/shared.py`, `tes
 | FTS query operational error | Keyword search returns an empty result list. | `kgfs/search/keyword.py` |
 | Unknown search mode | Raises `UnknownSearchMode`; CLI reports bad parameter. | `kgfs/search/registry.py`, `kgfs/cli/commands/search.py` |
 | Semantic unavailable | Raises `SearchModeUnavailable` for explicit semantic/hybrid search. Auto falls back to keyword with warning. | `kgfs/search/registry.py`, `kgfs/search/modes/semantic.py` |
-| Unknown vector backend | Vector status reports unavailable; semantic/hybrid modes report a helpful unavailable message. | `kgfs/search/backends/__init__.py`, `kgfs/vectors/status.py` |
+| Unknown vector backend | Vector status reports unavailable; semantic/hybrid modes report a helpful unavailable message with known backend names. | `kgfs/search/backends/registry.py`, `kgfs/vectors/status.py` |
 | AI disabled, missing SDK, missing API key, unsupported provider | Raises `AIError`; CLI reports bad parameter. | `kgfs/ai.py`, `kgfs/cli/commands/search.py` |
 | Newer DB schema | Raises `RuntimeError`. | `kgfs/db/migrations.py` |
 

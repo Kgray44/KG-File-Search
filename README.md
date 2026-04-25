@@ -29,7 +29,7 @@ kgfs search "sample query" --project-local
 - Text extraction for text-like files, Markdown, code, CSV, PDF, and DOCX.
 - SQLite `files`, FTS5, latest-results, semantic `chunks`, and schema-version tables.
 - Keyword, semantic, hybrid, and auto search modes.
-- Local vector data management with the default `sqlite_scan` backend.
+- Local vector backend registry with the default `sqlite_scan` backend, optional backend scaffolds, and vector benchmark/recommend commands.
 - Result explanations with `kgfs why`.
 - Optional OpenAI AI Assist for answer synthesis and reranking after local search.
 - Typer CLI and a local FastAPI dashboard.
@@ -79,7 +79,21 @@ Optional extras:
 python -m pip install -e ".[semantic]"
 python -m pip install -e ".[openai]"
 python -m pip install -e ".[package]"
+python -m pip install -e ".[hnsw]"          # optional advanced vector backend dependency
+python -m pip install -e ".[sqlite-vec]"    # optional experimental SQLite vector dependency
+python -m pip install -e ".[faiss]"         # optional power-user vector dependency
 ```
+
+Vector backend lab commands:
+
+```bash
+kgfs vector status
+kgfs vector benchmark
+kgfs vector recommend
+kgfs vector rebuild --backend sqlite_scan
+```
+
+The base install and base packaged build keep advanced vector dependencies out unless you install the relevant optional extra.
 
 Build a packaged executable:
 

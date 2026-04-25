@@ -259,27 +259,38 @@ This page inventories features implemented in the repository state at this commi
 - Sources: `kgfs/search/engine.py`, `kgfs/search/registry.py`, `kgfs/search/modes/*.py`.
 - Tests: `tests/test_search_kernel.py`, `tests/test_cli.py`.
 
-### Vector Backend Interface and `sqlite_scan`
+### Vector Backend Registry and `sqlite_scan`
 
-- What it does: defines a vector backend protocol and provides the default SQLite scan backend for chunk search, status, stats, and clearing.
+- What it does: defines a vector backend protocol, registers known backend names, and provides the default SQLite scan backend for chunk search, status, stats, and clearing.
 - Use it with: semantic/hybrid search and vector commands.
 - Inputs: query vector, `VectorSearchOptions`, `SearchContext`.
 - Outputs: `VectorSearchHit` rows sorted by cosine score.
-- Settings: `vectors.backend` (`sqlite_scan` at this commit), `semantic.model_name`.
-- Edge cases: malformed vector BLOBs and dimension mismatches are skipped; unknown backend names make semantic/hybrid unavailable.
-- Sources: `kgfs/search/backends/base.py`, `kgfs/search/backends/__init__.py`, `kgfs/search/backends/sqlite_scan.py`.
-- Tests: `tests/test_vector_backend.py`, `tests/test_search_kernel.py`.
+- Settings: `vectors.backend`, `semantic.model_name`.
+- Edge cases: malformed vector BLOBs and dimension mismatches are skipped; unknown backend names make semantic/hybrid unavailable with valid-name guidance.
+- Sources: `kgfs/search/backends/base.py`, `kgfs/search/backends/registry.py`, `kgfs/search/backends/sqlite_scan.py`.
+- Tests: `tests/test_vector_backend.py`, `tests/test_vector_backend_registry.py`, `tests/test_search_kernel.py`.
+
+### Optional Vector Backend Scaffolds
+
+- What it does: registers optional `sqlite_vec`, `hnsw`, and `faiss` backend names with lazy availability checks and install hints.
+- Use it with: `vectors.backend`, `kgfs vector status`, `kgfs vector rebuild --backend NAME`, and `kgfs vector clear --backend NAME --yes`.
+- Inputs: config/database runtime and optional backend dependency availability.
+- Outputs: `BackendAvailability`, `VectorIndexStatus`, and safe clear behavior for backend artifacts.
+- Settings: `vectors.sqlite_vec.*`, `vectors.hnsw.*`, `vectors.faiss.*`.
+- Edge cases: missing optional dependencies or incomplete backend implementations report unavailable; they do not fake successful semantic search.
+- Sources: `kgfs/search/backends/sqlite_vec.py`, `kgfs/search/backends/hnsw.py`, `kgfs/search/backends/faiss.py`, `kgfs/search/backends/_optional.py`, `kgfs/vectors/storage.py`.
+- Tests: `tests/test_vector_backend_registry.py`, `tests/test_vector_commands.py`.
 
 ### Vector Management Commands
 
-- What it does: reports vector readiness, rebuilds chunks from already indexed extracted text, and clears only vector/chunk rows.
-- Use it with: `kgfs vector status`, `kgfs vector rebuild`, `kgfs vector clear --yes`.
+- What it does: reports vector readiness, rebuilds chunks from already indexed extracted text, clears vector/chunk rows or backend artifacts, benchmarks local backend search, and recommends a backend.
+- Use it with: `kgfs vector status`, `kgfs vector rebuild`, `kgfs vector clear --yes`, `kgfs vector benchmark`, `kgfs vector recommend`.
 - Inputs: config/database runtime and indexed file records.
-- Outputs: status table, `VectorRebuildSummary`, or deleted chunk count.
-- Settings: `semantic.enabled`, `semantic.*`, `vectors.backend`, `--force/--no-force`, `--yes`.
-- Edge cases: rebuild requires `semantic.enabled: true`; clear requires `--yes`; clear leaves source files, `files`, and keyword FTS rows unchanged.
-- Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py`, `kgfs/vectors/status.py`, `kgfs/vectors/chunks.py`.
-- Tests: `tests/test_vector_commands.py`, `tests/test_vector_status.py`.
+- Outputs: status table, `VectorRebuildSummary`, deleted count, benchmark table, or recommendation.
+- Settings: `semantic.enabled`, `semantic.*`, `vectors.backend`, `--backend`, `--all-backends`, `--force/--no-force`, `--yes`.
+- Edge cases: rebuild requires `semantic.enabled: true`; clear requires `--yes`; clear leaves source files, `files`, and keyword FTS rows unchanged; benchmark uses existing vectors when no query text is supplied.
+- Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py`, `kgfs/vectors/status.py`, `kgfs/vectors/chunks.py`, `kgfs/vectors/benchmark.py`, `kgfs/vectors/recommend.py`.
+- Tests: `tests/test_vector_commands.py`, `tests/test_vector_status.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`.
 
 ### Latest Result IDs
 

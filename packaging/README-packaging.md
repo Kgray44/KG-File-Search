@@ -50,6 +50,7 @@ The release zip appears in `dist-packages/`:
 - `.git/`
 - Test fixtures
 - Downloaded semantic embedding model caches
+- Optional advanced vector backend packages such as sqlite-vec, hnswlib, FAISS, and their caches/artifacts
 - OpenAI SDK, unless a future AI-specific package is intentionally created
 
 ## Semantic Search
@@ -59,6 +60,15 @@ Keyword search, indexing, config management, stats, doctor, open/reveal, and the
 web dashboard work in the base package. Semantic search can be packaged later as
 a larger variant, or users can run from a Python environment with
 `kg-file-search[semantic]`.
+
+## Advanced Vector Backends
+
+The base package keeps `sqlite_scan` as the vector backend. Optional backend
+names such as `sqlite_vec`, `hnsw`, and `faiss` are registered, but the base
+PyInstaller spec excludes their heavy dependencies. A future backend-specific
+package can opt into those extras intentionally. Until then, packaged builds
+should report missing optional backends cleanly through `kgfs vector status`,
+`kgfs vector benchmark`, and `kgfs vector recommend`.
 
 ## Signing
 

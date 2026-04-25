@@ -145,11 +145,13 @@ Vector models:
 
 | Model | Fields | Used for | Source |
 |---|---|---|---|
-| `BackendAvailability` | available, message | Vector backend readiness checks. | `kgfs/search/backends/base.py` |
+| `BackendAvailability` | available, message, optional install hint | Vector backend readiness checks. | `kgfs/search/backends/base.py` |
 | `VectorSearchOptions` | model name, limit, filters | Options passed to vector backends. | `kgfs/search/backends/base.py` |
 | `VectorSearchHit` | chunk/file IDs, chunk index/text, vector dimension, file metadata, score, offsets, metadata | Backend search result before conversion to `SearchResult`. | `kgfs/search/backends/base.py`, `kgfs/search/backends/sqlite_scan.py` |
-| `VectorIndexStatus` | backend name, semantic enabled, model, chunk counts, dependency/backend readiness, warnings | Status returned by vector status helpers and `kgfs vector status`. | `kgfs/search/backends/base.py`, `kgfs/vectors/status.py` |
+| `VectorIndexStatus` | backend name, semantic enabled, model, chunk counts, dependency/backend readiness, install hint, optional artifact metadata, warnings | Status returned by vector status helpers and `kgfs vector status`. | `kgfs/search/backends/base.py`, `kgfs/vectors/status.py` |
 | `VectorRebuildSummary` | files considered/indexed, chunks indexed, skipped without text, skipped existing | Summary returned by vector rebuild helper. | `kgfs/vectors/index_manager.py` |
+| `VectorBenchmarkResult` | backend, availability, chunk/file counts, query timings, notes | Result rows for `kgfs vector benchmark`. | `kgfs/vectors/benchmark.py` |
+| `VectorRecommendation` | recommended backend, configured backend, chunk count, reasons, warnings | Recommendation payload for `kgfs vector recommend`. | `kgfs/vectors/recommend.py` |
 
 Protocols:
 
@@ -171,7 +173,7 @@ Defined in `kgfs/core/config.py`.
 | `ExtractionSettings` | Extractor settings. |
 | `SemanticSettings` | Local embedding settings. |
 | `SearchSettings` | CLI search defaults. |
-| `VectorSettings` | Vector backend selection and shard strategy placeholder. |
+| `VectorSettings` | Vector backend selection, shard strategy placeholder, and optional sqlite-vec/HNSW/FAISS settings. |
 | `HybridSettings` | Hybrid score weights and candidate pool multiplier. |
 | `AISettings` | AI Assist privacy, provider, and size settings. |
 

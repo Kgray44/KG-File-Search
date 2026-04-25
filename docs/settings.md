@@ -48,7 +48,7 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | `extraction` | object | See below | No | `ExtractionSettings` fields | Extractors/indexer | Defaults applied. | Pydantic type validation. |
 | `semantic` | object | See below | No | `SemanticSettings` fields | Indexer/search/doctor | Defaults disabled. | Some invalid numeric values are clamped in `chunk_text()` rather than rejected. |
 | `search` | object | See below | No | `SearchSettings` fields | CLI search | Defaults applied. | Invalid mode is detected when creating `SearchOptions`, not at config load. |
-| `vectors` | object | See below | No | `VectorSettings` fields | Semantic/hybrid search and vector commands | Defaults applied. | Unknown backend names make semantic/hybrid unavailable and vector rebuild/clear fail. |
+| `vectors` | object | See below | No | `VectorSettings` fields | Semantic/hybrid search and vector commands | Defaults applied. | Unknown backend names make semantic/hybrid unavailable and vector rebuild/clear fail with known-backend guidance. |
 | `hybrid` | object | See below | No | `HybridSettings` fields | Hybrid ranking | Defaults applied. | Numeric weights are coerced; invalid/negative values are made safe at runtime. |
 | `ai` | object | See below | No | `AISettings` fields | CLI ask/rerank and `kgfs/ai.py` | Defaults disabled. | Unsupported provider raises `AIError` when AI is used. |
 
@@ -161,8 +161,25 @@ ignored_extensions:
 
 | Key | Type | Default | Valid values | Read from | Behavior |
 |---|---|---:|---|---|---|
-| `backend` | str | `sqlite_scan` | `sqlite_scan` at this commit | `kgfs/search/backends/__init__.py`, semantic/hybrid search, vector commands | Selects the vector backend. Unknown values make vector status warn, semantic/hybrid unavailable, and vector rebuild/clear fail with a bad parameter. |
+| `backend` | str | `sqlite_scan` | `sqlite_scan`, `sqlite_vec`, `hnsw`, `faiss` | `kgfs/search/backends/registry.py`, semantic/hybrid search, vector commands | Selects the vector backend. Unknown values make vector status warn, semantic/hybrid unavailable, and vector rebuild/clear fail with valid-name guidance. |
 | `shard_strategy` | str | `none` | No behavioral values found beyond `none` | Config model/default only | Present in config and tests, but no runtime behavior was found at this commit. |
+
+Nested optional backend settings:
+
+| Key | Type | Default | Behavior |
+|---|---|---:|---|
+| `sqlite_vec.enabled` | bool | `false` | Enables the experimental sqlite-vec backend only when the optional dependency and implementation are available. |
+| `sqlite_vec.experimental` | bool | `true` | Marks sqlite-vec as experimental in config/status. |
+| `hnsw.enabled` | bool | `false` | Enables the optional hnswlib backend scaffold. |
+| `hnsw.space` | str | `cosine` | Accepted values are `cosine`, `l2`, and `ip`; invalid values fall back to `cosine`. |
+| `hnsw.m` | int | `16` | HNSW graph parameter; non-positive values fall back to the default. |
+| `hnsw.ef_construction` | int | `200` | Build-time search parameter; non-positive values fall back to the default. |
+| `hnsw.ef_search` | int | `50` | Query-time search parameter; non-positive values fall back to the default. |
+| `faiss.enabled` | bool | `false` | Enables the optional FAISS backend scaffold. |
+| `faiss.index_type` | str | `flat` | Currently accepted value is `flat`; invalid values fall back to `flat`. |
+| `faiss.use_gpu` | bool | `false` | Placeholder for future FAISS GPU support. |
+
+The base install does not include `sqlite-vec`, `hnswlib`, or `faiss-cpu`. Install optional extras only when testing those backends.
 
 ### `hybrid`
 
@@ -238,11 +255,13 @@ Important feature flags:
 | `SearchFilters` | `extensions`, `file_type`, `folder`, `after`, `before`, `failed_only` | `kgfs/search/filters.py` | Used by CLI, web, and search functions. |
 | `SearchOptions` | `mode`, `limit`, `filters`, `backend`, `explain`, `save_latest_results`, `highlight` | `kgfs/search/options.py` | `backend` is not exposed in CLI/web. `explain` exists as an option field, while user-facing explanations are exposed by `kgfs why`. |
 | `SearchContext` | `conn`, `config`, `semantic_embedder`, `metadata` | `kgfs/search/engine.py` | Supplies DB/config and optional injected embedder to registry engines. |
-| `get_vector_backend()` | `name` | `kgfs/search/backends/__init__.py` | Returns the configured vector backend. Only `sqlite_scan` is supported at this commit. |
+| `get_vector_backend()` | `name` | `kgfs/search/backends/registry.py` | Returns the configured vector backend. Known names are `sqlite_scan`, `sqlite_vec`, `hnsw`, and `faiss`; optional backend dependencies are lazy. |
 | `VectorSearchOptions` | `model_name`, `limit`, `filters` | `kgfs/search/backends/base.py` | Passed to vector backends for semantic/hybrid chunk search. |
 | `get_vector_status()` | `conn`, `config` | `kgfs/vectors/status.py` | Reports backend availability, chunk counts, semantic dependency status, and warnings. |
 | `rebuild_vector_index()` | `config`, `conn`, `embedder`, `force` | `kgfs/vectors/index_manager.py` | Rebuilds vector chunks from already indexed extracted text. Requires semantic enabled. |
 | `clear_chunks()` | `conn`, optional `model_name` | `kgfs/vectors/chunks.py` | Deletes KGFS chunk/vector rows only and returns the removed count. |
+| `benchmark_vector_backends()` | `conn`, `config`, backend names, queries, limit | `kgfs/vectors/benchmark.py` | Measures bounded vector query timings using existing vectors when possible. |
+| `recommend_vector_backend()` | `conn`, `config` | `kgfs/vectors/recommend.py` | Returns a conservative local backend recommendation with reasons and warnings. |
 | `create_app()` | `config_path`, `database_path`, `project_local` | `kgfs/web/app.py` | Builds FastAPI app. |
 | `build_package.py` | `--clean`, `--mode`, `--name`, `--dist-dir`, `--work-dir`, `--spec` | `scripts/build_package.py` | Writes package archive under dist dir. |
 | `smoke_test_packaged.py` | `--package` | `scripts/smoke_test_packaged.py` | Finds executable and runs CLI smoke workflow. |

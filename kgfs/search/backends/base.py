@@ -14,6 +14,7 @@ from kgfs.search.filters import SearchFilters
 class BackendAvailability:
     available: bool
     message: str = ""
+    install_hint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,10 @@ class VectorIndexStatus:
     chunks_ready: bool
     backend_available: bool
     warnings: list[str] = field(default_factory=list)
+    install_hint: str | None = None
+    artifact_path: Path | None = None
+    backend_index_exists: bool | None = None
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 class VectorBackend(Protocol):

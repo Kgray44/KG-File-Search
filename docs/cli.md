@@ -22,6 +22,8 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs vector status` | Show semantic vector backend/chunk readiness. | `kgfs/cli/commands/vector.py` |
 | `kgfs vector rebuild` | Rebuild semantic chunks from indexed extracted text. | `kgfs/cli/commands/vector.py` |
 | `kgfs vector clear` | Clear KGFS vector/chunk data only. | `kgfs/cli/commands/vector.py` |
+| `kgfs vector benchmark` | Benchmark available vector backends against existing local vectors. | `kgfs/cli/commands/vector.py` |
+| `kgfs vector recommend` | Recommend a vector backend based on local index size and availability. | `kgfs/cli/commands/vector.py` |
 | `kgfs why` | Explain why a latest search result matched a query. | `kgfs/cli/commands/why.py` |
 | `kgfs open` | Open a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
 | `kgfs reveal` | Reveal a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
@@ -226,15 +228,24 @@ Source: `kgfs/cli/commands/semantic.py`.
 
 ```bash
 kgfs vector status [--config PATH] [--database PATH] [--project-local]
-kgfs vector rebuild [--config PATH] [--database PATH] [--project-local] [--force/--no-force]
-kgfs vector clear [--config PATH] [--database PATH] [--project-local] --yes
+kgfs vector rebuild [--config PATH] [--database PATH] [--project-local]
+                    [--backend BACKEND] [--force/--no-force]
+kgfs vector clear [--config PATH] [--database PATH] [--project-local]
+                  [--backend BACKEND] [--all-backends] --yes
+kgfs vector benchmark [--config PATH] [--database PATH] [--project-local]
+                      [--backend BACKEND] [--query TEXT] [--limit N]
+kgfs vector recommend [--config PATH] [--database PATH] [--project-local]
 ```
 
-`vector status` reports semantic enablement, model name, configured backend, backend availability, semantic dependency availability, chunk count, files-with-chunks count, readiness, and warnings.
+`vector status` reports semantic enablement, model name, configured backend, backend availability, optional dependency install hints, chunk count, files-with-chunks count, readiness, and warnings.
 
-`vector rebuild` rebuilds semantic chunks from already indexed `files.extracted_text`. It requires `semantic.enabled: true` and a known `vectors.backend`. `--force` is the default; `--no-force` skips files that already have chunks for the configured model.
+`vector rebuild` rebuilds semantic chunks from already indexed `files.extracted_text` for `sqlite_scan`. It requires `semantic.enabled: true` and a known backend. `--force` is the default; `--no-force` skips files that already have chunks for the configured model. Optional backends can be selected with `--backend`, and unavailable backends print install hints instead of importing heavy packages at startup.
 
-`vector clear` requires `--yes`, clears KGFS chunk/vector rows for the configured semantic model, and leaves source files, file records, and keyword FTS rows unchanged.
+`vector clear` requires `--yes`. Without `--backend`, it preserves current behavior and clears KGFS chunk/vector rows for the configured semantic model. With `--backend hnsw`, `--backend faiss`, or `--backend sqlite_vec`, it clears backend artifacts only. It leaves source files, file records, and keyword FTS rows unchanged.
+
+`vector benchmark` uses existing stored vectors when no query text is supplied, so it can benchmark `sqlite_scan` without loading sentence-transformers. Optional backends that are missing or not implemented appear as unavailable rows with notes.
+
+`vector recommend` chooses a conservative backend recommendation. Small and moderate local indexes prefer `sqlite_scan`; larger indexes may recommend `hnsw` only when it is available.
 
 Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py`, `kgfs/vectors/status.py`, `kgfs/search/backends/*.py`.
 

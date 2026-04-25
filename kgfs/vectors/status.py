@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 
 from kgfs.core.config import KGFSConfig
-from kgfs.search.backends import UnknownVectorBackend, get_vector_backend
+from kgfs.search.backends import UnknownVectorBackend, get_vector_backend, vector_backend_install_hint
 from kgfs.search.backends.base import VectorIndexStatus
 from kgfs.search.engine import SearchContext
 from kgfs.search.semantic import get_semantic_status
@@ -26,8 +26,11 @@ def get_vector_status(conn: sqlite3.Connection, config: KGFSConfig) -> VectorInd
         backend_available = availability.available
         if not availability.available and availability.message:
             warnings.append(availability.message)
+        if not availability.available and availability.install_hint:
+            warnings.append(availability.install_hint)
     except UnknownVectorBackend as exc:
         warnings.append(str(exc))
+        warnings.append(vector_backend_install_hint(backend_name))
 
     if config.semantic.enabled and chunk_count == 0:
         warnings.append("No semantic chunks are indexed for the configured model.")
@@ -44,4 +47,5 @@ def get_vector_status(conn: sqlite3.Connection, config: KGFSConfig) -> VectorInd
         chunks_ready=chunk_count > 0,
         backend_available=backend_available,
         warnings=warnings,
+        install_hint=next((warning for warning in warnings if "pip install" in warning), None),
     )

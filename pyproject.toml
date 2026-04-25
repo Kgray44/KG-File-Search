@@ -30,6 +30,22 @@ dev = [
 semantic = [
   "sentence-transformers>=2.7",
 ]
+sqlite-vec = [
+  "sqlite-vec>=0.1.6",
+]
+hnsw = [
+  "hnswlib>=0.8.0",
+  "numpy>=1.26",
+]
+faiss = [
+  "faiss-cpu>=1.8.0",
+]
+advanced-search = [
+  "sentence-transformers>=2.7",
+  "sqlite-vec>=0.1.6",
+  "hnswlib>=0.8.0",
+  "numpy>=1.26",
+]
 openai = [
   "openai>=1.68.0",
 ]

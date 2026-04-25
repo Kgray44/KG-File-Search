@@ -69,3 +69,15 @@ def test_vector_status_reports_unknown_backend(tmp_path: Path) -> None:
 
     assert status.backend_available is False
     assert any("Unknown vector backend" in warning for warning in status.warnings)
+
+
+def test_vector_status_reports_optional_backend_install_hint(tmp_path: Path) -> None:
+    conn = connect_database(tmp_path / "kgfs.sqlite3")
+    initialize_database(conn)
+    config = KGFSConfig(vectors=VectorSettings(backend="hnsw"))
+
+    status = get_vector_status(conn, config)
+
+    assert status.backend_name == "hnsw"
+    assert status.backend_available is False
+    assert any("hnswlib" in warning for warning in status.warnings)

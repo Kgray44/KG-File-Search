@@ -10,8 +10,8 @@ This roadmap separates behavior implemented in the repository state at this comm
 - Local SQLite storage for file records, FTS5 rows, latest search results, semantic chunks, and schema version.
 - Incremental indexing, forced reindexing, hash verification, prune, reset, and rebuild.
 - Keyword, semantic, hybrid, and auto search modes with score breakdowns and `kgfs why`.
-- Local vector backend interface with the `sqlite_scan` backend.
-- `kgfs vector status`, `kgfs vector rebuild`, and `kgfs vector clear --yes`.
+- Local vector backend interface, registry, default `sqlite_scan` backend, and optional advanced backend scaffolds.
+- `kgfs vector status`, `kgfs vector rebuild`, `kgfs vector clear --yes`, `kgfs vector benchmark`, and `kgfs vector recommend`.
 - Local semantic embeddings through optional sentence-transformers.
 - Optional OpenAI AI Assist for snippet-bounded answer synthesis and reranking.
 - Typer CLI, local FastAPI dashboard, and PyInstaller packaging scripts.
@@ -32,7 +32,7 @@ Source anchors:
 
 The following are not implemented as user-facing KGFS features at this commit:
 
-- Vector backends beyond `sqlite_scan`.
+- Fully implemented advanced vector backends beyond `sqlite_scan`.
 - OCR or multimodal file search.
 - Similar-file search.
 - Deep search or remote retrieval.
@@ -43,7 +43,7 @@ The following are not implemented as user-facing KGFS features at this commit:
 - Docker, Kubernetes, or cloud deployment manifests.
 - Release publishing workflow that creates GitHub Releases from package artifacts.
 - Query expansion, despite the `ai.allow_query_expansion` config key.
-- Backend selection in CLI/web, despite the `SearchOptions.backend` runtime field.
+- Search-time backend selection in CLI/web, despite the `SearchOptions.backend` runtime field. Vector management commands expose `--backend`.
 - Generic `--explain` search flag, despite the `SearchOptions.explain` runtime field. Use `kgfs why` for implemented result explanations.
 
 When adding planned work, update [features](features.md), [settings](settings.md), [cli](cli.md), [architecture](architecture.md), [data model](data-model.md), [security](security.md), and this roadmap in the same change.

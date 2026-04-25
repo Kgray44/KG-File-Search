@@ -179,13 +179,16 @@ Tests: `tests/test_semantic.py`, `tests/test_search_kernel.py`.
 Purpose:
 
 - Route semantic and hybrid chunk search through a configured local vector backend.
-- Report vector readiness and clear/rebuild vector data.
+- Report vector readiness, clear/rebuild vector data, benchmark backends, and recommend a backend.
 
 Source:
 
 - `kgfs/search/backends/base.py`
-- `kgfs/search/backends/__init__.py`
+- `kgfs/search/backends/registry.py`
 - `kgfs/search/backends/sqlite_scan.py`
+- `kgfs/search/backends/sqlite_vec.py`
+- `kgfs/search/backends/hnsw.py`
+- `kgfs/search/backends/faiss.py`
 - `kgfs/vectors/*.py`
 
 Settings:
@@ -193,16 +196,20 @@ Settings:
 - `vectors.backend`
 - `vectors.shard_strategy`
 
-Current backend:
+Known backends:
 
-- `sqlite_scan` scans local SQLite `chunks`, unpacks float32 BLOBs, computes cosine similarity in Python, applies filters, and returns nearest chunk hits.
+- `sqlite_scan`: default, base-install backend. Scans local SQLite `chunks`, unpacks float32 BLOBs, computes cosine similarity in Python, applies filters, and returns nearest chunk hits.
+- `sqlite_vec`: optional experimental scaffold. Missing dependency or incomplete implementation reports unavailable with an install hint.
+- `hnsw`: optional hnswlib scaffold for future local ANN artifacts. Missing dependency or incomplete implementation reports unavailable with an install hint.
+- `faiss`: optional power-user scaffold. Missing dependency or incomplete implementation reports unavailable with an install hint.
 
 Limitations:
 
-- No external vector database integration is implemented.
+- Optional advanced backends are not bundled in the base package.
+- Optional backend scaffolds must not fake successful search when unavailable.
 - `vectors.shard_strategy` is present in config but has no behavior beyond the default placeholder.
 
-Tests: `tests/test_vector_backend.py`, `tests/test_vector_status.py`, `tests/test_vector_commands.py`.
+Tests: `tests/test_vector_backend.py`, `tests/test_vector_backend_registry.py`, `tests/test_vector_status.py`, `tests/test_vector_commands.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`.
 
 ## OpenAI
 

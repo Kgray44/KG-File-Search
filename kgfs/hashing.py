@@ -1,15 +1,7 @@
-"""File hashing helpers."""
+"""Compatibility module alias for hashing helpers."""
 
-from __future__ import annotations
+import sys
 
-import hashlib
-from pathlib import Path
+from kgfs.indexing import hashing as _module
 
-
-def sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(chunk_size), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
+sys.modules[__name__] = _module

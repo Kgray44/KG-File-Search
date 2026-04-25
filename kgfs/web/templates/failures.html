@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Extraction Failures</h1>
+<table>
+  <tr><th>Name</th><th>Path</th><th>Error</th></tr>
+  {% for failure in failures %}
+  <tr>
+    <td>{{ failure.file_name }}</td>
+    <td><code>{{ failure.path }}</code></td>
+    <td>{{ failure.extraction_error or "" }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="3">No extraction failures.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

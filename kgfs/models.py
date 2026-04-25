@@ -1,52 +1,7 @@
-"""Shared dataclasses used by KGFS modules."""
+"""Compatibility module alias for shared dataclasses."""
 
-from __future__ import annotations
+import sys
 
-from dataclasses import dataclass
-from pathlib import Path
+from kgfs.core import models as _module
 
-
-@dataclass(frozen=True)
-class FileRecord:
-    path: Path
-    normalized_path: str
-    file_name: str
-    extension: str
-    size: int
-    modified_time: float
-    content_hash: str | None
-    extracted_text: str
-    indexed_at: str
-    platform_indexed_from: str
-    extraction_status: str
-    extraction_error: str | None
-
-
-@dataclass(frozen=True)
-class IndexSummary:
-    discovered: int = 0
-    indexed: int = 0
-    skipped_unchanged: int = 0
-    failed: int = 0
-    bytes_indexed: int = 0
-    dry_run: bool = False
-
-
-@dataclass(frozen=True)
-class SearchResult:
-    result_id: int
-    file_id: int
-    file_name: str
-    path: Path
-    extension: str
-    modified_time: float
-    score: float
-    snippet: str
-
-
-@dataclass(frozen=True)
-class TextChunk:
-    chunk_index: int
-    text: str
-    start_char: int
-    end_char: int
+sys.modules[__name__] = _module

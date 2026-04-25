@@ -3,9 +3,15 @@
 <h1>Stats</h1>
 <table>
   <tr><th>Total indexed files</th><td>{{ stats.total_files }}</td></tr>
+  <tr><th>Total indexed folders</th><td>{{ stats.total_folders }}</td></tr>
   <tr><th>Total indexed size</th><td>{{ stats.total_size }} bytes</td></tr>
+  <tr><th>Extracted text size</th><td>{{ stats.total_extracted_text_size }} bytes</td></tr>
   <tr><th>Last indexed</th><td>{{ stats.last_indexed or "Never" }}</td></tr>
+  <tr><th>Extraction successes</th><td>{{ stats.extraction_successes }}</td></tr>
   <tr><th>Extraction failures</th><td>{{ stats.extraction_failures }}</td></tr>
+  <tr><th>Stale records</th><td>{{ stats.stale_records }}</td></tr>
+  <tr><th>Semantic chunks</th><td>{{ stats.total_chunks }}</td></tr>
+  <tr><th>Schema version</th><td>{{ stats.schema_version }}</td></tr>
   <tr><th>Database size</th><td>{{ stats.database_size }} bytes</td></tr>
 </table>
 <h2>File Types</h2>
@@ -15,4 +21,3 @@
   {% endfor %}
 </table>
 {% endblock %}
-

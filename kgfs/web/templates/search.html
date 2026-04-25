@@ -2,6 +2,11 @@
 {% block content %}
 <form action="/search" method="get" class="searchbar">
   <input type="search" name="q" value="{{ query }}" placeholder="Find notes about op-amps" autofocus>
+  <input type="text" name="ext" value="{{ filters.ext if filters else '' }}" placeholder=".pdf">
+  <input type="text" name="folder" value="{{ filters.folder if filters else '' }}" placeholder="folder">
+  <input type="date" name="after" value="{{ filters.after if filters else '' }}">
+  <input type="date" name="before" value="{{ filters.before if filters else '' }}">
+  <input type="number" name="limit" value="{{ filters.limit if filters else 10 }}" min="1" max="100">
   <button type="submit">Search</button>
 </form>
 <section class="results">
@@ -13,10 +18,13 @@
     </div>
     <p>{{ result.snippet }}</p>
     <code>{{ result.path }}</code>
+    <div class="actions">
+      <a href="/open/{{ result.result_id }}">Open</a>
+      <a href="/reveal/{{ result.result_id }}">Reveal</a>
+    </div>
   </article>
   {% else %}
     {% if query %}<p>No results.</p>{% endif %}
   {% endfor %}
 </section>
 {% endblock %}
-

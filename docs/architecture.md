@@ -12,6 +12,7 @@ kgfs/
   db/                  SQLite connection, schema, migrations, repositories, latest results, stats
   indexing/            Discovery, filters, hashing, indexing, pruning
   extractors/          Text extraction by file type
+  ocr/                 Optional local OCR backend, cache, status, and PDF fallback helpers
   search/              Query parsing, filters, ranking, snippets, keyword/semantic/hybrid search, engines
   search/backends/     Vector backend interfaces, registry, sqlite_scan, and optional accelerated backends
   search/modes/        Registry engine wrappers for keyword, semantic, hybrid, and auto fallback
@@ -50,7 +51,10 @@ flowchart TD
     Skip -->|"yes"| EnsureChunks["Optionally ensure semantic chunks"]
     Skip -->|"no"| Hash["Optional SHA-256\nkgfs/indexing/hashing.py"]
     Hash --> Extract["Extract text\nkgfs/extractors"]
-    Extract --> Upsert["Upsert files row and FTS row"]
+    Extract --> OCR{"OCR enabled and OCR-capable file?"}
+    OCR -->|"yes"| Tesseract["Local Tesseract OCR\nkgfs/ocr"]
+    Tesseract --> Upsert["Upsert files row and FTS row"]
+    OCR -->|"no"| Upsert
     Upsert --> Chunks{"semantic.enabled?"}
     Chunks -->|"yes"| Embed["Chunk and embed locally\nkgfs/search/semantic.py"]
     Chunks -->|"no"| Summary["IndexSummary"]
@@ -66,10 +70,40 @@ Important details:
 - Default ignored folders and extensions live in `kgfs/core/config.py`.
 - Risky roots are refused before DB initialization in the CLI and again in the library indexer.
 - Extraction failures are stored as DB records with `extraction_status = "error"` and `extraction_error`.
+- OCR is disabled by default. When enabled, OCR-supported image files are allowed through filtering, processed by local Tesseract, cached in KGFS data, and stored as normal extracted text with `extraction_source = "ocr"`.
+- Scanned PDF candidates are detected when normal PDF text is below the configured threshold; full page rasterization is safely scaffolded for a later pass.
 - `files_fts` rows are replaced whenever a file record is inserted or updated.
 - Semantic chunks are stored in SQLite `chunks` rows with vector BLOBs.
 
 Sources: `kgfs/cli/commands/index.py`, `kgfs/indexing/indexer.py`, `kgfs/indexing/discovery.py`, `kgfs/indexing/filters.py`, `kgfs/extractors/*.py`, `kgfs/db/repositories.py`, `tests/test_indexing.py`.
+
+## OCR Architecture
+
+OCR is treated as a text extraction source, not a separate search system:
+
+```mermaid
+flowchart TD
+    Image["OCR-supported image"] --> Filter["Filter only when ocr.enabled"]
+    Filter --> Cache{"OCR cache hit?"}
+    Cache -->|"yes"| Text["Cached OCR text"]
+    Cache -->|"no"| Backend["TesseractOCRBackend\nsubprocess stdout"]
+    Backend --> Store["ocr_cache row"]
+    Store --> Text
+    Text --> Files["files.extracted_text\nextraction_source=ocr"]
+    Files --> FTS["files_fts"]
+    Files --> Chunks["semantic chunks when enabled"]
+```
+
+The OCR package owns only local behavior:
+
+- `kgfs/ocr/base.py`: backend/status/result dataclasses.
+- `kgfs/ocr/registry.py`: lazy backend lookup.
+- `kgfs/ocr/tesseract.py`: local `tesseract input stdout -l LANG` subprocess integration.
+- `kgfs/ocr/cache.py`: SQLite OCR cache rows keyed by path/hash/mtime/backend/language.
+- `kgfs/ocr/status.py`: status data for CLI and doctor.
+- `kgfs/ocr/pdf.py`: scanned-PDF fallback scaffold.
+
+OCR never modifies source images/PDFs and never writes sidecars beside source files.
 
 ## Search Lifecycle
 
@@ -202,8 +236,9 @@ Tables:
 - `latest_results`: most recent search result IDs for open/reveal.
 - `chunks`: semantic text chunks and vector BLOBs.
 - `schema_version`: migration version marker.
+- `ocr_cache`: local OCR result cache keyed by source identity/backend/language.
 
-`initialize_database()` creates core tables, calls `migrate_database()`, and commits. Current schema version is `1`.
+`initialize_database()` creates core tables, calls `migrate_database()`, and commits. Current schema version is `2`.
 
 Sources: `kgfs/db/schema.py`, `kgfs/db/migrations.py`, `kgfs/db/repositories.py`, `kgfs/db/latest_results.py`, [Data Model](data-model.md).
 
@@ -258,6 +293,7 @@ Sources: `kgfs/ai.py`, `kgfs/cli/commands/search.py`, `kgfs/cli/shared.py`, `tes
 | Unknown search mode | Raises `UnknownSearchMode`; CLI reports bad parameter. | `kgfs/search/registry.py`, `kgfs/cli/commands/search.py` |
 | Semantic unavailable | Raises `SearchModeUnavailable` for explicit semantic/hybrid search. Auto falls back to keyword with warning. | `kgfs/search/registry.py`, `kgfs/search/modes/semantic.py` |
 | Unknown vector backend | Vector status reports unavailable; semantic/hybrid modes report a helpful unavailable message with known backend names. | `kgfs/search/backends/registry.py`, `kgfs/vectors/status.py` |
+| OCR disabled or missing Tesseract | Images remain ignored unless OCR is enabled; OCR status/extraction reports missing local command with install guidance. | `kgfs/indexing/filters.py`, `kgfs/ocr/tesseract.py` |
 | AI disabled, missing SDK, missing API key, unsupported provider | Raises `AIError`; CLI reports bad parameter. | `kgfs/ai.py`, `kgfs/cli/commands/search.py` |
 | Newer DB schema | Raises `RuntimeError`. | `kgfs/db/migrations.py` |
 
@@ -275,6 +311,7 @@ Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/doctor.py`, `kgfs/core/app_dir
 - Open/reveal behavior is isolated in `kgfs/core/platform_utils.py`; tests enforce that `platform.system()` checks are not scattered.
 - Web dashboard has no authentication and should stay bound to localhost unless the operator understands the exposure.
 - AI Assist is opt-in and context-bounded.
+- OCR is opt-in, local-only, and writes only KGFS database/cache data.
 
 Sources: `AGENTS.md`, `kgfs/core/safety.py`, `kgfs/core/platform_utils.py`, `tests/test_platform_boundary.py`, [Security](security.md).
 
@@ -285,6 +322,7 @@ Sources: `AGENTS.md`, `kgfs/core/safety.py`, `kgfs/core/platform_utils.py`, `tes
 | New CLI command | Add module under `kgfs/cli/commands/` and register it in `kgfs/cli/app.py`. | CLI exposure and behavior tests in `tests/test_cli.py` or focused test file. |
 | New config key | Add Pydantic field in `kgfs/core/config.py`, update `DEFAULT_CONFIG_YAML`, `config.example.yaml`, docs, and tests. | `tests/test_config.py` plus feature tests. |
 | New extractor | Add extractor module under `kgfs/extractors/`, update dispatch in `kgfs/extractors/__init__.py`, update default extensions if enabled by default. | `tests/test_extractors.py` and indexing/search tests. |
+| New OCR backend | Add backend under `kgfs/ocr/`, register it lazily, keep source files untouched, and update status/docs. | OCR backend/status/cache/indexing tests. |
 | New DB schema | Update `kgfs/db/schema.py`, migration logic in `kgfs/db/migrations.py`, and data-model docs. | `tests/test_migrations.py` and repository tests. |
 | New search mode | Add engine under `kgfs/search/modes/`, register in `build_default_search_registry()`, extend `SearchMode` enum if user-facing. | `tests/test_search_kernel.py`, CLI tests if exposed. |
 | New web route | Add route in `kgfs/web/app.py` and template/static assets as needed. | `tests/test_web.py`. |

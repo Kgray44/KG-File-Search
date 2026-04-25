@@ -101,6 +101,27 @@ indexing:
 extraction:
   pdf_max_pages: 250
 
+ocr:
+  # Local Tesseract OCR is disabled by default. When enabled, OCR text is
+  # stored in the KGFS index/cache only; source images and PDFs are not changed.
+  enabled: false
+  backend: "tesseract"
+  include_extensions:
+    - ".png"
+    - ".jpg"
+    - ".jpeg"
+    - ".tiff"
+    - ".bmp"
+  max_image_size_mb: 15
+  cache_results: true
+  modify_source_files: false
+  min_pdf_text_chars: 20
+  pdf_max_pages: null
+  image_preprocessing: true
+  tesseract:
+    command: "tesseract"
+    language: "eng"
+
 semantic:
   enabled: false
   model_name: "sentence-transformers/all-MiniLM-L6-v2"

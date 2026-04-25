@@ -22,6 +22,14 @@ Optional OpenAI AI Assist:
 python -m pip install -e ".[openai]"
 ```
 
+Optional OCR helper dependencies:
+
+```bash
+python -m pip install -e ".[ocr]"
+```
+
+Tesseract itself is an external local executable and is installed separately on Windows/macOS.
+
 Sources: `pyproject.toml`, `README.md`.
 
 ## First Run
@@ -288,6 +296,50 @@ embeddings. They do not fake successful search when a dependency, enablement, or
 backend artifact is missing.
 
 Sources: `kgfs/cli/commands/vector.py`, `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`.
+
+## OCR Workflows
+
+OCR is disabled by default. When enabled, supported image files are admitted by
+the normal file filters, processed through local Tesseract, cached in the KGFS
+database/cache, and searched through the same keyword/semantic/hybrid pipeline
+as other extracted text.
+
+Enable OCR:
+
+```yaml
+ocr:
+  enabled: true
+  backend: "tesseract"
+  tesseract:
+    command: "tesseract"
+    language: "eng"
+```
+
+Check local availability:
+
+```bash
+kgfs ocr status
+```
+
+Preview OCR on one image without indexing:
+
+```bash
+kgfs ocr test ./screenshot.png
+```
+
+Index configured folders with OCR extraction:
+
+```bash
+kgfs ocr index
+kgfs search "text from screenshot"
+kgfs why 1 "text from screenshot"
+```
+
+Scanned/image-only PDFs are detected when normal PDF text extraction is nearly
+empty. Full PDF page rasterization is not implemented yet, so KGFS records a
+helpful extraction error rather than modifying the PDF or creating sidecars.
+
+Sources: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`, `kgfs/extractors/image_ocr.py`, `kgfs/extractors/pdf.py`.
 
 ## AI Assist
 

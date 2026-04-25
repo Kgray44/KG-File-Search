@@ -51,6 +51,7 @@ The release zip appears in `dist-packages/`:
 - Test fixtures
 - Downloaded semantic embedding model caches
 - Optional advanced vector backend packages such as sqlite-vec, hnswlib, FAISS, and their caches/artifacts
+- Tesseract executable, OCR cache rows, or OCR user data
 - OpenAI SDK, unless a future AI-specific package is intentionally created
 
 ## Semantic Search
@@ -69,6 +70,14 @@ the base PyInstaller spec excludes their heavy dependencies. A future
 backend-specific package can opt into those extras intentionally. Base packaged
 builds should report missing optional backends cleanly through `kgfs vector
 status`, `kgfs vector benchmark`, and `kgfs vector recommend`.
+
+## OCR
+
+OCR commands are included in the base package, but Tesseract itself is not
+bundled. Users who enable OCR must install Tesseract locally and configure
+`ocr.tesseract.command` if it is not on PATH. `kgfs ocr status` should explain a
+missing command cleanly. Packaged builds must not include user OCR caches or
+indexed image/PDF data.
 
 ## Signing
 

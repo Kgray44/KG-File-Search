@@ -57,6 +57,7 @@ def print_results(title: str, results) -> None:
     table.add_column("ID", justify="right")
     table.add_column("Name")
     table.add_column("Type")
+    table.add_column("Source")
     table.add_column("Score", justify="right")
     table.add_column("Modified")
     table.add_column("Path")
@@ -66,6 +67,7 @@ def print_results(title: str, results) -> None:
             str(result.result_id),
             result.file_name,
             result.extension,
+            _format_result_source(result),
             f"{result.score:.3f}",
             format_timestamp(result.modified_time),
             str(result.path),
@@ -74,6 +76,14 @@ def print_results(title: str, results) -> None:
     console.print(table)
     if not results:
         console.print("No results.")
+
+
+def _format_result_source(result) -> str:
+    source = str(result.metadata.get("extraction_source", "text") if result.metadata else "text")
+    if source.startswith("ocr"):
+        kind = result.metadata.get("ocr_source_kind") if result.metadata else None
+        return "OCR PDF" if kind == "pdf" else "OCR"
+    return ""
 
 
 def ensure_ai_ready(config, *, feature: str) -> None:

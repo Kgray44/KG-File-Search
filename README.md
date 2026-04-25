@@ -30,6 +30,7 @@ kgfs search "sample query" --project-local
 - SQLite `files`, FTS5, latest-results, semantic `chunks`, and schema-version tables.
 - Keyword, semantic, hybrid, and auto search modes.
 - Local vector backend registry with the default `sqlite_scan` backend, optional accelerated backends, and vector benchmark/recommend commands.
+- Optional local Tesseract OCR for image files and scanned-PDF detection, disabled by default.
 - Result explanations with `kgfs why`.
 - Optional OpenAI AI Assist for answer synthesis and reranking after local search.
 - Typer CLI and a local FastAPI dashboard.
@@ -43,6 +44,7 @@ kgfs search "sample query" --project-local
 - Symlinks are not followed unless `follow_symlinks: true`.
 - Noisy, system, dependency, cache, application, game, binary, media, archive, and over-size files are ignored by default.
 - Prune/reset/vector-clear operations remove only KGFS index data, not source files.
+- OCR is off by default, never writes back to images/PDFs, and stores OCR cache data only in KGFS database/cache locations.
 - AI Assist is off by default and sends bounded snippets only after opt-in.
 
 ## Documentation
@@ -78,6 +80,7 @@ Optional extras:
 
 ```bash
 python -m pip install -e ".[semantic]"
+python -m pip install -e ".[ocr]"
 python -m pip install -e ".[openai]"
 python -m pip install -e ".[package]"
 python -m pip install -e ".[hnsw]"          # optional advanced vector backend dependency
@@ -95,6 +98,27 @@ kgfs vector rebuild --backend sqlite_scan
 ```
 
 The base install and base packaged build keep advanced vector dependencies out unless you install the relevant optional extra.
+
+Local OCR uses the external Tesseract executable. Install Tesseract separately, then enable it in `config.yaml`:
+
+```yaml
+ocr:
+  enabled: true
+  backend: "tesseract"
+  tesseract:
+    command: "tesseract"
+    language: "eng"
+```
+
+Useful OCR commands:
+
+```bash
+kgfs ocr status
+kgfs ocr test ./screenshot.png
+kgfs ocr index
+kgfs search "text from screenshot"
+kgfs why 1 "text from screenshot"
+```
 
 Build a packaged executable:
 

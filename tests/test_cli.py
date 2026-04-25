@@ -34,6 +34,7 @@ def test_cli_exposes_required_mvp_commands() -> None:
         "semantic-index",
         "vector",
         "why",
+        "ocr",
     }.issubset(command.commands.keys())
 
 

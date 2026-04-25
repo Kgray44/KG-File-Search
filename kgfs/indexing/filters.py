@@ -21,10 +21,12 @@ def should_index_file(path: Path, config: KGFSConfig) -> bool:
         return False
 
     suffix = path.suffix.lower()
-    if suffix in set(config.ignored_extensions):
-        return False
-    if config.include_extensions and suffix not in set(config.include_extensions):
-        return False
+    is_ocr_image = config.ocr.enabled and suffix in set(config.ocr.include_extensions)
+    if not is_ocr_image:
+        if suffix in set(config.ignored_extensions):
+            return False
+        if config.include_extensions and suffix not in set(config.include_extensions):
+            return False
 
     posix_path = path.as_posix()
     for pattern in config.exclude_globs:
@@ -32,7 +34,8 @@ def should_index_file(path: Path, config: KGFSConfig) -> bool:
             return False
 
     try:
-        if path.stat().st_size > config.max_file_size_bytes:
+        max_size = config.ocr.max_image_size_bytes if is_ocr_image else config.max_file_size_bytes
+        if path.stat().st_size > max_size:
             return False
     except OSError:
         return False

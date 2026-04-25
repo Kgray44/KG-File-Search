@@ -35,6 +35,7 @@ Stores one row per indexed file.
 | `platform_indexed_from` | `TEXT NOT NULL` | Platform name, such as Windows or Darwin. | `current_platform_name()` |
 | `extraction_status` | `TEXT NOT NULL` | `ok`, `skipped`, or `error`. | `ExtractionResult.status` |
 | `extraction_error` | `TEXT` | Error/skipped reason. | `ExtractionResult.error` |
+| `extraction_source` | `TEXT NOT NULL DEFAULT 'text'` | Source label such as `text` or `ocr`. | `ExtractionResult.metadata` / indexer |
 
 Sources: `kgfs/db/schema.py`, `kgfs/core/models.py`, `kgfs/indexing/indexer.py`.
 
@@ -99,6 +100,31 @@ Constraints and indexes:
 
 Sources: `kgfs/db/schema.py`, `kgfs/search/semantic.py`, `tests/test_semantic.py`.
 
+### `ocr_cache`
+
+Stores local OCR results so unchanged images do not need to be OCRed again.
+Rows live in the KGFS database only; no OCR sidecar files are written beside
+source files.
+
+| Column | Type | Meaning |
+|---|---|---|
+| `id` | `INTEGER PRIMARY KEY` | Cache row ID. |
+| `file_id` | `INTEGER REFERENCES files(id) ON DELETE CASCADE` | Optional indexed file row. |
+| `normalized_path` | `TEXT NOT NULL` | Normalized source path used for lookup. |
+| `content_hash` | `TEXT` | Content hash when available. |
+| `size` | `INTEGER NOT NULL` | Source file size. |
+| `modified_time_ns` | `INTEGER NOT NULL` | Precise source modified time. |
+| `backend` | `TEXT NOT NULL` | OCR backend name. |
+| `language` | `TEXT NOT NULL` | OCR language setting. |
+| `source_kind` | `TEXT NOT NULL` | `image` or `pdf`. |
+| `text` | `TEXT NOT NULL` | OCR output text. |
+| `status` | `TEXT NOT NULL` | OCR status. |
+| `error` | `TEXT` | OCR error if any. |
+| `created_at` | `TEXT NOT NULL` | UTC ISO timestamp. |
+| `updated_at` | `TEXT NOT NULL` | UTC ISO timestamp. |
+
+Sources: `kgfs/ocr/cache.py`, `kgfs/db/schema.py`, `tests/test_ocr_cache.py`.
+
 ### `schema_version`
 
 Created by migrations.
@@ -109,7 +135,7 @@ Created by migrations.
 | `version` | `INTEGER NOT NULL` | Current schema version. |
 | `applied_at` | `TEXT NOT NULL` | UTC ISO timestamp. |
 
-Current version: `1`.
+Current version: `2`.
 
 Sources: `kgfs/db/migrations.py`, `tests/test_migrations.py`.
 
@@ -130,7 +156,7 @@ Additional dataclasses and runtime models:
 |---|---|---|---|
 | `AppPaths` | config dir, data dir, cache dir, log dir, default config path, default database path | Platform/project-local path resolution. | `kgfs/core/app_dirs.py` |
 | `FolderChange` | path, display path, added, removed, exists, warning | Folder config command results. | `kgfs/core/config_commands.py` |
-| `ExtractionResult` | text, status, error | Extractor return value. Status values are produced by helpers as `ok`, `skipped`, or `error`. | `kgfs/extractors/base.py` |
+| `ExtractionResult` | text, status, error, metadata | Extractor return value. Status values are produced by helpers as `ok`, `skipped`, or `error`; metadata carries labels such as OCR source. | `kgfs/extractors/base.py` |
 | `PruneSummary` | stale paths, removed count, dry-run flag | Stale-record prune result. | `kgfs/indexing/prune.py` |
 | `ResetSummary` | database path, removed paths, would-remove flag, dry-run flag | Reset-index result. | `kgfs/reset.py` |
 | `SearchAvailability` | available, message | Search engine availability checks. | `kgfs/search/engine.py` |
@@ -140,6 +166,15 @@ Additional dataclasses and runtime models:
 | `SearchExplanation` | mode, summary, score breakdown, result ID, file name, path, final score, snippet, notes | Explanation object used by `kgfs why` and default `SearchEngine.explain()`. | `kgfs/search/result.py` |
 | `SemanticStatus` | enabled, available, message | Semantic dependency/config status for doctor and semantic-index output. | `kgfs/search/semantic.py` |
 | `AIResult` | text, context | AI answer result with returned text and context used. | `kgfs/ai.py` |
+
+OCR models:
+
+| Model | Fields | Used for | Source |
+|---|---|---|---|
+| `OCRAvailability` | available, message, install hint | Local OCR backend availability checks. | `kgfs/ocr/base.py` |
+| `OCRRequest` | path, config, source kind, optional page number | Backend extraction request. | `kgfs/ocr/base.py` |
+| `OCRResult` | text, status, error, backend, language, source kind, confidence, metadata | OCR backend extraction result. | `kgfs/ocr/base.py` |
+| `OCRStatus` | enabled, backend, availability, command/language, supported extensions, cache/index counts, warnings | `kgfs ocr status`, doctor integration, tests. | `kgfs/ocr/status.py` |
 
 Vector models:
 
@@ -172,6 +207,7 @@ Defined in `kgfs/core/config.py`.
 | `KGFSConfig` | Main YAML config. |
 | `IndexingSettings` | Indexing flags. |
 | `ExtractionSettings` | Extractor settings. |
+| `OCRSettings` / `TesseractOCRSettings` | Local OCR settings and Tesseract command/language. |
 | `SemanticSettings` | Local embedding settings. |
 | `SearchSettings` | CLI search defaults. |
 | `VectorSettings` | Vector backend selection, shard strategy placeholder, and optional sqlite-vec/HNSW/FAISS settings. |
@@ -209,7 +245,9 @@ Sources: `kgfs/search/keyword.py`, `kgfs/db/latest_results.py`.
 2. Ensures `files.modified_time_ns` exists for older schemas.
 3. Reads current schema version.
 4. Raises if database version is newer than code.
-5. Sets version to `1` for fresh/older DBs.
+5. Ensures `files.extraction_source`.
+6. Ensures `ocr_cache`.
+7. Sets version to `2` for fresh/older DBs.
 
 Sources: `kgfs/db/migrations.py`, `tests/test_migrations.py`.
 

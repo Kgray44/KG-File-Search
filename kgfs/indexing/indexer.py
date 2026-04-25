@@ -11,9 +11,10 @@ from kgfs.core.models import FileRecord, IndexSummary
 from kgfs.core.platform_utils import current_platform_name, normalize_path
 from kgfs.core.safety import RiskyRootError, find_risky_index_roots, format_risky_roots
 from kgfs.db.repositories import count_chunks_for_file, get_existing_file, upsert_file
-from kgfs.extractors import extract_text
+from kgfs.extractors import ExtractionResult, extract_text
 from kgfs.indexing.discovery import discover_files
 from kgfs.indexing.hashing import sha256_file
+from kgfs.ocr.cache import attach_ocr_cache_file_id, get_cached_ocr_result, store_ocr_cache_result
 from kgfs.search.semantic import Embedder, chunk_text, get_embedder, replace_file_chunks, semantic_model_name
 
 
@@ -82,11 +83,20 @@ def index_configured_folders(
         if dry_run:
             continue
 
-        extraction = extract_text(file_path, pdf_max_pages=config.extraction.pdf_max_pages)
+        extraction = _extract_with_ocr_cache(
+            config,
+            conn,
+            file_path,
+            normalized_path=normalized_path,
+            content_hash=content_hash,
+            size=stat.st_size,
+            modified_time_ns=stat_mtime_ns,
+        )
         if extraction.status == "error":
             failed += 1
 
         text = extraction.text if config.indexing.store_extracted_text else ""
+        extraction_source = str(extraction.metadata.get("extraction_source", "text"))
         record = FileRecord(
             path=file_path,
             normalized_path=normalized_path,
@@ -101,8 +111,20 @@ def index_configured_folders(
             platform_indexed_from=current_platform_name(),
             extraction_status=extraction.status,
             extraction_error=extraction.error,
+            extraction_source=extraction_source,
         )
         file_id = upsert_file(conn, record)
+        _attach_ocr_cache_if_needed(
+            config,
+            conn,
+            file_id=file_id,
+            file_path=file_path,
+            normalized_path=normalized_path,
+            content_hash=content_hash,
+            size=stat.st_size,
+            modified_time_ns=stat_mtime_ns,
+            extraction=extraction,
+        )
         _index_semantic_chunks(
             config,
             conn,
@@ -162,7 +184,18 @@ def _ensure_semantic_chunks(
 
     text = stored_text
     if not text:
-        extraction = extract_text(file_path, pdf_max_pages=config.extraction.pdf_max_pages)
+        stat = file_path.stat()
+        _, normalized_path = normalize_path(file_path)
+        content_hash = sha256_file(file_path) if config.indexing.hash_files else None
+        extraction = _extract_with_ocr_cache(
+            config,
+            conn,
+            file_path,
+            normalized_path=normalized_path,
+            content_hash=content_hash,
+            size=stat.st_size,
+            modified_time_ns=_stat_mtime_ns(stat),
+        )
         text = extraction.text
     _index_semantic_chunks(
         config,
@@ -197,3 +230,97 @@ def _index_semantic_chunks(
     )
     embeddings = embedder.embed([chunk.text for chunk in chunks])
     replace_file_chunks(conn, file_id=file_id, chunks=chunks, embeddings=embeddings, model_name=model_name)
+
+
+def _extract_with_ocr_cache(
+    config: KGFSConfig,
+    conn: Connection,
+    file_path: Path,
+    *,
+    normalized_path: str,
+    content_hash: str | None,
+    size: int,
+    modified_time_ns: int,
+) -> ExtractionResult:
+    source_kind = _ocr_candidate_kind(config, file_path)
+    if source_kind is not None:
+        cached = get_cached_ocr_result(
+            conn,
+            config,
+            normalized_path=normalized_path,
+            content_hash=content_hash,
+            size=size,
+            modified_time_ns=modified_time_ns,
+            source_kind=source_kind,
+        )
+        if cached is not None:
+            return ExtractionResult(
+                text=cached.text,
+                status=cached.status,
+                error=cached.error,
+                metadata={
+                    "extraction_source": "ocr",
+                    "ocr_backend": config.ocr.backend,
+                    "ocr_language": config.ocr.tesseract.language,
+                    "ocr_source_kind": source_kind,
+                    "ocr_cached": True,
+                },
+            )
+
+    extraction = extract_text(file_path, pdf_max_pages=config.extraction.pdf_max_pages, config=config)
+    if (
+        source_kind is not None
+        and config.ocr.cache_results
+        and str(extraction.metadata.get("extraction_source", "")) == "ocr"
+    ):
+        store_ocr_cache_result(
+            conn,
+            config,
+            normalized_path=normalized_path,
+            content_hash=content_hash,
+            size=size,
+            modified_time_ns=modified_time_ns,
+            source_kind=source_kind,
+            text=extraction.text,
+            status=extraction.status,
+            error=extraction.error,
+        )
+    return extraction
+
+
+def _attach_ocr_cache_if_needed(
+    config: KGFSConfig,
+    conn: Connection,
+    *,
+    file_id: int,
+    file_path: Path,
+    normalized_path: str,
+    content_hash: str | None,
+    size: int,
+    modified_time_ns: int,
+    extraction: ExtractionResult,
+) -> None:
+    source_kind = _ocr_candidate_kind(config, file_path)
+    if source_kind is None or str(extraction.metadata.get("extraction_source", "")) != "ocr":
+        return
+    attach_ocr_cache_file_id(
+        conn,
+        config,
+        file_id=file_id,
+        normalized_path=normalized_path,
+        content_hash=content_hash,
+        size=size,
+        modified_time_ns=modified_time_ns,
+        source_kind=source_kind,
+    )
+
+
+def _ocr_candidate_kind(config: KGFSConfig, file_path: Path) -> str | None:
+    if not config.ocr.enabled:
+        return None
+    suffix = file_path.suffix.lower()
+    if suffix in set(config.ocr.include_extensions):
+        return "image"
+    if suffix == ".pdf":
+        return "pdf"
+    return None

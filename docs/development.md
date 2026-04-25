@@ -28,6 +28,7 @@ Install optional extras only when needed:
 
 ```bash
 python -m pip install -e ".[semantic]"
+python -m pip install -e ".[ocr]"
 python -m pip install -e ".[openai]"
 python -m pip install -e ".[package]"
 python -m pip install -e ".[hnsw]"
@@ -132,7 +133,7 @@ Sources: `kgfs/extractors/__init__.py`.
 5. Add migration tests in `tests/test_migrations.py`.
 6. Update [Data Model](data-model.md).
 
-Current schema version is `CURRENT_SCHEMA_VERSION = 1`.
+Current schema version is `CURRENT_SCHEMA_VERSION = 2`.
 
 ## Add a New Search Mode
 

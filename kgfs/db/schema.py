@@ -24,7 +24,8 @@ def initialize_database(conn: sqlite3.Connection) -> None:
             indexed_at TEXT NOT NULL,
             platform_indexed_from TEXT NOT NULL,
             extraction_status TEXT NOT NULL,
-            extraction_error TEXT
+            extraction_error TEXT,
+            extraction_source TEXT NOT NULL DEFAULT 'text'
         );
 
         CREATE VIRTUAL TABLE IF NOT EXISTS files_fts USING fts5(
@@ -58,6 +59,27 @@ def initialize_database(conn: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS idx_chunks_file_id ON chunks(file_id);
         CREATE INDEX IF NOT EXISTS idx_chunks_model_name ON chunks(model_name);
+
+        CREATE TABLE IF NOT EXISTS ocr_cache (
+            id INTEGER PRIMARY KEY,
+            file_id INTEGER REFERENCES files(id) ON DELETE CASCADE,
+            normalized_path TEXT NOT NULL,
+            content_hash TEXT,
+            size INTEGER NOT NULL,
+            modified_time_ns INTEGER NOT NULL,
+            backend TEXT NOT NULL,
+            language TEXT NOT NULL,
+            source_kind TEXT NOT NULL,
+            text TEXT NOT NULL,
+            status TEXT NOT NULL,
+            error TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(normalized_path, content_hash, size, modified_time_ns, backend, language, source_kind)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ocr_cache_lookup
+        ON ocr_cache(normalized_path, content_hash, size, modified_time_ns, backend, language, source_kind);
         """
     )
     migrate_database(conn)

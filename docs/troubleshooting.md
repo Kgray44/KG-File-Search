@@ -27,6 +27,11 @@ Sources: `kgfs/cli/commands/doctor.py`, `kgfs/cli/commands/stats.py`.
 | Search returns no results after editing a file | Incremental metadata check may think the file is unchanged, or the index is stale. | Run `kgfs index --verify-hashes` or `kgfs index --force`. | `kgfs/indexing/indexer.py`, `tests/test_indexing.py` |
 | Old/deleted files still appear in search | KGFS does not delete stale DB rows during normal indexing unless asked. | Run `kgfs prune --dry-run`, then `kgfs prune`; or `kgfs index --prune`. | `kgfs/indexing/prune.py`, `kgfs/cli/commands/maintenance.py` |
 | Extraction failures appear | Parser dependency missing or parser could not read file. | Run `kgfs doctor`; inspect `kgfs web /failures` or DB `extraction_error`; install dependencies if missing. | `kgfs/extractors/pdf.py`, `kgfs/extractors/docx.py`, `kgfs/web/app.py` |
+| Image files are not indexed | OCR is disabled by default, or the image extension is not in `ocr.include_extensions`. | Set `ocr.enabled: true`, confirm extensions, then run `kgfs ocr status` and `kgfs ocr index`. | `kgfs/indexing/filters.py`, `kgfs/ocr/status.py` |
+| `kgfs ocr status` says Tesseract is missing | The configured Tesseract command is not on PATH or the command path is wrong. | Install Tesseract locally and set `ocr.tesseract.command` to `tesseract` or a full executable path. | `kgfs/ocr/tesseract.py` |
+| OCR result is an extraction error | Tesseract could not read the image or exited non-zero. | Try `kgfs ocr test PATH`; check language and command settings. | `kgfs/cli/commands/ocr.py`, `kgfs/ocr/tesseract.py` |
+| Scanned PDF text is not extracted | Full scanned-PDF rasterization is not implemented in this pass. | KGFS detects likely scanned PDFs and records a helpful error; use image OCR for screenshots/images until PDF rasterization is added. | `kgfs/extractors/pdf.py`, `kgfs/ocr/pdf.py` |
+| OCR keeps rerunning | Cache disabled, source metadata changed, or hash changed. | Leave `ocr.cache_results: true`; rerun without `--force` for unchanged files. | `kgfs/ocr/cache.py`, `kgfs/indexing/indexer.py` |
 | PDF support is missing | `pypdf` not installed. | Install base package dependencies with `python -m pip install -e ".[dev]"` or install `pypdf`. | `pyproject.toml`, `kgfs/extractors/pdf.py` |
 | DOCX support is missing | `python-docx` not installed. | Install base package dependencies with `python -m pip install -e ".[dev]"` or install `python-docx`. | `pyproject.toml`, `kgfs/extractors/docx.py` |
 | `kgfs search --mode semantic` reports unavailable | `semantic.enabled` false, dependency missing, model unavailable, or no chunks indexed for model. | Enable semantic config, install `.[semantic]`, ensure local model availability, run `kgfs semantic-index --rebuild`. | `kgfs/search/modes/semantic.py`, `kgfs/cli/commands/semantic.py` |
@@ -103,6 +108,13 @@ kgfs vector benchmark
 kgfs vector recommend
 ```
 
+Check OCR state and one-image behavior:
+
+```bash
+kgfs ocr status
+kgfs ocr test ./screenshot.png
+```
+
 Preview AI context without API calls:
 
 ```bash
@@ -134,6 +146,8 @@ SELECT COUNT(*) FROM files;
 SELECT extension, COUNT(*) FROM files GROUP BY extension ORDER BY COUNT(*) DESC;
 SELECT file_name, extraction_error FROM files WHERE extraction_status = 'error';
 SELECT COUNT(*) FROM chunks;
+SELECT COUNT(*) FROM ocr_cache;
+SELECT file_name, extraction_source, extraction_error FROM files WHERE extraction_source LIKE 'ocr%';
 SELECT * FROM schema_version;
 ```
 
@@ -156,6 +170,9 @@ Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 - `max_file_size_mb` is too low.
 - `follow_symlinks` is false when your files live behind symlinks.
 - `semantic.enabled` is true but chunks have not been rebuilt.
+- `ocr.enabled` is false when you expected image OCR.
+- `ocr.tesseract.command` is not on PATH or not an absolute executable path.
+- `ocr.include_extensions` omits a desired image suffix.
 - `vectors.backend` is not a registered backend name, or an optional backend is selected without its dependency, enablement, or rebuilt artifact.
 - `vectors.shard_strategy` is changed even though no behavior beyond the `none` placeholder was found.
 - `search.default_mode` is invalid.
@@ -170,3 +187,4 @@ Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 - AI query expansion has a config key (`ai.allow_query_expansion`) but no implemented command path was found.
 - Backend selection is exposed for vector management commands, but `kgfs search` does not expose a `--backend` flag at this commit.
 - Base packaged builds exclude semantic dependencies and OpenAI SDK.
+- OCR PDF rasterization is scaffolded; scanned/image-only PDFs are detected and reported, while image OCR is implemented through Tesseract.

@@ -89,6 +89,7 @@ def semantic_search(
                 matched_chunk_id=hit.chunk_id,
                 mode="semantic",
                 source="semantic",
+                metadata=hit.metadata,
             )
 
     ranked = sorted(best_by_file.values(), key=lambda item: item.score, reverse=True)[:limit]
@@ -129,7 +130,8 @@ def hybrid_search(
     placeholders = ", ".join("?" for _ in file_ids)
     rows = conn.execute(
         f"""
-        SELECT id, file_name, path, normalized_path, extension, modified_time, extracted_text, extraction_status
+        SELECT id, file_name, path, normalized_path, extension, modified_time, extracted_text,
+               extraction_status, extraction_source
         FROM files
         WHERE id IN ({placeholders})
         """,
@@ -177,6 +179,7 @@ def hybrid_search(
                 matched_chunk_id=semantic.matched_chunk_id if semantic else None,
                 mode="hybrid",
                 source="hybrid",
+                metadata={"extraction_source": row["extraction_source"]},
             )
         )
 
@@ -206,6 +209,7 @@ def _run_search(
                 f.modified_time,
                 f.extracted_text,
                 f.extraction_status,
+                f.extraction_source,
                 bm25(files_fts) AS rank,
                 snippet(files_fts, 2, '', '', '...', 18) AS fts_snippet
             FROM files_fts
@@ -240,6 +244,7 @@ def _run_search(
                 score_breakdown={"keyword": score, "bm25": rank, "final": score},
                 mode="keyword",
                 source="keyword",
+                metadata={"extraction_source": row["extraction_source"]},
             )
         )
     results.sort(key=lambda item: item.score, reverse=True)

@@ -62,6 +62,7 @@ Operations:
 - Reset deletes KGFS database files and SQLite sidecars.
 - Rebuild resets the database and reindexes configured folders.
 - Vector clear deletes KGFS chunk/vector rows only for the configured model.
+- OCR reads source images/PDFs but writes OCR text only to KGFS database/cache data, never back to the source file or a sidecar beside it.
 
 Sources: `kgfs/indexing/indexer.py`, `kgfs/indexing/prune.py`, `kgfs/reset.py`, `tests/test_prune.py`, `tests/test_reset_rebuild.py`.
 
@@ -77,6 +78,7 @@ The SQLite database can contain:
 - Extraction errors.
 - Latest result IDs.
 - Semantic chunks and embeddings when enabled.
+- OCR cache rows and OCR-derived text when OCR is enabled.
 
 If `indexing.store_extracted_text` is false, stored extracted text is empty, which also limits keyword and semantic usefulness.
 
@@ -137,6 +139,24 @@ No cloud call is made by KGFS semantic search code. The local model must exist i
 
 Sources: `kgfs/search/semantic.py`, `tests/test_semantic.py`.
 
+## OCR Privacy
+
+OCR is disabled by default and local-only in this phase.
+
+Default OCR behavior:
+
+- `ocr.enabled: false`
+- Backend: local `tesseract` executable.
+- No cloud OCR calls.
+- No EasyOCR, PaddleOCR, image captioning, or multimodal embeddings.
+- Source images and PDFs are never modified.
+- OCR sidecar files are not created next to source files.
+- OCR cache rows are stored in the KGFS SQLite database/app data/project-local paths.
+
+Tesseract must be installed separately. Missing Tesseract produces status or extraction errors instead of stack traces.
+
+Sources: `kgfs/ocr/*.py`, `kgfs/extractors/image_ocr.py`, `tests/test_ocr_*.py`.
+
 ## Web Dashboard Exposure
 
 The web dashboard has no authentication at this commit.
@@ -179,6 +199,7 @@ Packaged builds do not include:
 - Indexed personal files.
 - `.kgfs/`.
 - Downloaded semantic model caches.
+- Tesseract itself and OCR cache/user data.
 - OpenAI SDK in the base package.
 
 Sources: `packaging/README-packaging.md`, `packaging/pyinstaller/kgfs.spec`, `scripts/build_package.py`.

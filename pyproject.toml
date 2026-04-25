@@ -30,6 +30,9 @@ dev = [
 semantic = [
   "sentence-transformers>=2.7",
 ]
+ocr = [
+  "pillow>=10",
+]
 sqlite-vec = [
   "sqlite-vec>=0.1.6",
 ]

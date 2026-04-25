@@ -7,6 +7,7 @@ This roadmap separates behavior implemented in the repository state at this comm
 - Explicit-folder local indexing with risky-root protection.
 - File discovery and filtering for ignored folders, ignored extensions, include extensions, globs, file size, and symlink policy.
 - Text extraction for text-like files, Markdown, code, CSV, PDF, and DOCX.
+- Optional local Tesseract OCR for configured image files, plus safe scanned-PDF candidate reporting.
 - Local SQLite storage for file records, FTS5 rows, latest search results, semantic chunks, and schema version.
 - Incremental indexing, forced reindexing, hash verification, prune, reset, and rebuild.
 - Keyword, semantic, hybrid, and auto search modes with score breakdowns and `kgfs why`.
@@ -33,7 +34,7 @@ Source anchors:
 The following are not implemented as user-facing KGFS features at this commit:
 
 - More advanced vector tuning beyond the current optional sqlite-vec/HNSW/FAISS implementations.
-- OCR or multimodal file search.
+- Full scanned-PDF OCR rasterization, OCR backend expansion, or multimodal file search.
 - Similar-file search.
 - Deep search or remote retrieval.
 - Background daemon/index scheduler.

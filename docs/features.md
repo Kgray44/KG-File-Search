@@ -99,8 +99,8 @@ This page inventories features implemented in the repository state at this commi
 - Use it with: automatic discovery filtering.
 - Inputs: file and directory paths.
 - Outputs: boolean index/skip decisions.
-- Settings: all filter-related config keys.
-- Edge cases: directory matching is by directory name; extension matching is lowercase and dot-normalized during config load.
+- Settings: all filter-related config keys plus `ocr.enabled` and `ocr.include_extensions`.
+- Edge cases: directory matching is by directory name; extension matching is lowercase and dot-normalized during config load. Image extensions stay ignored unless OCR is explicitly enabled.
 - Sources: `kgfs/indexing/filters.py`, `kgfs/core/config.py`.
 - Tests: `tests/test_file_filters.py`.
 
@@ -125,6 +125,18 @@ This page inventories features implemented in the repository state at this commi
 - Edge cases: Markdown/code extraction is plain text, not syntax-aware; missing `pypdf` or `python-docx` becomes an extraction error; CSV falls back to latin-1 text on decode failure.
 - Sources: `kgfs/extractors/text.py`, `kgfs/extractors/markdown.py`, `kgfs/extractors/code.py`, `kgfs/extractors/csv.py`, `kgfs/extractors/pdf.py`, `kgfs/extractors/docx.py`.
 - Tests: `tests/test_extractors.py`, `tests/test_indexing.py`, `tests/test_cli.py`.
+
+### Optional Local OCR
+
+- What it does: extracts visible text from configured image files through local Tesseract when `ocr.enabled: true`, caches OCR results in KGFS data, and stores OCR text in `files.extracted_text`.
+- Use it with: `kgfs ocr status`, `kgfs ocr test ./image.png`, `kgfs ocr index`, or normal `kgfs index` after enabling OCR.
+- Inputs: explicitly indexed folders and OCR-supported images: `.png`, `.jpg`, `.jpeg`, `.tiff`, `.bmp` by default.
+- Outputs: OCR text searchable through keyword, semantic, hybrid, and auto modes; OCR source labels in search output and `kgfs why`.
+- Settings: `ocr.enabled`, `ocr.backend`, `ocr.include_extensions`, `ocr.max_image_size_mb`, `ocr.cache_results`, `ocr.tesseract.*`.
+- Edge cases: Tesseract must be installed separately; missing commands become extraction/status errors instead of crashes. Scanned/image-only PDFs are detected when normal PDF text is very short, but full PDF page rasterization is safely scaffolded for a later pass.
+- Safety: KGFS never modifies images/PDFs and never writes OCR sidecars next to source files.
+- Sources: `kgfs/ocr/*.py`, `kgfs/extractors/image_ocr.py`, `kgfs/extractors/pdf.py`, `kgfs/cli/commands/ocr.py`.
+- Tests: `tests/test_ocr_*.py`.
 
 ### Incremental Indexing
 
@@ -329,7 +341,7 @@ This page inventories features implemented in the repository state at this commi
 
 ### Stats Command
 
-- What it does: shows indexed file counts, sizes, semantic chunk count, embedding storage, failures, stale records, DB size, schema version, file types, and largest files.
+- What it does: shows indexed file counts, sizes, semantic chunk count, embedding storage, OCR cache/index counts, failures, stale records, DB size, schema version, file types, and largest files.
 - Use it with: `kgfs stats`.
 - Inputs: database path.
 - Outputs: Rich tables.
@@ -390,7 +402,7 @@ This page inventories features implemented in the repository state at this commi
 - Use it with: automatic CLI/web DB connection.
 - Inputs: SQLite connection.
 - Outputs: tables and `schema_version` row.
-- Settings: `CURRENT_SCHEMA_VERSION = 1`.
+- Settings: `CURRENT_SCHEMA_VERSION = 2`.
 - Edge cases: newer DB schema versions raise `RuntimeError`.
 - Sources: `kgfs/db/schema.py`, `kgfs/db/migrations.py`.
 - Tests: `tests/test_migrations.py`.

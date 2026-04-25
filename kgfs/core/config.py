@@ -96,6 +96,75 @@ class ExtractionSettings(BaseModel):
     pdf_max_pages: int = 250
 
 
+class TesseractOCRSettings(BaseModel):
+    command: str = "tesseract"
+    language: str = "eng"
+
+
+class OCRSettings(BaseModel):
+    enabled: bool = False
+    backend: str = "tesseract"
+    include_extensions: list[str] = Field(default_factory=lambda: [".png", ".jpg", ".jpeg", ".tiff", ".bmp"])
+    max_image_size_mb: float = 15
+    cache_results: bool = True
+    modify_source_files: bool = False
+    min_pdf_text_chars: int = 20
+    pdf_max_pages: int | None = None
+    image_preprocessing: bool = True
+    tesseract: TesseractOCRSettings = Field(default_factory=TesseractOCRSettings)
+
+    @field_validator("include_extensions", mode="before")
+    @classmethod
+    def _normalize_ocr_extensions(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        extensions: list[str] = []
+        for item in value:
+            text = str(item).strip().lower()
+            if text and not text.startswith("."):
+                text = f".{text}"
+            if text:
+                extensions.append(text)
+        return extensions
+
+    @field_validator("max_image_size_mb", mode="before")
+    @classmethod
+    def _positive_image_size(cls, value: Any) -> float:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return 15
+        return number if number > 0 else 15
+
+    @field_validator("min_pdf_text_chars", mode="before")
+    @classmethod
+    def _nonnegative_pdf_threshold(cls, value: Any) -> int:
+        try:
+            return max(0, int(value))
+        except (TypeError, ValueError):
+            return 20
+
+    @field_validator("pdf_max_pages", mode="before")
+    @classmethod
+    def _optional_positive_pdf_pages(cls, value: Any) -> int | None:
+        if value in (None, ""):
+            return None
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return None
+        return number if number > 0 else None
+
+    @field_validator("modify_source_files", mode="before")
+    @classmethod
+    def _force_no_source_modification(cls, value: Any) -> bool:
+        return False
+
+    @property
+    def max_image_size_bytes(self) -> int:
+        return int(self.max_image_size_mb * 1024 * 1024)
+
+
 class SemanticSettings(BaseModel):
     enabled: bool = False
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -224,6 +293,7 @@ class KGFSConfig(BaseModel):
     database_path: Path | None = None
     indexing: IndexingSettings = Field(default_factory=IndexingSettings)
     extraction: ExtractionSettings = Field(default_factory=ExtractionSettings)
+    ocr: OCRSettings = Field(default_factory=OCRSettings)
     semantic: SemanticSettings = Field(default_factory=SemanticSettings)
     search: SearchSettings = Field(default_factory=SearchSettings)
     vectors: VectorSettings = Field(default_factory=VectorSettings)
@@ -370,6 +440,27 @@ indexing:
 
 extraction:
   pdf_max_pages: 250
+
+ocr:
+  # OCR is local-only and disabled by default. Enable only for folders you
+  # explicitly configure above. KGFS never modifies images or PDFs.
+  enabled: false
+  backend: "tesseract"
+  include_extensions:
+    - ".png"
+    - ".jpg"
+    - ".jpeg"
+    - ".tiff"
+    - ".bmp"
+  max_image_size_mb: 15
+  cache_results: true
+  modify_source_files: false
+  min_pdf_text_chars: 20
+  pdf_max_pages: null
+  image_preprocessing: true
+  tesseract:
+    command: "tesseract"
+    language: "eng"
 
 semantic:
   enabled: false

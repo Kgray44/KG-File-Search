@@ -46,6 +46,7 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | `database_path` | path or null | `null` | No | Path | CLI runtime and app dirs | Null falls back to app data database path. | Path expansion is applied; parent is created on DB connect. |
 | `indexing` | object | See below | No | `IndexingSettings` fields | Indexer | Defaults applied. | Unknown behavior follows Pydantic defaults; extra-key policy is not explicitly configured in source. |
 | `extraction` | object | See below | No | `ExtractionSettings` fields | Extractors/indexer | Defaults applied. | Pydantic type validation. |
+| `ocr` | object | See below | No | `OCRSettings` fields | Image/PDF extraction, OCR commands, doctor/stats | Defaults disabled. | Image extensions are normalized; source-file modification is forced off in this phase. |
 | `semantic` | object | See below | No | `SemanticSettings` fields | Indexer/search/doctor | Defaults disabled. | Some invalid numeric values are clamped in `chunk_text()` rather than rejected. |
 | `search` | object | See below | No | `SearchSettings` fields | CLI search | Defaults applied. | Invalid mode is detected when creating `SearchOptions`, not at config load. |
 | `vectors` | object | See below | No | `VectorSettings` fields | Semantic/hybrid search and vector commands | Defaults applied. | Unknown backend names make semantic/hybrid unavailable and vector rebuild/clear fail with known-backend guidance. |
@@ -136,6 +137,26 @@ ignored_extensions:
 | Key | Type | Default | Read from | Behavior |
 |---|---|---:|---|---|
 | `pdf_max_pages` | int | `250` | `kgfs/indexing/indexer.py`, `kgfs/extractors/pdf.py` | Limits pages read from PDF files. |
+
+### `ocr`
+
+OCR is local-only and disabled by default. The first backend is Tesseract, which KGFS calls as a local executable. Tesseract itself is installed separately; the optional `ocr` Python extra only adds light image-library room for future preprocessing.
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `enabled` | bool | `false` | filters, extractors, OCR CLI | Enables indexing configured image extensions through OCR. |
+| `backend` | str | `tesseract` | `kgfs/ocr/registry.py` | Selects OCR backend. Only `tesseract` is implemented. |
+| `include_extensions` | list | `.png`, `.jpg`, `.jpeg`, `.tiff`, `.bmp` | file filters | These image extensions are indexable only when OCR is enabled. |
+| `max_image_size_mb` | float | `15` | file filters | Separate size cap for OCR images. Invalid/non-positive values fall back to 15 MB. |
+| `cache_results` | bool | `true` | `kgfs/ocr/cache.py` | Reuses OCR text for unchanged files through the local KGFS SQLite cache. |
+| `modify_source_files` | bool | `false` | config validation | Forced false in this phase. KGFS never writes OCR output into source files. |
+| `min_pdf_text_chars` | int | `20` | PDF extractor | PDFs below this extracted-text threshold are treated as scanned-PDF candidates when OCR is enabled. |
+| `pdf_max_pages` | int or null | `null` | reserved | Present for future scanned-PDF page limits. |
+| `image_preprocessing` | bool | `true` | reserved | Placeholder for optional local preprocessing; no heavy dependency is required. |
+| `tesseract.command` | str | `tesseract` | Tesseract backend | Command name or full path to the local Tesseract executable. |
+| `tesseract.language` | str | `eng` | Tesseract backend | Passed to Tesseract with `-l`. |
+
+OCR results are stored in `files.extracted_text` so keyword, semantic, hybrid, snippets, and `kgfs why` all use the same search pipeline. Cache rows live in the KGFS database, not beside source files.
 
 ### `semantic`
 
@@ -234,6 +255,7 @@ Important feature flags:
 | `--force` | `index` | `false` | Re-extracts files even when metadata is unchanged. |
 | `--verify-hashes` | `index` | `false` | Hash-checks metadata-matching files. |
 | `--rebuild-embeddings` | `index` | `false` | Rebuilds semantic chunks/embeddings for unchanged files. |
+| `ocr status/test/index` | `ocr` | n/a | Inspect OCR availability, run one-file OCR preview, or run indexing with OCR-enabled extraction. |
 | `--mode` | `search` | config `search.default_mode` | Selects `keyword`, `semantic`, `hybrid`, or `auto`. |
 | `--hybrid` | `search` | `false` | Forces hybrid mode. |
 | `--ai-rerank` | `search` | `false` | Opt-in OpenAI reranking of local results. |
@@ -283,6 +305,25 @@ indexing:
 
 extraction:
   pdf_max_pages: 250
+
+ocr:
+  enabled: false
+  backend: "tesseract"
+  include_extensions:
+    - ".png"
+    - ".jpg"
+    - ".jpeg"
+    - ".tiff"
+    - ".bmp"
+  max_image_size_mb: 15
+  cache_results: true
+  modify_source_files: false
+  min_pdf_text_chars: 20
+  pdf_max_pages: null
+  image_preprocessing: true
+  tesseract:
+    command: "tesseract"
+    language: "eng"
 
 semantic:
   enabled: false

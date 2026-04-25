@@ -125,6 +125,48 @@ Failure behavior:
 - Missing dependency returns extraction status `error` with message `pypdf is not installed`.
 - Parser errors are caught and stored as extraction errors.
 
+## Tesseract OCR
+
+Purpose:
+
+- Optional local OCR for supported image files.
+- Safe scanned/image-only PDF detection when normal PDF text extraction finds very little text.
+
+Source:
+
+- `kgfs/ocr/tesseract.py`
+- `kgfs/ocr/status.py`
+- `kgfs/extractors/image_ocr.py`
+- `kgfs/extractors/pdf.py`
+
+Install:
+
+Tesseract is an external executable and is not installed by KGFS. Install it
+with your OS package manager or installer, then set:
+
+```yaml
+ocr:
+  enabled: true
+  tesseract:
+    command: "tesseract"
+    language: "eng"
+```
+
+Optional Python extra:
+
+```bash
+python -m pip install -e ".[ocr]"
+```
+
+Behavior:
+
+- Missing Tesseract reports a helpful status/extraction error.
+- OCR output is stored in KGFS database/cache rows.
+- Source images and PDFs are never modified.
+- No cloud OCR is used.
+
+Tests: `tests/test_ocr_backend.py`, `tests/test_ocr_indexing.py`, `tests/test_ocr_pdf.py`.
+
 ## python-docx
 
 Purpose:
@@ -330,6 +372,7 @@ Excluded:
 - tests
 - pytest tooling
 - semantic model stack
+- Tesseract executable and OCR user cache/data
 - OpenAI SDK
 
 Smoke test:
@@ -399,3 +442,4 @@ No implementation was found for:
 - Remote index storage.
 - Authentication provider.
 - Telemetry backend.
+- Cloud OCR providers.

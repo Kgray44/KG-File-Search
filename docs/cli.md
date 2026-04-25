@@ -24,6 +24,9 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs vector clear` | Clear KGFS vector/chunk data only. | `kgfs/cli/commands/vector.py` |
 | `kgfs vector benchmark` | Benchmark available vector backends against existing local vectors. | `kgfs/cli/commands/vector.py` |
 | `kgfs vector recommend` | Recommend a vector backend based on local index size and availability. | `kgfs/cli/commands/vector.py` |
+| `kgfs ocr status` | Show OCR config and Tesseract availability. | `kgfs/cli/commands/ocr.py` |
+| `kgfs ocr test` | OCR one image without indexing it. | `kgfs/cli/commands/ocr.py` |
+| `kgfs ocr index` | Run indexing with OCR-enabled extraction. | `kgfs/cli/commands/ocr.py` |
 | `kgfs why` | Explain why a latest search result matched a query. | `kgfs/cli/commands/why.py` |
 | `kgfs open` | Open a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
 | `kgfs reveal` | Reveal a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
@@ -80,6 +83,7 @@ Reports:
 - Open/reveal strategy
 - SQLite FTS5 availability
 - Semantic status
+- OCR status and cache/index counts
 - PDF/DOCX/OpenAI dependency availability
 - Configured folder existence/readability/warnings
 
@@ -249,6 +253,23 @@ kgfs vector recommend [--config PATH] [--database PATH] [--project-local]
 
 Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py`, `kgfs/vectors/status.py`, `kgfs/search/backends/*.py`.
 
+## OCR Commands
+
+```bash
+kgfs ocr status [--config PATH] [--database PATH] [--project-local]
+kgfs ocr test IMAGE_PATH [--config PATH] [--project-local]
+kgfs ocr index [--config PATH] [--database PATH] [--project-local]
+               [--dry-run] [--force] [--allow-risky-root]
+```
+
+`ocr status` reports whether OCR is enabled, the configured backend, Tesseract command/language, supported image extensions, cache settings, and install hints when Tesseract is missing.
+
+`ocr test` runs local OCR on one image and prints a preview. It does not add the image to the index and does not create a database.
+
+`ocr index` reuses the normal indexing pipeline with OCR-capable extraction. It requires `ocr.enabled: true`, writes OCR text to the KGFS database/cache only, and never modifies source images or PDFs.
+
+Source: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`.
+
 ## Open and Reveal
 
 ```bash
@@ -274,7 +295,7 @@ Sources: `kgfs/cli/commands/open_reveal.py`, `kgfs/core/platform_utils.py`.
 kgfs stats [--config PATH] [--database PATH] [--project-local]
 ```
 
-Reports totals, extraction counts, semantic counts, stale records, database size, schema version, file types, and largest indexed files.
+Reports totals, extraction counts, OCR counts/cache entries, semantic counts, stale records, database size, schema version, file types, and largest indexed files.
 
 Sources: `kgfs/cli/commands/stats.py`, `kgfs/db/stats.py`.
 

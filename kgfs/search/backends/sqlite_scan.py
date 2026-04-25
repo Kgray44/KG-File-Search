@@ -50,7 +50,8 @@ class SqliteScanVectorBackend:
                 f.normalized_path,
                 f.extension,
                 f.modified_time,
-                f.extraction_status
+                f.extraction_status,
+                f.extraction_source
             FROM chunks c
             JOIN files f ON f.id = c.file_id
             WHERE c.model_name = ?
@@ -84,6 +85,7 @@ class SqliteScanVectorBackend:
                     score=score,
                     start_char=row["start_char"],
                     end_char=row["end_char"],
+                    metadata={"extraction_source": row["extraction_source"]},
                 )
             )
         hits.sort(key=lambda hit: hit.score, reverse=True)

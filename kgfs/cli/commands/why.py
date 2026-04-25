@@ -85,7 +85,7 @@ def _find_matching_result(results: list[SearchResult], file_id: int, path: Path)
 def _load_latest_file_as_result(conn, file_id: int, result_id: int, query: str, highlight: bool) -> SearchResult:
     row = conn.execute(
         """
-        SELECT id, file_name, path, normalized_path, extension, modified_time, extracted_text
+        SELECT id, file_name, path, normalized_path, extension, modified_time, extracted_text, extraction_source
         FROM files
         WHERE id = ?
         """,
@@ -109,6 +109,7 @@ def _load_latest_file_as_result(conn, file_id: int, result_id: int, query: str, 
         score_breakdown={"final": 0.0},
         mode="keyword",
         source="latest",
+        metadata={"extraction_source": row["extraction_source"]},
     )
 
 

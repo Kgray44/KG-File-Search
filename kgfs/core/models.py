@@ -21,6 +21,7 @@ class FileRecord:
     extraction_status: str
     extraction_error: str | None
     modified_time_ns: int | None = None
+    extraction_source: str = "text"
 
 
 @dataclass(frozen=True)

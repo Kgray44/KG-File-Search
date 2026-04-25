@@ -30,6 +30,7 @@ def upsert_file(conn: sqlite3.Connection, record: FileRecord) -> int:
         record.platform_indexed_from,
         record.extraction_status,
         record.extraction_error,
+        record.extraction_source,
     )
     if existing:
         file_id = int(existing["id"])
@@ -38,7 +39,7 @@ def upsert_file(conn: sqlite3.Connection, record: FileRecord) -> int:
             UPDATE files
             SET path = ?, normalized_path = ?, file_name = ?, extension = ?, size = ?,
                 modified_time = ?, modified_time_ns = ?, content_hash = ?, extracted_text = ?, indexed_at = ?,
-                platform_indexed_from = ?, extraction_status = ?, extraction_error = ?
+                platform_indexed_from = ?, extraction_status = ?, extraction_error = ?, extraction_source = ?
             WHERE id = ?
             """,
             values + (file_id,),
@@ -49,9 +50,9 @@ def upsert_file(conn: sqlite3.Connection, record: FileRecord) -> int:
             INSERT INTO files (
                 path, normalized_path, file_name, extension, size, modified_time,
                 modified_time_ns, content_hash, extracted_text, indexed_at, platform_indexed_from,
-                extraction_status, extraction_error
+                extraction_status, extraction_error, extraction_source
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             values,
         )

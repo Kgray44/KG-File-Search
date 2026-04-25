@@ -16,6 +16,10 @@ def explain_result(
     mode = SearchMode.coerce(mode_used or result.mode or SearchMode.KEYWORD)
     breakdown = result.score_breakdown or {"final": result.score}
     summary = build_score_explanation(query, result, breakdown)
+    explanation_notes = list(notes or [])
+    extraction_source = str(result.metadata.get("extraction_source", "") if result.metadata else "")
+    if extraction_source.startswith("ocr"):
+        explanation_notes.append("This result matched OCR-derived text stored in the local KGFS index.")
     return SearchExplanation(
         mode=mode,
         summary=summary,
@@ -25,7 +29,7 @@ def explain_result(
         path=result.path,
         final_score=breakdown.get("final", result.score),
         snippet=result.snippet,
-        notes=notes or [],
+        notes=explanation_notes,
     )
 
 

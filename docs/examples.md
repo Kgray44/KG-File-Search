@@ -182,7 +182,45 @@ index rows.
 
 Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`.
 
-## Example 9: AI Preview Without API Call
+## Example 9: Local OCR for Images
+
+Install optional light OCR Python dependencies if you want future preprocessing support, then install Tesseract separately for your OS:
+
+```bash
+python -m pip install -e ".[ocr]"
+```
+
+Enable OCR:
+
+```yaml
+ocr:
+  enabled: true
+  backend: "tesseract"
+  tesseract:
+    command: "tesseract"
+    language: "eng"
+```
+
+Check status and test one image without indexing:
+
+```bash
+kgfs ocr status
+kgfs ocr test ./screenshots/circuit-label.png
+```
+
+Index configured folders and search OCR text:
+
+```bash
+kgfs ocr index
+kgfs search "text from screenshot"
+kgfs why 1 "text from screenshot"
+```
+
+KGFS stores OCR text in its local database/cache and never writes back to the image or PDF source file.
+
+Sources: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`, `tests/test_ocr_*.py`.
+
+## Example 10: AI Preview Without API Call
 
 Enable AI in config for preview:
 
@@ -209,7 +247,7 @@ No API call is made when `--preview-ai-context` is used.
 
 Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/search.py`, `tests/test_cli.py`.
 
-## Example 10: OpenAI Answer Synthesis
+## Example 11: OpenAI Answer Synthesis
 
 Install OpenAI dependency:
 
@@ -242,7 +280,7 @@ kgfs ask "What do my notes say about motor torque?"
 
 Source: `kgfs/ai.py`.
 
-## Example 11: Start Web Dashboard
+## Example 12: Start Web Dashboard
 
 ```bash
 kgfs web
@@ -258,7 +296,7 @@ Use `/search?q=pid&ext=.pdf` for a filtered search URL.
 
 Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`.
 
-## Example 12: Reset and Rebuild
+## Example 13: Reset and Rebuild
 
 Dry-run reset:
 
@@ -280,7 +318,7 @@ kgfs rebuild --yes
 
 Sources: `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py`.
 
-## Example 13: Build a Package
+## Example 14: Build a Package
 
 ```bash
 python -m pip install -e ".[package]"

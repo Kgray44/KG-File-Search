@@ -6,14 +6,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from sqlite3 import Connection
 
-from kgfs.config import KGFSConfig
-from kgfs.database import count_chunks_for_file, get_existing_file, upsert_file
+from kgfs.core.config import KGFSConfig
+from kgfs.core.models import FileRecord, IndexSummary
+from kgfs.core.platform_utils import current_platform_name, normalize_path
+from kgfs.core.safety import RiskyRootError, find_risky_index_roots, format_risky_roots
+from kgfs.db.repositories import count_chunks_for_file, get_existing_file, upsert_file
 from kgfs.extractors import extract_text
-from kgfs.file_discovery import discover_files
-from kgfs.hashing import sha256_file
-from kgfs.models import FileRecord, IndexSummary
-from kgfs.platform_utils import current_platform_name, normalize_path
-from kgfs.semantic import Embedder, chunk_text, get_embedder, replace_file_chunks, semantic_model_name
+from kgfs.indexing.discovery import discover_files
+from kgfs.indexing.hashing import sha256_file
+from kgfs.search.semantic import Embedder, chunk_text, get_embedder, replace_file_chunks, semantic_model_name
 
 
 def index_configured_folders(
@@ -23,7 +24,18 @@ def index_configured_folders(
     dry_run: bool = False,
     semantic_embedder: Embedder | None = None,
     rebuild_embeddings: bool = False,
+    allow_risky_root: bool = False,
+    force: bool = False,
+    verify_hashes: bool = False,
 ) -> IndexSummary:
+    risky_roots = find_risky_index_roots(config.indexed_folders)
+    if risky_roots and not allow_risky_root:
+        raise RiskyRootError(
+            "Refusing to index risky root folders:\n"
+            f"{format_risky_roots(risky_roots)}\n"
+            "Pass --allow-risky-root only if you intentionally want this scan."
+        )
+
     discovered = indexed = skipped_unchanged = failed = bytes_indexed = 0
 
     for file_path in discover_files(config):
@@ -34,29 +46,39 @@ def index_configured_folders(
             failed += 1
             continue
 
-        content_hash = sha256_file(file_path) if config.indexing.hash_files else None
         _, normalized_path = normalize_path(file_path)
         existing = get_existing_file(conn, normalized_path)
-        if (
-            existing
+        stat_mtime_ns = _stat_mtime_ns(stat)
+        content_hash: str | None = None
+        metadata_matches = (
+            not force
+            and existing
             and config.indexing.skip_unchanged_files
             and int(existing["size"]) == stat.st_size
-            and float(existing["modified_time"]) == stat.st_mtime
-            and existing["content_hash"] == content_hash
-        ):
-            _ensure_semantic_chunks(
-                config,
-                conn,
-                file_path,
-                int(existing["id"]),
-                existing["extracted_text"],
-                semantic_embedder=semantic_embedder,
-                rebuild_embeddings=rebuild_embeddings,
-                dry_run=dry_run,
-            )
-            skipped_unchanged += 1
-            continue
+            and _modified_time_matches(existing, stat.st_mtime, stat_mtime_ns)
+        )
+        if metadata_matches:
+            if verify_hashes:
+                content_hash = sha256_file(file_path)
+                existing_hash = existing["content_hash"]
+                if existing_hash is not None and existing_hash != content_hash:
+                    metadata_matches = False
+            if metadata_matches:
+                _ensure_semantic_chunks(
+                    config,
+                    conn,
+                    file_path,
+                    int(existing["id"]),
+                    existing["extracted_text"],
+                    semantic_embedder=semantic_embedder,
+                    rebuild_embeddings=rebuild_embeddings,
+                    dry_run=dry_run,
+                )
+                skipped_unchanged += 1
+                continue
 
+        if content_hash is None and (config.indexing.hash_files or verify_hashes):
+            content_hash = sha256_file(file_path)
         if dry_run:
             continue
 
@@ -72,6 +94,7 @@ def index_configured_folders(
             extension=file_path.suffix.lower(),
             size=stat.st_size,
             modified_time=stat.st_mtime,
+            modified_time_ns=stat_mtime_ns,
             content_hash=content_hash,
             extracted_text=text,
             indexed_at=datetime.now(timezone.utc).isoformat(),
@@ -103,7 +126,21 @@ def index_configured_folders(
 
 def index_single_file(config: KGFSConfig, conn: Connection, file_path: Path) -> IndexSummary:
     local_config = config.model_copy(update={"indexed_folders": [file_path]})
-    return index_configured_folders(local_config, conn)
+    return index_configured_folders(local_config, conn, allow_risky_root=True)
+
+
+def _stat_mtime_ns(stat_result) -> int:
+    return int(getattr(stat_result, "st_mtime_ns", int(stat_result.st_mtime * 1_000_000_000)))
+
+
+def _modified_time_matches(existing, modified_time: float, modified_time_ns: int) -> bool:
+    try:
+        existing_ns = existing["modified_time_ns"]
+    except (KeyError, IndexError):
+        existing_ns = None
+    if existing_ns is not None:
+        return int(existing_ns) == modified_time_ns
+    return float(existing["modified_time"]) == modified_time
 
 
 def _ensure_semantic_chunks(

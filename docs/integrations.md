@@ -1,6 +1,6 @@
 # Integrations
 
-KGFS is local-first. Most integrations are local libraries or local OS features. The only cloud integration in the current worktree is optional OpenAI AI Assist.
+KGFS is local-first. Most integrations are local libraries or local OS features. The only cloud integration at this commit is optional OpenAI AI Assist.
 
 ## SQLite and FTS5
 
@@ -285,7 +285,7 @@ Default:
 
 Limitations:
 
-- No authentication in current worktree.
+- No authentication at this commit.
 - Web search is keyword-only.
 
 Tests: `tests/test_web.py`.
@@ -381,7 +381,7 @@ Configuration:
 - Test path: `tests`
 - Pytest options: `-ra`
 
-## Not Present in Current Worktree
+## Not Present At This Commit
 
 No implementation was found for:
 

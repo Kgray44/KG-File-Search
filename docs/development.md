@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide describes how to work on KGFS from the current worktree.
+This guide describes how to work on KGFS from the repository state at this commit.
 
 ## Requirements
 
@@ -49,7 +49,7 @@ Sources: `pyproject.toml`.
 
 ## Lint, Typecheck, and Build
 
-No dedicated lint or typecheck tool configuration is present in the current worktree. There is no `ruff`, `black`, `mypy`, `Makefile`, Dockerfile, Kubernetes config, or cloud deployment manifest found in the repo.
+No dedicated lint or typecheck tool configuration is present at this commit. There is no `ruff`, `black`, `mypy`, `Makefile`, Dockerfile, Kubernetes config, or cloud deployment manifest found in the repo.
 
 Packaging build:
 

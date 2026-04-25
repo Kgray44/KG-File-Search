@@ -1,88 +1,463 @@
 # Features
 
-This page inventories features implemented in the current worktree. It includes modified and untracked source files. If behavior is ambiguous or only partially surfaced, it is marked as such.
+This page inventories features implemented in the repository state at this commit. If behavior is ambiguous, partially surfaced, or represented only as an extension point, it is called out under [Unclear or Needs Verification](#unclear-or-needs-verification).
 
-## Safety and Configuration Features
+## Safety and Configuration
 
-| Feature | What it does | Implemented in | Enable or use | Inputs | Outputs | Related settings | Edge cases and limitations | Tests |
-|---|---|---|---|---|---|---|---|---|
-| No-scan initialization | Creates a config file with `indexed_folders: []` and does not index anything. Existing config files are left unchanged. | `kgfs/cli/commands/init.py`, `kgfs/core/config.py` | `kgfs init`; optional `--config`, `--project-local` | Destination config path | Config file and app dirs | `KGFS_CONFIG_PATH`, `KGFS_CONFIG_DIR`, `KGFS_PROJECT_LOCAL`, `--project-local` | `kgfs config` fails if the resolved config file does not exist. | `tests/test_config.py`, `tests/test_cli.py` |
-| Platform app directories | Uses platformdirs for config, data, cache, and log paths unless project-local mode or overrides are used. | `kgfs/core/app_dirs.py` | Used by most CLI commands and web app runtime | Optional CLI path overrides and env vars | `AppPaths` with default config/database paths | `KGFS_CONFIG_DIR`, `KGFS_DATA_DIR`, `KGFS_CACHE_DIR`, `KGFS_LOG_DIR` | CLI commands expose `--project-local`; the helper also supports env-based project-local mode when called with `project_local=None`. | `tests/test_app_dirs.py`, `tests/test_cli.py` |
-| Path expansion | Expands `~`, `~/...`, `~\...`, POSIX env vars, and Windows `%VAR%` style env vars. | `kgfs/core/path_utils.py` | Automatic when loading config or resolving env paths | Path-like strings | `pathlib.Path` | All path config keys and env path vars | Undefined env variables remain unchanged. | `tests/test_path_utils.py`, `tests/test_config.py` |
-| Risky root refusal | Refuses filesystem roots, Windows drive roots, home root, and obvious system roots unless explicitly overridden. | `kgfs/core/safety.py`, `kgfs/cli/commands/index.py`, `kgfs/indexing/indexer.py` | Default behavior in `kgfs index`; override with `--allow-risky-root` | `indexed_folders` | CLI exit code 2 or `RiskyRootError` | `--allow-risky-root` | The override is intentionally broad and should be used only for intentional scans. | `tests/test_safety.py`, `tests/test_indexing.py`, `tests/test_cli.py` |
-| Folder config commands | Adds, removes, and lists configured indexed folders without indexing immediately. | `kgfs/cli/commands/folders.py`, `kgfs/core/config_commands.py` | `kgfs add-folder`, `kgfs remove-folder`, `kgfs list-folders` | Folder path | Updated YAML and console tables | `indexed_folders`, `--config`, `--project-local` | Adding a folder rewrites YAML with `yaml.safe_dump`, so comments from the generated config are not preserved after edits. | `tests/test_config_commands.py`, `tests/test_cli.py` |
-| Config display | Prints the active config path and file contents. | `kgfs/cli/commands/config.py` | `kgfs config` | Config path | Console output | `--config`, `--project-local`, `KGFS_CONFIG_PATH` | Does not create a missing config. | `tests/test_cli.py`, `tests/test_resources.py` |
-| Doctor diagnostics | Reports platform, Python version, packaged status, paths, DB existence, schema version, FTS5, semantic status, optional dependencies, and folder readability/warnings. | `kgfs/cli/commands/doctor.py`, `kgfs/core/platform_utils.py`, `kgfs/core/resources.py` | `kgfs doctor` | Optional config/database/project-local flags | Rich tables | App path env vars, `semantic.*` | If config is missing, `doctor` uses default `KGFSConfig()` for diagnostics. | `tests/test_cli.py`, `tests/test_resources.py` |
+### No-Scan Initialization
 
-## Indexing and Extraction Features
+- What it does: creates config/app directories and a default YAML config with `indexed_folders: []`; it does not index files.
+- Use it with: `kgfs init`, optionally `--config` or `--project-local`.
+- Inputs: destination config path.
+- Outputs: config file and app directories.
+- Settings: `KGFS_CONFIG_PATH`, `KGFS_CONFIG_DIR`, `KGFS_PROJECT_LOCAL`, `--project-local`.
+- Edge cases: existing config files are left unchanged; `kgfs config` fails if the resolved config file does not exist.
+- Sources: `kgfs/cli/commands/init.py`, `kgfs/core/config.py`.
+- Tests: `tests/test_config.py`, `tests/test_cli.py`.
 
-| Feature | What it does | Implemented in | Enable or use | Inputs | Outputs | Related settings | Edge cases and limitations | Tests |
-|---|---|---|---|---|---|---|---|---|
-| File discovery | Walks each configured root and yields supported, small, non-ignored files in sorted directory/file order. Also accepts a configured root that is itself a file. | `kgfs/indexing/discovery.py` | `kgfs index`, `index_configured_folders()` | `KGFSConfig.indexed_folders` | Iterator of `Path` objects | `indexed_folders`, `ignored_folders`, `include_extensions`, `ignored_extensions`, `exclude_globs`, `max_file_size_mb`, `follow_symlinks` | Missing configured roots are skipped. Symlinks are skipped unless enabled. | `tests/test_file_discovery.py`, `tests/test_file_filters.py` |
-| Directory and file filters | Skips default noisy/system directories, ignored extensions, unsupported extensions, exclude globs, symlinks, over-size files, and unreadable stat failures. | `kgfs/indexing/filters.py`, `kgfs/core/config.py` | Automatic during indexing | File and directory paths | Boolean decisions | Filter-related config keys | Directory matching is by directory name exactly. Extension matching is lowercase and dot-normalized on config load. | `tests/test_file_filters.py` |
-| Text extraction dispatch | Dispatches extraction by file suffix. | `kgfs/extractors/__init__.py` | Automatic during indexing | File path | `ExtractionResult` | `extraction.pdf_max_pages` for PDFs | Unsupported extensions return `status="skipped"`. | `tests/test_extractors.py` |
-| Plain text extraction | Reads `.txt`, `.html`, `.css`, and `.json` using `utf-8-sig`, `utf-8`, `cp1252`, then `latin-1`. | `kgfs/extractors/text.py`, `kgfs/extractors/__init__.py` | Automatic for configured extensions | File path | Extracted text or error | `include_extensions` | OSError becomes `status="error"`. | `tests/test_extractors.py` |
-| Markdown and code extraction | Treats `.md`, `.py`, `.js`, and `.ts` as plain text. | `kgfs/extractors/markdown.py`, `kgfs/extractors/code.py` | Automatic for configured extensions | File path | Extracted text | `include_extensions` | No syntax-aware parsing is currently implemented. | `tests/test_extractors.py`, `tests/test_indexing.py` |
-| CSV extraction | Reads CSV with `utf-8-sig`, joins non-empty cell values with spaces, and falls back to latin-1 text on decode failure. | `kgfs/extractors/csv.py` | Automatic for `.csv` | CSV file | Plain text rows | `include_extensions` | CSV parsing errors become extraction errors. | `tests/test_extractors.py` |
-| PDF extraction | Uses `pypdf.PdfReader` and extracts text from up to `pdf_max_pages` pages. | `kgfs/extractors/pdf.py` | Automatic for `.pdf` when dependency is installed | PDF file | Extracted text or error | `extraction.pdf_max_pages` | Missing `pypdf` returns an extraction error. Parser-specific exceptions are caught broadly. | `tests/test_extractors.py`, `tests/test_cli.py` |
-| DOCX extraction | Uses `python-docx` to extract paragraph and table cell text. | `kgfs/extractors/docx.py` | Automatic for `.docx` when dependency is installed | DOCX file | Extracted text or error | `include_extensions` | Missing `python-docx` returns an extraction error. | `tests/test_cli.py` |
-| Incremental indexing | Skips unchanged files by comparing size and precise modified time before hashing. | `kgfs/indexing/indexer.py`, `kgfs/db/repositories.py` | `kgfs index` | Indexed files and existing DB rows | `IndexSummary.skipped_unchanged` | `indexing.skip_unchanged_files` | If `skip_unchanged_files` is false, files are re-extracted. | `tests/test_indexing.py` |
-| Hash verification | Stores SHA-256 hashes when enabled and can verify hashes even when metadata looks unchanged. | `kgfs/indexing/hashing.py`, `kgfs/indexing/indexer.py` | Default hashing via config; stronger check with `kgfs index --verify-hashes` | File bytes | `content_hash` in DB; reindex decision | `indexing.hash_files`, `--verify-hashes` | Hashing can be skipped for unchanged files unless `--verify-hashes` is used. | `tests/test_indexing.py` |
-| Force reindex | Re-extracts and rewrites existing records even when metadata matches. | `kgfs/indexing/indexer.py`, `kgfs/cli/commands/index.py` | `kgfs index --force` | Configured files | Updated `files` and `files_fts` rows | `--force` | Does not delete stale rows unless `--prune` or `kgfs prune` is used. | `tests/test_indexing.py` |
-| Dry-run indexing | Discovers indexable files without writing records. | `kgfs/indexing/indexer.py`, `kgfs/cli/commands/index.py` | `kgfs index --dry-run` | Configured folders | Summary with `dry_run=True` | `--dry-run` | The implementation stats files before the dry-run continue, so inaccessible files can still count as failures. | `tests/test_cli.py` |
-| Semantic chunk creation during indexing | When semantic is enabled, splits extracted text into overlapping chunks, embeds locally, and stores vectors in SQLite. | `kgfs/indexing/indexer.py`, `kgfs/search/semantic.py`, `kgfs/db/schema.py` | Set `semantic.enabled: true` and run `kgfs index --rebuild-embeddings` or `kgfs semantic-index --rebuild` | Extracted text | Rows in `chunks` | `semantic.*`, `--rebuild-embeddings`, `--rebuild` | Requires `sentence-transformers` unless tests pass a fake embedder. Local-only model loading is default. | `tests/test_semantic.py`, `tests/test_search_kernel.py` |
+### Platform App Directories
 
-## Search Features
+- What it does: resolves config, data, cache, and log paths through platformdirs unless project-local mode or explicit overrides are used.
+- Use it with: most CLI commands and web app runtime; project-local mode uses `.kgfs/` under the current directory.
+- Inputs: optional path overrides, environment variables, and `--project-local`.
+- Outputs: `AppPaths` with config/database defaults.
+- Settings: `KGFS_CONFIG_DIR`, `KGFS_DATA_DIR`, `KGFS_CACHE_DIR`, `KGFS_LOG_DIR`, `KGFS_PROJECT_LOCAL`.
+- Edge cases: CLI commands pass an explicit boolean default for project-local mode, so prefer `--project-local` over relying on `KGFS_PROJECT_LOCAL` from CLI.
+- Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/shared.py`.
+- Tests: `tests/test_app_dirs.py`, `tests/test_cli.py`.
 
-| Feature | What it does | Implemented in | Enable or use | Inputs | Outputs | Related settings | Edge cases and limitations | Tests |
-|---|---|---|---|---|---|---|---|---|
-| FTS query building | Tokenizes natural language queries, removes stopwords, and builds prefix FTS terms joined by `AND` or fallback `OR`. | `kgfs/search/query.py`, `kgfs/search/keyword.py` | Automatic in keyword search | Query string | SQLite FTS5 query string | None | Empty meaningful tokens return no results. Stopword list is fixed in source. | `tests/test_search.py`, `tests/test_ranking.py` |
-| Keyword search | Searches `files_fts`, falls back from `AND` to `OR`, filters candidates, ranks by BM25-derived base score plus local relevance boosts, and returns stable result IDs. | `kgfs/search/keyword.py`, `kgfs/search/ranking.py` | `kgfs search --mode keyword` or direct `search()` | Query, DB connection, filters, limit | `SearchResult` list | `search.default_limit`, `search.highlight_matches`, filters | SQLite `OperationalError` during FTS search returns no results. | `tests/test_search.py`, `tests/test_search_filters.py`, `tests/test_ranking.py` |
-| Search filters | Filters by extension, file type, folder/path substring, modified-date range, and extraction failures. `before` expands to the end of the given day. | `kgfs/search/filters.py`, CLI/web search commands | `--ext`, `--type`, `--folder`, `--after`, `--before`, `--failed-only`; web `/search` params | Filter values | Filtered search results | CLI flags; web query params | Dates must parse with `datetime.fromisoformat`; invalid dates are not wrapped in a custom error. | `tests/test_search_filters.py`, `tests/test_web.py` |
-| Snippets and highlighting | Builds compact snippets near exact phrases or matching query terms, compacts multiline text, handles Unicode/punctuation terms, escapes Rich markup, and can add Rich `[bold]` markup for CLI highlighting. | `kgfs/search/snippets.py` | Automatic during search | Extracted text, query | Snippet string | `search.highlight_matches` | AI context strips Rich bold markup before sending snippets. | `tests/test_snippets.py`, `tests/test_ai.py` |
-| Semantic search | Embeds the query locally, compares against stored chunk vectors with cosine similarity, and returns the best chunk per file. | `kgfs/search/keyword.py`, `kgfs/search/semantic.py`, `kgfs/search/modes/semantic.py` | `kgfs semantic "query"` or `kgfs search --mode semantic` | Query, chunks, embedder | Semantic `SearchResult` list | `semantic.enabled`, `semantic.model_name`, `semantic.local_files_only`, `semantic.batch_size` | Requires semantic chunks for the selected model. Explicit semantic mode reports unavailable when not ready. | `tests/test_semantic.py`, `tests/test_search_kernel.py`, `tests/test_cli.py` |
-| Hybrid search | Combines semantic score, keyword score, filename relevance, path relevance, exact phrase relevance, and modest recency into a single ranking with score breakdowns. | `kgfs/search/keyword.py`, `kgfs/search/ranking.py`, `kgfs/search/modes/hybrid.py` | `kgfs search --hybrid` or `--mode hybrid` | Query, chunks, FTS rows | Hybrid `SearchResult` list | `semantic.*`, `search.default_mode`, `hybrid.*` | Requires semantic availability. Candidate limit uses `hybrid.candidate_limit_multiplier`. | `tests/test_semantic.py`, `tests/test_search_kernel.py`, `tests/test_ranking.py` |
-| Auto search mode | Uses hybrid when semantic is enabled, dependencies are available, vector backend is available, and chunks exist. Falls back quietly to keyword when semantic is disabled and warns once when semantic/vector search is configured but not ready. | `kgfs/search/registry.py`, `kgfs/search/modes/auto.py` | `kgfs search --mode auto`; default `search.default_mode` is `auto` | Search context | `SearchExecution` with mode used and warnings | `search.default_mode`, `semantic.*`, `vectors.backend` | Auto is not a concrete engine and cannot be fetched directly from the registry. | `tests/test_search_kernel.py`, `tests/test_cli.py` |
-| Search engine registry | Registers keyword, semantic, and hybrid engines, resolves mode names, reports availability, and executes searches. | `kgfs/search/engine.py`, `kgfs/search/registry.py`, `kgfs/search/modes/*.py` | Used by CLI search command; available as library API | `SearchOptions`, `SearchContext` | `SearchExecution` | `SearchOptions.mode`, `SearchOptions.limit`, `SearchOptions.filters` | New in current worktree and not yet deeply integrated with web search, which still calls keyword search directly. | `tests/test_search_kernel.py`, `tests/test_cli.py` |
-| Latest result IDs | Persists the most recent search result IDs for `open`, `reveal`, and `why`. | `kgfs/db/latest_results.py`, `kgfs/cli/commands/search.py`, `kgfs/web/app.py` | Automatic after CLI and web search when enabled | Query and results | `latest_results` rows | `search.save_latest_results` | Only one latest-result set is stored; new searches replace old rows. | `tests/test_search.py`, `tests/test_web.py`, `tests/test_cli.py` |
-| Result explanation | Explains a latest result by rerunning local search, showing score components, snippet, and mode used. | `kgfs/cli/commands/why.py`, `kgfs/search/explain.py` | `kgfs why RESULT_ID "query"` | Latest result ID and query | CLI explanation table | `search.default_mode`, `hybrid.*`, `semantic.*` | Does not call AI. If the result no longer reproduces, shows saved indexed context when possible. | `tests/test_cli.py` |
+### Path Expansion
 
-## User Interface Features
+- What it does: expands `~`, `~/...`, `~\...`, POSIX env vars, and Windows `%VAR%` variables.
+- Use it with: config paths, database paths, indexed folders, and app-dir environment overrides.
+- Inputs: path-like strings.
+- Outputs: `pathlib.Path` values.
+- Edge cases: undefined environment variables remain unchanged.
+- Sources: `kgfs/core/path_utils.py`, `kgfs/core/config.py`.
+- Tests: `tests/test_path_utils.py`, `tests/test_config.py`.
 
-| Feature | What it does | Implemented in | Enable or use | Inputs | Outputs | Related settings | Edge cases and limitations | Tests |
-|---|---|---|---|---|---|---|---|---|
-| Typer CLI | Exposes all KGFS commands through the `kgfs` console script and `python -m kgfs`. | `pyproject.toml`, `kgfs/__main__.py`, `kgfs/cli/app.py` | `kgfs --help` | CLI args | Console output and database updates | CLI flags, config, env vars | No shell completion setup is documented in source. | `tests/test_cli.py` |
-| Stats command | Shows indexed file counts, sizes, semantic chunk count, embedding storage, failures, stale records, DB size, schema version, file types, and largest indexed files. | `kgfs/cli/commands/stats.py`, `kgfs/db/stats.py` | `kgfs stats` | DB path | Rich tables | `--config`, `--database`, `--project-local` | Stale record count checks source path existence at runtime. | `tests/test_cli.py`, `tests/test_prune.py` |
-| Open and reveal commands | Opens or reveals a file from latest search results using platform-specific behavior. | `kgfs/cli/commands/open_reveal.py`, `kgfs/core/platform_utils.py` | `kgfs open 1`, `kgfs reveal 1` | Latest result ID | OS open/reveal side effect | `search.save_latest_results` | Fails if there is no latest result with that ID. Missing files reveal parent folder where possible. | `tests/test_platform_utils.py`, `tests/test_web.py` |
-| Web dashboard | Provides HTML pages for home, search, stats, config, failures, and latest result open/reveal. | `kgfs/cli/commands/web.py`, `kgfs/web/app.py`, `kgfs/web/templates/*.html` | `kgfs web`; default `http://127.0.0.1:8765` | Browser requests | HTML or plain text responses | `--host`, `--port`, config/database flags | Web search currently uses keyword search only. No authentication is implemented. | `tests/test_web.py` |
+### Risky Root Refusal
 
-## Maintenance Features
+- What it does: refuses filesystem roots, Windows drive roots, home root, and obvious system roots unless explicitly overridden.
+- Use it with: default `kgfs index`; override with `--allow-risky-root`.
+- Inputs: configured `indexed_folders`.
+- Outputs: CLI error or `RiskyRootError` before broad indexing.
+- Settings: `--allow-risky-root`.
+- Edge cases: the override is broad and should be used only for intentional scans.
+- Sources: `kgfs/core/safety.py`, `kgfs/cli/commands/index.py`, `kgfs/indexing/indexer.py`.
+- Tests: `tests/test_safety.py`, `tests/test_indexing.py`, `tests/test_cli.py`.
 
-| Feature | What it does | Implemented in | Enable or use | Inputs | Outputs | Related settings | Edge cases and limitations | Tests |
-|---|---|---|---|---|---|---|---|---|
-| Prune stale records | Removes DB records, FTS rows, chunks, and latest-result rows for files that no longer exist. Does not delete source files. | `kgfs/indexing/prune.py`, `kgfs/cli/commands/maintenance.py` | `kgfs prune`; `kgfs prune --dry-run`; `kgfs index --prune` | DB rows | `PruneSummary` and console output | `--dry-run` | Displays only first 20 stale paths in CLI output. | `tests/test_prune.py` |
-| Reset index | Removes KGFS database files only, including SQLite sidecar files. | `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py` | `kgfs reset-index --dry-run` or `kgfs reset-index --yes` | Database path | Removed database files | `--yes`, `--dry-run` | Library function requires `yes=True` unless dry-run. Does not remove config or source files. | `tests/test_reset_rebuild.py` |
-| Rebuild index | Resets the database and indexes configured folders again. | `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py` | `kgfs rebuild --yes` | Config and database path | New database and `IndexSummary` | `--allow-risky-root`, `--yes` | Defaults to force reindex inside `rebuild_index()`. | `tests/test_reset_rebuild.py` |
-| Schema initialization and migrations | Creates current schema and runs idempotent migrations. Tracks schema version. | `kgfs/db/schema.py`, `kgfs/db/migrations.py` | Automatic when connecting through CLI/web runtime | SQLite connection | Tables and `schema_version` row | `CURRENT_SCHEMA_VERSION = 1` | Newer DB schema versions raise `RuntimeError`. | `tests/test_migrations.py` |
+### Folder Config Commands
 
-## Optional AI Assist Features
+- What it does: adds, removes, and lists configured indexed folders without indexing immediately.
+- Use it with: `kgfs add-folder`, `kgfs remove-folder`, `kgfs list-folders`.
+- Inputs: folder/file path for add/remove.
+- Outputs: updated YAML and console tables.
+- Settings: `indexed_folders`, `--config`, `--project-local`.
+- Edge cases: add/remove rewrites YAML through `yaml.safe_dump`, so comments from the generated config are not preserved after edits.
+- Sources: `kgfs/cli/commands/folders.py`, `kgfs/core/config_commands.py`.
+- Tests: `tests/test_config_commands.py`, `tests/test_cli.py`.
 
-| Feature | What it does | Implemented in | Enable or use | Inputs | Outputs | Related settings | Edge cases and limitations | Tests |
-|---|---|---|---|---|---|---|---|---|
-| AI context preview | Builds and prints the exact context that would be sent to OpenAI, then makes no API call when `--preview-ai-context` is used. | `kgfs/ai.py`, `kgfs/cli/shared.py`, `kgfs/cli/commands/search.py` | `kgfs ask ... --preview-ai-context`; `kgfs search ... --ai-rerank --preview-ai-context` | Local results and AI settings | Console preview | `ai.preview_context_before_send`, `ai.max_*`, `ai.send_*`, `ai.redact_home_path` | Preview can also print before confirmation when `preview_context_before_send` is true. | `tests/test_ai.py`, `tests/test_cli.py` |
-| AI answer synthesis | Sends local result snippets to OpenAI and prints an answer constrained by prompt text. | `kgfs/ai.py`, `kgfs/cli/commands/search.py` | `kgfs ask "question"` after enabling AI | Question and local search results | `AIResult` and console answer | `ai.enabled`, `ai.allow_answer_synthesis`, `ai.model`, `ai.api_key_env` | Requires OpenAI SDK and API key. Disabled by default. | `tests/test_ai.py`, `tests/test_cli.py` |
-| AI reranking | Sends local result snippets to OpenAI and expects a JSON array of KGFS result IDs ordered by relevance. | `kgfs/ai.py`, `kgfs/cli/commands/search.py` | `kgfs search "query" --ai-rerank` after enabling AI | Query and local results | Reordered result list | `ai.enabled`, `ai.allow_rerank`, `ai.max_*` | Non-JSON output is parsed best-effort; unmentioned results remain in original order after reranked IDs. | `tests/test_ai.py`, `tests/test_cli.py` |
+### Config Display
 
-## Packaging and CI Features
+- What it does: prints the active config path and file contents.
+- Use it with: `kgfs config`.
+- Inputs: config path.
+- Outputs: console output.
+- Settings: `--config`, `--project-local`, `KGFS_CONFIG_PATH`.
+- Edge cases: does not create a missing config.
+- Sources: `kgfs/cli/commands/config.py`.
+- Tests: `tests/test_cli.py`, `tests/test_resources.py`.
 
-| Feature | What it does | Implemented in | Enable or use | Inputs | Outputs | Related settings | Edge cases and limitations | Tests |
-|---|---|---|---|---|---|---|---|---|
-| PyInstaller packaging | Builds onedir by default or experimental onefile, includes runtime modules, web assets, README, LICENSE, config example, and generated quickstart. | `scripts/build_package.py`, `packaging/pyinstaller/kgfs.spec` | `python scripts/build_package.py --clean` | Build args | `dist-packages/KGFS-<os>-<arch>.zip` | `KGFS_PYINSTALLER_MODE`, `KGFS_PACKAGE_NAME` | Base package excludes tests, semantic dependencies/model caches, and OpenAI SDK. | `tests/test_packaging_scripts.py` |
-| Packaged smoke test | Finds packaged executable, runs help/doctor/init/config/add-folder/index/search against a temporary project-local corpus. | `scripts/smoke_test_packaged.py` | `python scripts/smoke_test_packaged.py --package dist-packages/KGFS` | Package path | Pass/fail smoke result | `KGFS_PROJECT_LOCAL`, `COLUMNS` in smoke environment | Smoke corpus is temporary and deleted after test. | `tests/test_packaging_scripts.py` |
-| GitHub Actions CI | Runs tests on Windows, macOS, and Ubuntu for Python 3.11 and 3.12. Packaging workflow builds Windows and macOS artifacts. | `.github/workflows/ci.yml`, `.github/workflows/package.yml` | Push, pull request, manual packaging workflow | GitHub workflow events | Test runs and uploaded artifacts | Workflow YAML | No release-publishing workflow is implemented. | `tests/test_ci_workflow.py` |
+### Doctor Diagnostics
+
+- What it does: reports platform, Python version, packaged status, app paths, DB state, schema version, FTS5, semantic status, optional dependencies, and folder warnings.
+- Use it with: `kgfs doctor`.
+- Inputs: optional config/database/project-local flags.
+- Outputs: Rich diagnostic tables.
+- Settings: app path env vars, `semantic.*`.
+- Edge cases: if config is missing, doctor uses default `KGFSConfig()` for diagnostics.
+- Sources: `kgfs/cli/commands/doctor.py`, `kgfs/core/platform_utils.py`, `kgfs/core/resources.py`.
+- Tests: `tests/test_cli.py`, `tests/test_resources.py`.
+
+## Indexing and Extraction
+
+### File Discovery
+
+- What it does: walks each configured root and yields supported, small, non-ignored files in sorted order; a configured root may also be a file.
+- Use it with: `kgfs index` or `index_configured_folders()`.
+- Inputs: `KGFSConfig.indexed_folders`.
+- Outputs: indexable `Path` objects.
+- Settings: `indexed_folders`, `ignored_folders`, `include_extensions`, `ignored_extensions`, `exclude_globs`, `max_file_size_mb`, `follow_symlinks`.
+- Edge cases: missing configured roots are skipped; symlinks are skipped unless enabled.
+- Sources: `kgfs/indexing/discovery.py`, `kgfs/indexing/filters.py`.
+- Tests: `tests/test_file_discovery.py`, `tests/test_file_filters.py`.
+
+### Directory and File Filters
+
+- What it does: skips default noisy/system directories, ignored extensions, unsupported extensions, exclude globs, symlinks, over-size files, and unreadable stat failures.
+- Use it with: automatic discovery filtering.
+- Inputs: file and directory paths.
+- Outputs: boolean index/skip decisions.
+- Settings: all filter-related config keys.
+- Edge cases: directory matching is by directory name; extension matching is lowercase and dot-normalized during config load.
+- Sources: `kgfs/indexing/filters.py`, `kgfs/core/config.py`.
+- Tests: `tests/test_file_filters.py`.
+
+### Extractor Dispatch
+
+- What it does: routes file suffixes to extractor modules.
+- Use it with: automatic indexing.
+- Inputs: file path and extraction settings.
+- Outputs: `ExtractionResult`.
+- Settings: `include_extensions`, `extraction.pdf_max_pages`.
+- Edge cases: unsupported extensions return `status="skipped"`.
+- Sources: `kgfs/extractors/__init__.py`, `kgfs/extractors/base.py`.
+- Tests: `tests/test_extractors.py`.
+
+### Text, Markdown, Code, CSV, PDF, and DOCX Extraction
+
+- What it does: extracts text from `.txt`, `.html`, `.css`, `.json`, `.md`, `.py`, `.js`, `.ts`, `.csv`, `.pdf`, and `.docx`.
+- Use it with: enabled default include extensions during indexing.
+- Inputs: matching files.
+- Outputs: extracted text or stored extraction errors.
+- Settings: `include_extensions`, `extraction.pdf_max_pages`.
+- Edge cases: Markdown/code extraction is plain text, not syntax-aware; missing `pypdf` or `python-docx` becomes an extraction error; CSV falls back to latin-1 text on decode failure.
+- Sources: `kgfs/extractors/text.py`, `kgfs/extractors/markdown.py`, `kgfs/extractors/code.py`, `kgfs/extractors/csv.py`, `kgfs/extractors/pdf.py`, `kgfs/extractors/docx.py`.
+- Tests: `tests/test_extractors.py`, `tests/test_indexing.py`, `tests/test_cli.py`.
+
+### Incremental Indexing
+
+- What it does: skips unchanged files by comparing size and precise modified time before hashing.
+- Use it with: default `kgfs index`.
+- Inputs: indexed files and existing DB rows.
+- Outputs: `IndexSummary.skipped_unchanged`.
+- Settings: `indexing.skip_unchanged_files`.
+- Edge cases: if disabled, files are re-extracted; stale rows are not deleted unless prune is requested.
+- Sources: `kgfs/indexing/indexer.py`, `kgfs/db/repositories.py`.
+- Tests: `tests/test_indexing.py`.
+
+### Hash Verification
+
+- What it does: stores SHA-256 hashes and can verify hashes even when size/mtime look unchanged.
+- Use it with: default hashing and `kgfs index --verify-hashes`.
+- Inputs: file bytes.
+- Outputs: `content_hash` in the DB and reindex decisions.
+- Settings: `indexing.hash_files`, `--verify-hashes`.
+- Edge cases: unchanged files can skip hashing unless `--verify-hashes` is supplied.
+- Sources: `kgfs/indexing/hashing.py`, `kgfs/indexing/indexer.py`.
+- Tests: `tests/test_indexing.py`.
+
+### Force, Dry Run, and Prune-on-Index
+
+- What it does: `--force` re-extracts existing records, `--dry-run` discovers without writing, and `--prune` removes stale DB rows after indexing.
+- Use it with: `kgfs index --force`, `kgfs index --dry-run`, `kgfs index --prune`.
+- Inputs: configured files and existing database.
+- Outputs: index/prune summaries.
+- Settings: CLI flags.
+- Edge cases: dry-run still stats files, so inaccessible files can count as failures.
+- Sources: `kgfs/cli/commands/index.py`, `kgfs/indexing/indexer.py`, `kgfs/indexing/prune.py`.
+- Tests: `tests/test_cli.py`, `tests/test_indexing.py`, `tests/test_prune.py`.
+
+### Semantic Chunk Creation During Indexing
+
+- What it does: when semantic is enabled, splits extracted text into overlapping chunks, embeds locally, and stores vector BLOBs in SQLite.
+- Use it with: `semantic.enabled: true` and `kgfs index --rebuild-embeddings` or `kgfs semantic-index --rebuild`.
+- Inputs: extracted text.
+- Outputs: `chunks` rows.
+- Settings: `semantic.*`, `--rebuild-embeddings`, `--rebuild`.
+- Edge cases: requires sentence-transformers unless tests inject a fake embedder; local-only model loading is the default.
+- Sources: `kgfs/indexing/indexer.py`, `kgfs/search/semantic.py`, `kgfs/db/schema.py`.
+- Tests: `tests/test_semantic.py`, `tests/test_search_kernel.py`.
+
+## Search and Retrieval
+
+### FTS Query Building
+
+- What it does: tokenizes natural-language queries, removes fixed stopwords, and builds prefix FTS terms joined by `AND` or fallback `OR`.
+- Use it with: keyword search.
+- Inputs: query string.
+- Outputs: SQLite FTS5 query string.
+- Edge cases: empty meaningful tokens return no results.
+- Sources: `kgfs/search/query.py`, `kgfs/search/keyword.py`.
+- Tests: `tests/test_search.py`, `tests/test_ranking.py`.
+
+### Keyword Search
+
+- What it does: searches `files_fts`, falls back from `AND` to `OR`, filters candidates, ranks with BM25-derived score plus local boosts, and returns stable result IDs.
+- Use it with: `kgfs search --mode keyword` or `search()`.
+- Inputs: query, DB connection, filters, limit.
+- Outputs: `SearchResult` list.
+- Settings: `search.default_limit`, `search.highlight_matches`, filters.
+- Edge cases: SQLite `OperationalError` during FTS search returns no results.
+- Sources: `kgfs/search/keyword.py`, `kgfs/search/ranking.py`.
+- Tests: `tests/test_search.py`, `tests/test_search_filters.py`, `tests/test_ranking.py`.
+
+### Search Filters
+
+- What it does: filters by extension, file type, folder/path substring, modified-date range, and extraction failures.
+- Use it with: CLI flags or web `/search` parameters.
+- Inputs: filter values.
+- Outputs: filtered search results.
+- Settings: `--ext`, `--type`, `--folder`, `--after`, `--before`, `--failed-only`; web query params.
+- Edge cases: `before` expands to the end of the given day; invalid dates are parsed with `datetime.fromisoformat`.
+- Sources: `kgfs/search/filters.py`, `kgfs/cli/commands/search.py`, `kgfs/web/app.py`.
+- Tests: `tests/test_search_filters.py`, `tests/test_web.py`.
+
+### Snippets and Highlighting
+
+- What it does: builds compact snippets near matching terms, compacts multiline text, handles Unicode/punctuation terms, and can add Rich `[bold]` markup.
+- Use it with: search result rendering and AI context building.
+- Inputs: extracted text and query.
+- Outputs: snippet string.
+- Settings: `search.highlight_matches`.
+- Edge cases: AI context strips Rich bold markup before sending snippets.
+- Sources: `kgfs/search/snippets.py`, `kgfs/ai.py`.
+- Tests: `tests/test_snippets.py`, `tests/test_ai.py`.
+
+### Semantic Search
+
+- What it does: embeds the query locally, searches configured vector backend chunks, and returns the best chunk per file.
+- Use it with: `kgfs semantic "query"` or `kgfs search --mode semantic`.
+- Inputs: query, chunks, embedder.
+- Outputs: semantic `SearchResult` list.
+- Settings: `semantic.enabled`, `semantic.model_name`, `semantic.local_files_only`, `semantic.batch_size`, `vectors.backend`.
+- Edge cases: explicit semantic mode is unavailable when semantic config/dependencies/backend/chunks are not ready.
+- Sources: `kgfs/search/keyword.py`, `kgfs/search/semantic.py`, `kgfs/search/modes/semantic.py`.
+- Tests: `tests/test_semantic.py`, `tests/test_search_kernel.py`, `tests/test_cli.py`.
+
+### Hybrid Search
+
+- What it does: combines semantic score, keyword score, filename relevance, path relevance, exact phrase relevance, and recency.
+- Use it with: `kgfs search --hybrid` or `kgfs search --mode hybrid`.
+- Inputs: query, chunks, FTS rows.
+- Outputs: hybrid `SearchResult` list with score breakdown.
+- Settings: `semantic.*`, `vectors.backend`, `hybrid.*`, `search.default_mode`.
+- Edge cases: requires semantic availability; candidate limit is controlled by `hybrid.candidate_limit_multiplier` with a floor of 25.
+- Sources: `kgfs/search/keyword.py`, `kgfs/search/modes/hybrid.py`, `kgfs/search/ranking.py`.
+- Tests: `tests/test_semantic.py`, `tests/test_search_kernel.py`, `tests/test_ranking.py`.
+
+### Auto Search Mode
+
+- What it does: uses hybrid when semantic is enabled, dependencies are available, vector backend is available, and chunks exist; otherwise falls back to keyword.
+- Use it with: default `search.default_mode: auto` or `kgfs search --mode auto`.
+- Inputs: `SearchContext`.
+- Outputs: `SearchExecution` with `mode_used` and warnings.
+- Settings: `search.default_mode`, `semantic.*`, `vectors.backend`.
+- Edge cases: if semantic is enabled but unavailable, auto emits a warning; `auto` is not a concrete registry engine.
+- Sources: `kgfs/search/registry.py`, `kgfs/search/modes/auto.py`.
+- Tests: `tests/test_search_kernel.py`, `tests/test_cli.py`.
+
+### Search Engine Registry
+
+- What it does: registers keyword, semantic, and hybrid engines; resolves mode names; reports availability; executes searches.
+- Use it with: CLI search and library callers.
+- Inputs: `SearchOptions`, `SearchContext`.
+- Outputs: `SearchExecution`.
+- Settings: `SearchOptions.mode`, `SearchOptions.limit`, `SearchOptions.filters`.
+- Edge cases: web search currently calls keyword search directly and does not use registry modes.
+- Sources: `kgfs/search/engine.py`, `kgfs/search/registry.py`, `kgfs/search/modes/*.py`.
+- Tests: `tests/test_search_kernel.py`, `tests/test_cli.py`.
+
+### Vector Backend Interface and `sqlite_scan`
+
+- What it does: defines a vector backend protocol and provides the default SQLite scan backend for chunk search, status, stats, and clearing.
+- Use it with: semantic/hybrid search and vector commands.
+- Inputs: query vector, `VectorSearchOptions`, `SearchContext`.
+- Outputs: `VectorSearchHit` rows sorted by cosine score.
+- Settings: `vectors.backend` (`sqlite_scan` at this commit), `semantic.model_name`.
+- Edge cases: malformed vector BLOBs and dimension mismatches are skipped; unknown backend names make semantic/hybrid unavailable.
+- Sources: `kgfs/search/backends/base.py`, `kgfs/search/backends/__init__.py`, `kgfs/search/backends/sqlite_scan.py`.
+- Tests: `tests/test_vector_backend.py`, `tests/test_search_kernel.py`.
+
+### Vector Management Commands
+
+- What it does: reports vector readiness, rebuilds chunks from already indexed extracted text, and clears only vector/chunk rows.
+- Use it with: `kgfs vector status`, `kgfs vector rebuild`, `kgfs vector clear --yes`.
+- Inputs: config/database runtime and indexed file records.
+- Outputs: status table, `VectorRebuildSummary`, or deleted chunk count.
+- Settings: `semantic.enabled`, `semantic.*`, `vectors.backend`, `--force/--no-force`, `--yes`.
+- Edge cases: rebuild requires `semantic.enabled: true`; clear requires `--yes`; clear leaves source files, `files`, and keyword FTS rows unchanged.
+- Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py`, `kgfs/vectors/status.py`, `kgfs/vectors/chunks.py`.
+- Tests: `tests/test_vector_commands.py`, `tests/test_vector_status.py`.
+
+### Latest Result IDs
+
+- What it does: stores the most recent search result IDs for `open`, `reveal`, and `why`.
+- Use it with: automatic CLI/web search saving when enabled.
+- Inputs: query and results.
+- Outputs: `latest_results` rows.
+- Settings: `search.save_latest_results`.
+- Edge cases: only one latest-result set is stored; new searches replace old rows.
+- Sources: `kgfs/db/latest_results.py`, `kgfs/cli/commands/search.py`, `kgfs/web/app.py`.
+- Tests: `tests/test_search.py`, `tests/test_web.py`, `tests/test_cli.py`.
+
+### Result Explanations
+
+- What it does: explains why a saved latest search result matched a query, including score breakdown and snippet.
+- Use it with: `kgfs why RESULT_ID QUERY [--mode MODE]`.
+- Inputs: latest result ID and query.
+- Outputs: console explanation table and notes.
+- Settings: `search.default_mode`, `search.default_limit`, `search.highlight_matches`, `--mode`.
+- Edge cases: reruns search with `save_latest_results=False`; if the result is not present in the fresh rerun, it loads the saved file and reports that limitation.
+- Sources: `kgfs/cli/commands/why.py`, `kgfs/search/explain.py`, `kgfs/search/result.py`.
+- Tests: `tests/test_cli.py`.
+
+## User Interfaces
+
+### Typer CLI
+
+- What it does: exposes KGFS commands through the `kgfs` console script and `python -m kgfs`.
+- Use it with: `kgfs --help`.
+- Inputs: CLI args.
+- Outputs: console output and database updates.
+- Settings: command flags, config, environment variables.
+- Edge cases: no shell-completion setup is documented in source.
+- Sources: `pyproject.toml`, `kgfs/__main__.py`, `kgfs/cli/app.py`.
+- Tests: `tests/test_cli.py`.
+
+### Stats Command
+
+- What it does: shows indexed file counts, sizes, semantic chunk count, embedding storage, failures, stale records, DB size, schema version, file types, and largest files.
+- Use it with: `kgfs stats`.
+- Inputs: database path.
+- Outputs: Rich tables.
+- Settings: `--config`, `--database`, `--project-local`.
+- Edge cases: stale record count checks source path existence at runtime.
+- Sources: `kgfs/cli/commands/stats.py`, `kgfs/db/stats.py`.
+- Tests: `tests/test_cli.py`, `tests/test_prune.py`.
+
+### Open and Reveal Commands
+
+- What it does: opens or reveals a file from latest search results using platform-specific behavior.
+- Use it with: `kgfs open 1`, `kgfs reveal 1`, web `/open/{result_id}`, web `/reveal/{result_id}`.
+- Inputs: latest result ID.
+- Outputs: OS open/reveal side effect.
+- Settings: `search.save_latest_results`.
+- Edge cases: fails if no latest result has that ID; missing files reveal/open parent folder where possible.
+- Sources: `kgfs/cli/commands/open_reveal.py`, `kgfs/core/platform_utils.py`, `kgfs/web/app.py`.
+- Tests: `tests/test_platform_utils.py`, `tests/test_web.py`.
+
+### Web Dashboard
+
+- What it does: provides local HTML pages for home, keyword search, stats, config, extraction failures, and latest-result open/reveal.
+- Use it with: `kgfs web` at `http://127.0.0.1:8765` by default.
+- Inputs: browser requests.
+- Outputs: HTML/plain text responses.
+- Settings: `--host`, `--port`, config/database flags.
+- Edge cases: web search is keyword-only; no authentication is implemented.
+- Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`, `kgfs/web/templates/*.html`.
+- Tests: `tests/test_web.py`.
+
+## Maintenance
+
+### Prune Stale Records
+
+- What it does: removes DB records, FTS rows, chunks, and latest-result rows for files that no longer exist.
+- Use it with: `kgfs prune`, `kgfs prune --dry-run`, `kgfs index --prune`.
+- Inputs: DB rows.
+- Outputs: `PruneSummary` and console output.
+- Settings: `--dry-run`.
+- Edge cases: displays only the first 20 stale paths in CLI output; does not delete source files.
+- Sources: `kgfs/indexing/prune.py`, `kgfs/cli/commands/maintenance.py`.
+- Tests: `tests/test_prune.py`.
+
+### Reset and Rebuild Index
+
+- What it does: reset removes KGFS database files only; rebuild resets and indexes configured folders again.
+- Use it with: `kgfs reset-index --dry-run`, `kgfs reset-index --yes`, `kgfs rebuild --yes`.
+- Inputs: database path and config.
+- Outputs: removed database files and new indexed data.
+- Settings: `--yes`, `--dry-run`, `--allow-risky-root`.
+- Edge cases: source files and config files are not removed; rebuild force-indexes by default.
+- Sources: `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py`.
+- Tests: `tests/test_reset_rebuild.py`.
+
+### Schema Initialization and Migrations
+
+- What it does: creates the current schema, runs idempotent migrations, and tracks schema version.
+- Use it with: automatic CLI/web DB connection.
+- Inputs: SQLite connection.
+- Outputs: tables and `schema_version` row.
+- Settings: `CURRENT_SCHEMA_VERSION = 1`.
+- Edge cases: newer DB schema versions raise `RuntimeError`.
+- Sources: `kgfs/db/schema.py`, `kgfs/db/migrations.py`.
+- Tests: `tests/test_migrations.py`.
+
+## Optional AI Assist
+
+### AI Context Preview
+
+- What it does: builds and prints the exact OpenAI context without making an API call when preview-only is used.
+- Use it with: `kgfs ask ... --preview-ai-context` or `kgfs search ... --ai-rerank --preview-ai-context`.
+- Inputs: local results and AI settings.
+- Outputs: console preview.
+- Settings: `ai.preview_context_before_send`, `ai.max_*`, `ai.send_*`, `ai.redact_home_path`.
+- Edge cases: preview can also print before confirmation when configured.
+- Sources: `kgfs/ai.py`, `kgfs/cli/shared.py`, `kgfs/cli/commands/search.py`.
+- Tests: `tests/test_ai.py`, `tests/test_cli.py`.
+
+### AI Answer Synthesis
+
+- What it does: sends local result snippets to OpenAI and prints an answer constrained by prompt text.
+- Use it with: `kgfs ask "question"` after enabling AI.
+- Inputs: question and local search results.
+- Outputs: `AIResult` and console answer.
+- Settings: `ai.enabled`, `ai.allow_answer_synthesis`, `ai.model`, `ai.api_key_env`.
+- Edge cases: requires OpenAI SDK and API key; disabled by default.
+- Sources: `kgfs/ai.py`, `kgfs/cli/commands/search.py`.
+- Tests: `tests/test_ai.py`, `tests/test_cli.py`.
+
+### AI Reranking
+
+- What it does: sends local result snippets to OpenAI and expects JSON result IDs ordered by relevance.
+- Use it with: `kgfs search "query" --ai-rerank` after enabling AI.
+- Inputs: query and local results.
+- Outputs: reordered result list.
+- Settings: `ai.enabled`, `ai.allow_rerank`, `ai.max_*`.
+- Edge cases: non-JSON output is parsed best-effort; unmentioned results remain after reranked IDs.
+- Sources: `kgfs/ai.py`, `kgfs/cli/commands/search.py`.
+- Tests: `tests/test_ai.py`, `tests/test_cli.py`.
+
+## Packaging and CI
+
+### PyInstaller Packaging
+
+- What it does: builds onedir by default or experimental onefile; includes runtime modules, web assets, README, LICENSE, config example, and generated quickstart.
+- Use it with: `python scripts/build_package.py --clean`.
+- Inputs: build flags.
+- Outputs: `dist-packages/KGFS-<os>-<arch>.zip`.
+- Settings: `KGFS_PYINSTALLER_MODE`, `KGFS_PACKAGE_NAME`.
+- Edge cases: base package excludes tests, semantic dependencies/model caches, and OpenAI SDK.
+- Sources: `scripts/build_package.py`, `packaging/pyinstaller/kgfs.spec`.
+- Tests: `tests/test_packaging_scripts.py`.
+
+### Packaged Smoke Test
+
+- What it does: finds the packaged executable and runs help, doctor, init, config, add-folder, index, and search against a temporary project-local corpus.
+- Use it with: `python scripts/smoke_test_packaged.py --package dist-packages/KGFS`.
+- Inputs: package path.
+- Outputs: pass/fail smoke result.
+- Settings: `KGFS_PROJECT_LOCAL`, `COLUMNS` in smoke-test subprocess environment.
+- Edge cases: temporary smoke corpus is deleted after the test.
+- Sources: `scripts/smoke_test_packaged.py`.
+- Tests: `tests/test_packaging_scripts.py`.
+
+### GitHub Actions CI
+
+- What it does: runs tests on Windows, macOS, and Ubuntu for Python 3.11 and 3.12; package workflow builds Windows and macOS artifacts.
+- Use it with: push, pull request, or manual packaging workflow.
+- Inputs: GitHub workflow events.
+- Outputs: test runs and uploaded package artifacts.
+- Settings: workflow YAML.
+- Edge cases: no GitHub Release publishing workflow is implemented.
+- Sources: `.github/workflows/ci.yml`, `.github/workflows/package.yml`.
+- Tests: `tests/test_ci_workflow.py`.
 
 ## Unclear or Needs Verification
 
-- `KGFS_PROJECT_LOCAL` is implemented in `kgfs/core/app_dirs.py` when `get_app_paths(project_local=None)` is used, but most CLI commands pass an explicit default `False` unless `--project-local` is supplied. For CLI use, document and prefer `--project-local`.
-- `SearchOptions.backend` and `SearchOptions.explain` exist in `kgfs/search/options.py`, and `SearchEngine.explain()` exists in `kgfs/search/engine.py`. `kgfs why` exposes basic result explanation, but web explanation UI is not implemented.
-- `ai.allow_query_expansion` exists in `kgfs/core/config.py`, but the current AI code does not implement a query expansion command path.
+- `KGFS_PROJECT_LOCAL` is implemented in `kgfs/core/app_dirs.py` when `get_app_paths(project_local=None)` is used, but most CLI commands pass an explicit default `False` unless `--project-local` is supplied. For CLI use, prefer `--project-local`.
+- `SearchOptions.backend` exists in `kgfs/search/options.py`, but no CLI/web path currently exposes backend selection.
+- `SearchOptions.explain` and `SearchEngine.explain()` exist as runtime fields/hooks. User-facing explanation is implemented through `kgfs why`, not through a generic `--explain` search flag.
+- `ai.allow_query_expansion` exists in `kgfs/core/config.py`, but no implemented query expansion command path was found.
+- `vectors.shard_strategy` exists in config defaults and `VectorSettings`, but no behavior beyond storing/validating the setting was found.

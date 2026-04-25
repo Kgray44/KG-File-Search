@@ -1,6 +1,6 @@
 # Security, Privacy, and Safety
 
-KGFS is designed as a local-first file search tool. This page documents the security and privacy behavior implemented in the current worktree.
+KGFS is designed as a local-first file search tool. This page documents the security and privacy behavior implemented in the repository state at this commit.
 
 ## Local-First Defaults
 
@@ -127,7 +127,7 @@ Sources: `kgfs/ai.py`, `config.example.yaml`.
 
 ## Semantic Search Privacy
 
-Semantic search is local in the current worktree:
+Semantic search is local at this commit:
 
 - Embeddings are generated with local sentence-transformers.
 - Vectors are stored in the local SQLite database.
@@ -139,7 +139,7 @@ Sources: `kgfs/search/semantic.py`, `tests/test_semantic.py`.
 
 ## Web Dashboard Exposure
 
-The web dashboard has no authentication in the current worktree.
+The web dashboard has no authentication at this commit.
 
 Default bind:
 

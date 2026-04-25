@@ -1,6 +1,6 @@
 # API and Programmatic Interfaces
 
-KGFS does not expose a JSON REST API in the current worktree. It exposes:
+KGFS does not expose a JSON REST API at this commit. It exposes:
 
 - An HTML/plain-text FastAPI dashboard.
 - Python module functions and dataclasses.

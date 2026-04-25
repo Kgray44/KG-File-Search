@@ -1,0 +1,67 @@
+from pathlib import Path
+
+import yaml
+
+from kgfs.config import KGFSConfig, create_default_config_file, load_config
+
+
+def test_load_config_expands_indexed_folders_and_defaults(tmp_path: Path) -> None:
+    docs = tmp_path / "Documents"
+    docs.mkdir()
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "indexed_folders": [str(docs)],
+                "max_file_size_mb": 5,
+                "follow_symlinks": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.indexed_folders == [docs]
+    assert ".git" in config.ignored_folders
+    assert ".pdf" in config.include_extensions
+    assert config.max_file_size_bytes == 5 * 1024 * 1024
+    assert config.indexing.hash_files is True
+    assert config.semantic.enabled is False
+
+
+def test_load_config_expands_windows_style_tilde_paths(tmp_path: Path, monkeypatch) -> None:
+    home = tmp_path / "User Home"
+    home.mkdir()
+    monkeypatch.setattr("kgfs.path_utils.Path.home", lambda: home)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        yaml.safe_dump({"indexed_folders": ["~\\Documents\\Résumé Notes"]}),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.indexed_folders == [home / "Documents" / "Résumé Notes"]
+
+
+def test_create_default_config_file_does_not_overwrite(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("indexed_folders: []\n", encoding="utf-8")
+
+    created = create_default_config_file(config_path)
+
+    assert created is False
+    assert config_path.read_text(encoding="utf-8") == "indexed_folders: []\n"
+
+
+def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yaml"
+
+    assert create_default_config_file(config_path) is True
+    loaded = KGFSConfig.model_validate(yaml.safe_load(config_path.read_text(encoding="utf-8")))
+
+    assert loaded.follow_symlinks is False
+    assert loaded.max_file_size_mb == 25
+    assert loaded.semantic.enabled is False
+    assert loaded.semantic.model_name == "sentence-transformers/all-MiniLM-L6-v2"

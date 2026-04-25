@@ -1,0 +1,2 @@
+"""KGFS local web dashboard."""
+

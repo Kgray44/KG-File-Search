@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<form action="/search" method="get" class="searchbar">
+  <input type="search" name="q" value="{{ query }}" placeholder="Find notes about op-amps" autofocus>
+  <button type="submit">Search</button>
+</form>
+<section class="results">
+  {% for result in results %}
+  <article class="result">
+    <div class="result-head">
+      <strong>{{ result.result_id }}. {{ result.file_name }}</strong>
+      <span>{{ "%.3f"|format(result.score) }}</span>
+    </div>
+    <p>{{ result.snippet }}</p>
+    <code>{{ result.path }}</code>
+  </article>
+  {% else %}
+    {% if query %}<p>No results.</p>{% endif %}
+  {% endfor %}
+</section>
+{% endblock %}
+

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="band">
+  <h1>KGFS</h1>
+  <form action="/search" method="get" class="searchbar">
+    <input type="search" name="q" placeholder="Search local files..." autofocus>
+    <button type="submit">Search</button>
+  </form>
+</section>
+<section class="grid">
+  <div class="metric"><span>Total files</span><strong>{{ stats.total_files }}</strong></div>
+  <div class="metric"><span>Failures</span><strong>{{ stats.extraction_failures }}</strong></div>
+  <div class="metric"><span>Last indexed</span><strong>{{ stats.last_indexed or "Never" }}</strong></div>
+</section>
+{% endblock %}
+

@@ -1,0 +1,4 @@
+indexed_folders:
+  - "tests/fixtures/sample_files"
+max_file_size_mb: 1
+follow_symlinks: false

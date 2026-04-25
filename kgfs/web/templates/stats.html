@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Stats</h1>
+<table>
+  <tr><th>Total indexed files</th><td>{{ stats.total_files }}</td></tr>
+  <tr><th>Total indexed size</th><td>{{ stats.total_size }} bytes</td></tr>
+  <tr><th>Last indexed</th><td>{{ stats.last_indexed or "Never" }}</td></tr>
+  <tr><th>Extraction failures</th><td>{{ stats.extraction_failures }}</td></tr>
+  <tr><th>Database size</th><td>{{ stats.database_size }} bytes</td></tr>
+</table>
+<h2>File Types</h2>
+<table>
+  {% for extension, count in stats.file_types %}
+  <tr><th>{{ extension or "(none)" }}</th><td>{{ count }}</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
+

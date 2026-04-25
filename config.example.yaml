@@ -1,0 +1,99 @@
+# KG File Search example config.
+# Copy this to config.yaml or run: kgfs init
+
+# Explicitly list folders you want indexed. KGFS will not index your whole drive
+# unless you deliberately configure a drive root yourself.
+indexed_folders:
+  - "~/Documents"
+  - "~/Downloads"
+  - "~/Desktop"
+
+# Folder names skipped anywhere below indexed folders.
+ignored_folders:
+  - ".git"
+  - ".svn"
+  - ".hg"
+  - "node_modules"
+  - ".venv"
+  - "venv"
+  - "env"
+  - "__pycache__"
+  - ".pytest_cache"
+  - ".mypy_cache"
+  - "build"
+  - "dist"
+  - "target"
+  - ".idea"
+  - ".vscode"
+  - "vendor"
+  - "Library"
+  - "AppData"
+  - "Windows"
+  - "Program Files"
+  - "Program Files (x86)"
+  - "Applications"
+  - "System"
+  - "Steam"
+  - "SteamLibrary"
+  - "Epic Games"
+  - "XboxGames"
+
+# KGFS only indexes these text-like file types in the MVP.
+include_extensions:
+  - ".txt"
+  - ".md"
+  - ".py"
+  - ".js"
+  - ".ts"
+  - ".html"
+  - ".css"
+  - ".json"
+  - ".csv"
+  - ".docx"
+  - ".pdf"
+
+# These file types are skipped even if they appear in an indexed folder.
+ignored_extensions:
+  - ".exe"
+  - ".dll"
+  - ".dylib"
+  - ".so"
+  - ".app"
+  - ".png"
+  - ".jpg"
+  - ".jpeg"
+  - ".gif"
+  - ".mp4"
+  - ".mov"
+  - ".mp3"
+  - ".wav"
+  - ".zip"
+  - ".7z"
+  - ".rar"
+
+exclude_globs:
+  - "~$*"
+  - "*.tmp"
+
+max_file_size_mb: 25
+follow_symlinks: false
+
+# Optional. Leave null to store the SQLite database in your platform app-data
+# folder. Set a path for project-local development or portable experiments.
+database_path: null
+
+indexing:
+  store_extracted_text: true
+  skip_unchanged_files: true
+  hash_files: true
+
+extraction:
+  pdf_max_pages: 250
+
+semantic:
+  enabled: false
+  model_name: "sentence-transformers/all-MiniLM-L6-v2"
+  chunk_size_chars: 1200
+  chunk_overlap_chars: 200
+  local_files_only: true
+  batch_size: 16

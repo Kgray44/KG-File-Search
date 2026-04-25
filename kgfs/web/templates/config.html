@@ -2,6 +2,13 @@
 {% block content %}
 <h1>Config</h1>
 <p><code>{{ config_path }}</code></p>
+<h2>Indexed Folders</h2>
+<table>
+  {% for folder in folders %}
+  <tr><td><code>{{ folder }}</code></td></tr>
+  {% else %}
+  <tr><td>No folders configured.</td></tr>
+  {% endfor %}
+</table>
 <pre>{{ config }}</pre>
 {% endblock %}
-

@@ -1,12 +1,13 @@
 # KG File Search example config.
 # Copy this to config.yaml or run: kgfs init
 
-# Explicitly list folders you want indexed. KGFS will not index your whole drive
-# unless you deliberately configure a drive root yourself.
-indexed_folders:
-  - "~/Documents"
-  - "~/Downloads"
-  - "~/Desktop"
+# Explicitly list folders you want indexed. KGFS will not index anything until
+# you add folders here.
+indexed_folders: []
+# Examples:
+#  - "~/Documents"
+#  - "~/Downloads"
+#  - "~/Desktop"
 
 # Folder names skipped anywhere below indexed folders.
 ignored_folders:
@@ -31,6 +32,8 @@ ignored_folders:
   - "Windows"
   - "Program Files"
   - "Program Files (x86)"
+  - "$Recycle.Bin"
+  - "System Volume Information"
   - "Applications"
   - "System"
   - "Steam"
@@ -59,17 +62,25 @@ ignored_extensions:
   - ".dylib"
   - ".so"
   - ".app"
+  - ".bin"
   - ".png"
   - ".jpg"
   - ".jpeg"
   - ".gif"
+  - ".bmp"
+  - ".tiff"
   - ".mp4"
   - ".mov"
+  - ".avi"
+  - ".mkv"
   - ".mp3"
   - ".wav"
+  - ".flac"
   - ".zip"
   - ".7z"
   - ".rar"
+  - ".tar"
+  - ".gz"
 
 exclude_globs:
   - "~$*"
@@ -97,3 +108,20 @@ semantic:
   chunk_overlap_chars: 200
   local_files_only: true
   batch_size: 16
+
+ai:
+  enabled: false
+  provider: "openai"
+  model: "gpt-5.4-nano"
+  api_key_env: "OPENAI_API_KEY"
+  require_confirmation: true
+  preview_context_before_send: true
+  send_file_paths: false
+  redact_home_path: true
+  send_full_file_text: false
+  max_results_sent: 12
+  max_chars_per_result: 1500
+  max_total_chars_sent: 12000
+  allow_query_expansion: true
+  allow_rerank: true
+  allow_answer_synthesis: true

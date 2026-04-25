@@ -59,9 +59,18 @@ def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yaml"
 
     assert create_default_config_file(config_path) is True
-    loaded = KGFSConfig.model_validate(yaml.safe_load(config_path.read_text(encoding="utf-8")))
+    text = config_path.read_text(encoding="utf-8")
+    loaded = KGFSConfig.model_validate(yaml.safe_load(text))
 
+    assert loaded.indexed_folders == []
     assert loaded.follow_symlinks is False
     assert loaded.max_file_size_mb == 25
     assert loaded.semantic.enabled is False
     assert loaded.semantic.model_name == "sentence-transformers/all-MiniLM-L6-v2"
+    assert loaded.ai.enabled is False
+    assert loaded.ai.api_key_env == "OPENAI_API_KEY"
+    assert loaded.ai.send_file_paths is False
+    assert loaded.ai.send_full_file_text is False
+    assert '#  - "~/Documents"' in text
+    assert '#  - "~/Downloads"' in text
+    assert '#  - "~/Desktop"' in text

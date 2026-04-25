@@ -50,6 +50,7 @@ h1 {
 
 .searchbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   max-width: 760px;
 }
@@ -60,6 +61,12 @@ input {
   flex: 1;
   font-size: 16px;
   padding: 12px 14px;
+}
+
+.searchbar input[type="text"],
+.searchbar input[type="date"],
+.searchbar input[type="number"] {
+  flex: 0 1 130px;
 }
 
 button {
@@ -107,6 +114,18 @@ button {
   display: flex;
   gap: 16px;
   justify-content: space-between;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.actions a {
+  color: #245b4f;
+  font-weight: 700;
+  text-decoration: none;
 }
 
 code,

@@ -12,3 +12,19 @@ def test_make_snippet_prefers_query_term_context() -> None:
 
 def test_make_snippet_handles_empty_text() -> None:
     assert make_snippet("", "query") == ""
+
+
+def test_make_snippet_handles_multiline_unicode_and_punctuation() -> None:
+    text = "Intro line\nRésumé notes discuss op-amps, Thevenin equivalents, and torque."
+
+    snippet = make_snippet(text, '"op-amps?" résumé', max_chars=70)
+
+    assert "\n" not in snippet
+    assert "Résumé" in snippet
+    assert "op-amps" in snippet
+
+
+def test_make_snippet_can_highlight_matched_terms() -> None:
+    snippet = make_snippet("Motor torque lab notes", "motor torque", highlight=True)
+
+    assert "[bold]" in snippet

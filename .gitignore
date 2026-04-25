@@ -1,11 +1,44 @@
+# KGFS local app data and project-local indexes
 .kgfs/
+data/*
+!data/.gitkeep
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.wal
+*.shm
+
+# Caches, logs, and extracted/index artifacts
+cache/
+logs/
+*.log
+*.faiss
+*.hnsw
+*.ann
+*.npy
+*.npz
+*.embedding
+*.embeddings
+*.vectors
+
+# Python/test artifacts
 .pytest-tmp/
 .pytest_cache/
-*.sqlite3
-*.db
 *.egg-info/
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 env/
+
+# Build/package output
+build/
+dist/
+dist-packages/
+*.zip
+*.tar.gz
+*.spec
+!packaging/pyinstaller/kgfs.spec

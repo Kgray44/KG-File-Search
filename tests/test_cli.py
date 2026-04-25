@@ -20,6 +20,14 @@ def test_cli_exposes_required_mvp_commands() -> None:
         "doctor",
         "web",
         "semantic",
+        "ask",
+        "prune",
+        "add-folder",
+        "remove-folder",
+        "list-folders",
+        "reset-index",
+        "rebuild",
+        "semantic-index",
     }.issubset(command.commands.keys())
 
 
@@ -38,3 +46,118 @@ def test_doctor_reports_platform_paths_and_open_strategies(tmp_path) -> None:
     assert "Log path" in result.output
     assert "Open files" in result.output
     assert "Reveal files" in result.output
+
+
+def test_index_prints_helpful_message_when_no_folders_configured(tmp_path) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("indexed_folders: []\n", encoding="utf-8")
+    db_path = tmp_path / "kgfs.sqlite3"
+
+    result = runner.invoke(app, ["index", "--config", str(config_path), "--database", str(db_path)])
+
+    assert result.exit_code == 0
+    assert "No indexed folders configured" in result.output
+    assert not db_path.exists()
+
+
+def test_index_refuses_risky_root_without_override(tmp_path) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("indexed_folders:\n  - /\n", encoding="utf-8")
+    db_path = tmp_path / "kgfs.sqlite3"
+
+    result = runner.invoke(app, ["index", "--config", str(config_path), "--database", str(db_path)])
+
+    assert result.exit_code != 0
+    assert "Refusing to index risky root" in result.output
+
+
+def test_index_allows_risky_root_with_explicit_override(tmp_path, mocker) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("indexed_folders:\n  - /\n", encoding="utf-8")
+    db_path = tmp_path / "kgfs.sqlite3"
+    mocked_index = mocker.patch("kgfs.cli.commands.index.index_configured_folders")
+
+    result = runner.invoke(
+        app,
+        ["index", "--config", str(config_path), "--database", str(db_path), "--allow-risky-root"],
+    )
+
+    assert result.exit_code == 0
+    mocked_index.assert_called_once()
+
+
+def test_ask_preview_prints_context_and_does_not_call_api(tmp_path, mocker) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+indexed_folders: []
+ai:
+  enabled: true
+  require_confirmation: false
+""",
+        encoding="utf-8",
+    )
+    result_item = mocker.Mock()
+    result_item.result_id = 1
+    result_item.file_id = 1
+    result_item.file_name = "notes.md"
+    result_item.path = tmp_path / "notes.md"
+    result_item.extension = ".md"
+    result_item.modified_time = 1.0
+    result_item.score = 0.5
+    result_item.snippet = "preview snippet"
+    mocker.patch("kgfs.cli.commands.search.search", return_value=[result_item])
+    mocked_client = mocker.patch("kgfs.cli.commands.search.get_openai_client")
+
+    result = runner.invoke(app, ["ask", "what is here?", "--config", str(config_path), "--preview-ai-context"])
+
+    assert result.exit_code == 0
+    assert "AI Context Preview" in result.output
+    assert "preview snippet" in result.output
+    mocked_client.assert_not_called()
+
+
+def test_ai_disabled_prevents_api_call(tmp_path, mocker) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("indexed_folders: []\nai:\n  enabled: false\n", encoding="utf-8")
+    mocked_client = mocker.patch("kgfs.cli.commands.search.get_openai_client")
+
+    result = runner.invoke(app, ["ask", "what is here?", "--config", str(config_path)])
+
+    assert result.exit_code != 0
+    assert "AI Assist is disabled" in result.output
+    mocked_client.assert_not_called()
+
+
+def test_search_ai_rerank_preview_prints_context_and_does_not_call_api(tmp_path, mocker) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+indexed_folders: []
+ai:
+  enabled: true
+  require_confirmation: false
+""",
+        encoding="utf-8",
+    )
+    result_item = mocker.Mock()
+    result_item.result_id = 1
+    result_item.file_id = 1
+    result_item.file_name = "notes.md"
+    result_item.path = tmp_path / "notes.md"
+    result_item.extension = ".md"
+    result_item.modified_time = 1.0
+    result_item.score = 0.5
+    result_item.snippet = "rerank preview snippet"
+    mocker.patch("kgfs.cli.commands.search.search", return_value=[result_item])
+    mocked_client = mocker.patch("kgfs.cli.commands.search.get_openai_client")
+
+    result = runner.invoke(
+        app,
+        ["search", "query", "--config", str(config_path), "--ai-rerank", "--preview-ai-context"],
+    )
+
+    assert result.exit_code == 0
+    assert "AI Context Preview" in result.output
+    assert "rerank preview snippet" in result.output
+    mocked_client.assert_not_called()

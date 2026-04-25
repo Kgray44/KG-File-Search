@@ -11,11 +11,11 @@ import typer
 from rich.table import Table
 
 from kgfs.cli.shared import console, optional_config_runtime, read_schema_version_if_present
-from kgfs.database import check_fts5_available
-from kgfs.platform_utils import platform_diagnostics
-from kgfs.resources import executable_path, is_frozen
-from kgfs.safety import risk_warning
-from kgfs.semantic import get_semantic_status
+from kgfs.core.platform_utils import platform_diagnostics
+from kgfs.core.resources import executable_path, is_frozen
+from kgfs.core.safety import risk_warning
+from kgfs.db import check_fts5_available
+from kgfs.search.semantic import get_semantic_status
 
 
 def register(app: typer.Typer) -> None:

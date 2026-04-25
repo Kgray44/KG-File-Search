@@ -8,7 +8,7 @@ import typer
 from rich.table import Table
 
 from kgfs.cli.shared import connect_runtime, console, format_bytes
-from kgfs.database import get_database_stats
+from kgfs.db import get_database_stats
 
 
 def register(app: typer.Typer) -> None:

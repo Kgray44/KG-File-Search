@@ -7,7 +7,7 @@ from pathlib import Path
 import typer
 
 from kgfs.cli.shared import connect_runtime, console, optional_config_runtime, runtime
-from kgfs.prune import prune_stale_files
+from kgfs.indexing.prune import prune_stale_files
 from kgfs.reset import rebuild_index, reset_index
 
 

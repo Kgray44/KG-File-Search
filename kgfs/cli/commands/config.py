@@ -6,8 +6,8 @@ from pathlib import Path
 
 import typer
 
-from kgfs.app_dirs import get_app_paths, resolve_config_path
 from kgfs.cli.shared import console
+from kgfs.core.app_dirs import get_app_paths, resolve_config_path
 
 
 def register(app: typer.Typer) -> None:

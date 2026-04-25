@@ -7,8 +7,8 @@ from pathlib import Path
 import typer
 
 from kgfs.cli.shared import connect_runtime
-from kgfs.platform_utils import open_file as open_path
-from kgfs.platform_utils import reveal_file as reveal_path
+from kgfs.core.platform_utils import open_file as open_path
+from kgfs.core.platform_utils import reveal_file as reveal_path
 from kgfs.search import get_latest_result_path
 
 

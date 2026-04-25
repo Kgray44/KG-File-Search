@@ -11,10 +11,10 @@ from rich.console import Console
 from rich.table import Table
 
 from kgfs.ai import AIError
-from kgfs.app_dirs import get_app_paths, resolve_config_path, resolve_database_path
-from kgfs.config import KGFSConfig, load_config
-from kgfs.database import connect_database, initialize_database
-from kgfs.migrations import get_schema_version
+from kgfs.core.app_dirs import get_app_paths, resolve_config_path, resolve_database_path
+from kgfs.core.config import KGFSConfig, load_config
+from kgfs.db import connect_database, initialize_database
+from kgfs.db.migrations import get_schema_version
 
 console = Console()
 

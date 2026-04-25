@@ -7,10 +7,10 @@ from pathlib import Path
 import typer
 
 from kgfs.cli.shared import connect_runtime, console, format_bytes, print_results
-from kgfs.database import get_database_stats
+from kgfs.db import get_database_stats
 from kgfs.indexing import index_configured_folders
 from kgfs.search import save_latest_results, semantic_search
-from kgfs.semantic import get_embedder, get_semantic_status
+from kgfs.search.semantic import get_embedder, get_semantic_status
 
 
 def register(app: typer.Typer) -> None:

@@ -5,10 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from kgfs.config import KGFSConfig
-from kgfs.database import connect_database, initialize_database
+from kgfs.core.config import KGFSConfig
+from kgfs.core.models import IndexSummary
+from kgfs.db import connect_database, initialize_database
 from kgfs.indexing import index_configured_folders
-from kgfs.models import IndexSummary
 
 
 @dataclass(frozen=True)

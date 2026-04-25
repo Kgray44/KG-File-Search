@@ -7,10 +7,10 @@ from pathlib import Path
 import typer
 from rich.table import Table
 
-from kgfs.app_dirs import get_app_paths, resolve_config_path
 from kgfs.cli.shared import console
-from kgfs.config_commands import add_indexed_folder, list_indexed_folders, remove_indexed_folder
-from kgfs.safety import risk_warning
+from kgfs.core.app_dirs import get_app_paths, resolve_config_path
+from kgfs.core.config_commands import add_indexed_folder, list_indexed_folders, remove_indexed_folder
+from kgfs.core.safety import risk_warning
 
 
 def register(app: typer.Typer) -> None:

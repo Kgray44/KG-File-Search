@@ -7,10 +7,10 @@ from pathlib import Path
 import typer
 
 from kgfs.cli.shared import console, runtime
-from kgfs.database import connect_database, initialize_database
+from kgfs.db import connect_database, initialize_database
 from kgfs.indexing import index_configured_folders
-from kgfs.prune import prune_stale_files
-from kgfs.safety import find_risky_index_roots, format_risky_roots
+from kgfs.indexing.prune import prune_stale_files
+from kgfs.core.safety import find_risky_index_roots, format_risky_roots
 
 
 def register(app: typer.Typer) -> None:

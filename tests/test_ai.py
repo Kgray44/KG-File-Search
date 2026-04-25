@@ -2,6 +2,7 @@ from pathlib import Path
 
 from kgfs.ai import (
     AIError,
+    answer_question_with_ai,
     build_ai_context,
     get_openai_api_key,
     redact_home_path,
@@ -32,6 +33,31 @@ def _result(result_id: int, path: Path, snippet: str) -> SearchResult:
         score=0.5,
         snippet=snippet,
     )
+
+
+def test_ai_settings_are_privacy_first_by_default() -> None:
+    settings = AISettings()
+
+    assert settings.enabled is False
+    assert settings.api_key_env == "OPENAI_API_KEY"
+    assert settings.require_confirmation is True
+    assert settings.preview_context_before_send is True
+    assert settings.send_file_paths is False
+    assert settings.redact_home_path is True
+    assert settings.send_full_file_text is False
+
+
+def test_answer_ai_disabled_does_not_call_client(tmp_path: Path) -> None:
+    client = FakeAIClient("should not be used")
+    result = _result(1, tmp_path / "notes.md", "snippet")
+
+    try:
+        answer_question_with_ai("question", [result], AISettings(), client)
+    except AIError as exc:
+        assert "AI Assist is disabled" in str(exc)
+    else:
+        raise AssertionError("Expected disabled AI Assist to raise")
+    assert client.calls == []
 
 
 def test_get_openai_api_key_requires_environment_variable(monkeypatch) -> None:

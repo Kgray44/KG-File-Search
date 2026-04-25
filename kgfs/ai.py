@@ -14,8 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from kgfs.config import AISettings
-from kgfs.models import SearchResult
+from kgfs.core.config import AISettings
+from kgfs.core.models import SearchResult
 
 
 class AIError(RuntimeError):

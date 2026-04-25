@@ -15,9 +15,9 @@ from kgfs.cli.shared import (
     print_results,
     runtime,
 )
-from kgfs.database import connect_database, initialize_database
+from kgfs.db import connect_database, initialize_database
 from kgfs.search import SearchFilters, hybrid_search, save_latest_results, search
-from kgfs.semantic import get_embedder
+from kgfs.search.semantic import get_embedder
 
 
 def register(app: typer.Typer) -> None:

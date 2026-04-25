@@ -2,6 +2,13 @@
 
 KG File Search is a private local-first file search app. It indexes folders you explicitly choose, extracts text from common document/code formats, searches with SQLite FTS5 keyword ranking, and can optionally add local semantic search with sentence-transformers embeddings.
 
+## Documentation
+
+The detailed documentation set lives in `docs/README.md`. It covers features,
+settings, CLI usage, web routes, architecture, data model, integrations,
+security, development, troubleshooting, and examples. The docs are written
+against the current worktree and include source-file references for verification.
+
 ## Safety Model
 
 - KGFS never indexes your whole drive by default.

@@ -64,11 +64,11 @@ a larger variant, or users can run from a Python environment with
 ## Advanced Vector Backends
 
 The base package keeps `sqlite_scan` as the vector backend. Optional backend
-names such as `sqlite_vec`, `hnsw`, and `faiss` are registered, but the base
-PyInstaller spec excludes their heavy dependencies. A future backend-specific
-package can opt into those extras intentionally. Until then, packaged builds
-should report missing optional backends cleanly through `kgfs vector status`,
-`kgfs vector benchmark`, and `kgfs vector recommend`.
+names such as `sqlite_vec`, `hnsw`, and `faiss` are implemented in source, but
+the base PyInstaller spec excludes their heavy dependencies. A future
+backend-specific package can opt into those extras intentionally. Base packaged
+builds should report missing optional backends cleanly through `kgfs vector
+status`, `kgfs vector benchmark`, and `kgfs vector recommend`.
 
 ## Signing
 

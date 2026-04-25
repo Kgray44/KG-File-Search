@@ -29,7 +29,7 @@ kgfs search "sample query" --project-local
 - Text extraction for text-like files, Markdown, code, CSV, PDF, and DOCX.
 - SQLite `files`, FTS5, latest-results, semantic `chunks`, and schema-version tables.
 - Keyword, semantic, hybrid, and auto search modes.
-- Local vector backend registry with the default `sqlite_scan` backend, optional backend scaffolds, and vector benchmark/recommend commands.
+- Local vector backend registry with the default `sqlite_scan` backend, optional accelerated backends, and vector benchmark/recommend commands.
 - Result explanations with `kgfs why`.
 - Optional OpenAI AI Assist for answer synthesis and reranking after local search.
 - Typer CLI and a local FastAPI dashboard.
@@ -50,6 +50,7 @@ kgfs search "sample query" --project-local
 The full documentation hub is [docs/README.md](docs/README.md). Start there for:
 
 - [Features](docs/features.md)
+- [KGFS vs OS Search](docs/kgfs-vs-os-search.md)
 - [Settings](docs/settings.md)
 - [CLI](docs/cli.md)
 - [Usage](docs/usage.md)

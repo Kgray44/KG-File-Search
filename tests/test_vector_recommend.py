@@ -76,3 +76,31 @@ def test_vector_recommend_large_index_uses_hnsw_when_available(tmp_path: Path, m
 
     assert recommendation.backend_name == "hnsw"
     assert any("large" in reason.lower() for reason in recommendation.reasons)
+
+
+def test_vector_recommend_installed_backend_missing_artifact_recommends_rebuild(tmp_path: Path, monkeypatch) -> None:
+    conn, config = _indexed_config(tmp_path)
+    config = config.model_copy(update={"vectors": VectorSettings(backend="hnsw")})
+
+    class FakeBackend:
+        name = "hnsw"
+
+        def available(self, _context):
+            return BackendAvailability(False, "hnsw index is missing. Run kgfs vector rebuild --backend hnsw.")
+
+    monkeypatch.setattr("kgfs.vectors.recommend.get_vector_backend", lambda _name: FakeBackend())
+    monkeypatch.setattr("kgfs.vectors.recommend.count_chunks", lambda *_args, **_kwargs: 25000)
+    monkeypatch.setattr(
+        "kgfs.vectors.recommend.backend_availability_by_name",
+        lambda *_args, **_kwargs: {
+            "sqlite_scan": BackendAvailability(True, "ok"),
+            "sqlite_vec": BackendAvailability(False, "missing"),
+            "hnsw": BackendAvailability(False, "hnsw index is missing. Run kgfs vector rebuild --backend hnsw."),
+            "faiss": BackendAvailability(False, "missing"),
+        },
+    )
+
+    recommendation = recommend_vector_backend(conn, config)
+
+    assert recommendation.backend_name == "hnsw"
+    assert any("rebuild" in reason.lower() for reason in recommendation.reasons)

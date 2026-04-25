@@ -23,6 +23,20 @@ def backend_artifact_dir(config: KGFSConfig, backend_name: str, *, model_name: s
     return root / backend_name
 
 
+def backend_artifact_path(
+    config: KGFSConfig,
+    backend_name: str,
+    filename: str,
+    *,
+    model_name: str | None = None,
+) -> Path:
+    return backend_artifact_dir(config, backend_name, model_name=model_name) / filename
+
+
+def backend_metadata_path(config: KGFSConfig, backend_name: str, *, model_name: str | None = None) -> Path:
+    return backend_artifact_path(config, backend_name, "metadata.json", model_name=model_name)
+
+
 def clear_backend_artifacts(config: KGFSConfig, backend_name: str, *, model_name: str | None = None) -> int:
     target = backend_artifact_dir(config, backend_name, model_name=model_name)
     if not target.exists():

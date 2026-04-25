@@ -21,6 +21,7 @@ class VectorRecommendation:
 def recommend_vector_backend(conn: Connection, config: KGFSConfig) -> VectorRecommendation:
     chunk_count = count_chunks(conn, model_name=config.semantic.model_name)
     context = SearchContext(conn=conn, config=config)
+    configured_name = config.vectors.backend
     try:
         configured = get_vector_backend(config.vectors.backend)
         configured_availability = configured.available(context)
@@ -41,6 +42,16 @@ def recommend_vector_backend(conn: Connection, config: KGFSConfig) -> VectorReco
     availability = backend_availability_by_name(context)
     warnings = [configured_warning] if configured_warning else []
     if configured_warning:
+        warning_text = configured_warning.casefold()
+        if "rebuild" in warning_text or "index is" in warning_text or "artifact" in warning_text:
+            return VectorRecommendation(
+                configured_name,
+                reasons=[
+                    f"Configured backend {configured_name!r} is selected but its local index artifact is not ready.",
+                    f"Run kgfs vector rebuild --backend {configured_name}.",
+                ],
+                warnings=warnings,
+            )
         reasons = [
             f"Configured backend {config.vectors.backend!r} is unavailable.",
             "sqlite_scan is the built-in fallback and works without optional dependencies.",

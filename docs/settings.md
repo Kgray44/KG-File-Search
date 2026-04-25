@@ -168,16 +168,16 @@ Nested optional backend settings:
 
 | Key | Type | Default | Behavior |
 |---|---|---:|---|
-| `sqlite_vec.enabled` | bool | `false` | Enables the experimental sqlite-vec backend only when the optional dependency and implementation are available. |
+| `sqlite_vec.enabled` | bool | `false` | Enables the experimental sqlite-vec backend when the optional dependency is installed. |
 | `sqlite_vec.experimental` | bool | `true` | Marks sqlite-vec as experimental in config/status. |
-| `hnsw.enabled` | bool | `false` | Enables the optional hnswlib backend scaffold. |
+| `hnsw.enabled` | bool | `false` | Enables the optional hnswlib backend when the optional dependency is installed. |
 | `hnsw.space` | str | `cosine` | Accepted values are `cosine`, `l2`, and `ip`; invalid values fall back to `cosine`. |
 | `hnsw.m` | int | `16` | HNSW graph parameter; non-positive values fall back to the default. |
 | `hnsw.ef_construction` | int | `200` | Build-time search parameter; non-positive values fall back to the default. |
 | `hnsw.ef_search` | int | `50` | Query-time search parameter; non-positive values fall back to the default. |
-| `faiss.enabled` | bool | `false` | Enables the optional FAISS backend scaffold. |
+| `faiss.enabled` | bool | `false` | Enables the optional FAISS backend when the optional dependency is installed. |
 | `faiss.index_type` | str | `flat` | Currently accepted value is `flat`; invalid values fall back to `flat`. |
-| `faiss.use_gpu` | bool | `false` | Placeholder for future FAISS GPU support. |
+| `faiss.use_gpu` | bool | `false` | GPU mode is not implemented; set false for the supported flat CPU index. |
 
 The base install does not include `sqlite-vec`, `hnswlib`, or `faiss-cpu`. Install optional extras only when testing those backends.
 

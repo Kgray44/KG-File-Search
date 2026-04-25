@@ -38,6 +38,7 @@ def test_vector_benchmark_runs_sqlite_scan_without_semantic_dependencies(tmp_pat
     assert results[0].backend_name == "sqlite_scan"
     assert results[0].available is True
     assert results[0].chunk_count > 0
+    assert results[0].artifact_status == "ready"
     assert results[0].query_count >= 1
     assert results[0].average_query_seconds is not None
 
@@ -49,6 +50,7 @@ def test_vector_benchmark_reports_missing_optional_backend(tmp_path: Path) -> No
 
     assert results[0].backend_name == "hnsw"
     assert results[0].available is False
+    assert results[0].artifact_status == "unavailable"
     assert any("hnswlib" in note for note in results[0].notes)
 
 
@@ -59,6 +61,7 @@ def test_vector_benchmark_handles_no_chunks(tmp_path: Path) -> None:
     results = benchmark_vector_backends(conn, KGFSConfig(), backend_names=["sqlite_scan"], limit=3)
 
     assert results[0].available is True
+    assert results[0].artifact_status == "ready"
     assert results[0].chunk_count == 0
     assert results[0].query_count == 0
     assert any("No vectors" in note for note in results[0].notes)

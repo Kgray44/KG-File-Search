@@ -23,6 +23,7 @@ class VectorBenchmarkResult:
     chunk_count: int
     file_count: int
     query_count: int
+    artifact_status: str = "unknown"
     average_query_seconds: float | None = None
     median_query_seconds: float | None = None
     max_query_seconds: float | None = None
@@ -60,18 +61,35 @@ def _benchmark_one(
     try:
         backend = get_vector_backend(name)
     except UnknownVectorBackend as exc:
-        return VectorBenchmarkResult(name, False, chunk_count, file_count, 0, notes=[str(exc)])
+        return VectorBenchmarkResult(name, False, chunk_count, file_count, 0, artifact_status="unknown", notes=[str(exc)])
 
     context = SearchContext(conn=conn, config=config)
+    status = backend.status(context)
     availability = backend.available(context)
     if not availability.available:
         if availability.message:
             notes.append(availability.message)
         if availability.install_hint:
             notes.append(availability.install_hint)
-        return VectorBenchmarkResult(name, False, chunk_count, file_count, 0, notes=notes)
+        return VectorBenchmarkResult(
+            name,
+            False,
+            chunk_count,
+            file_count,
+            0,
+            artifact_status="unavailable" if availability.install_hint else str(status.metadata.get("artifact_status", "unavailable")),
+            notes=notes,
+        )
     if not query_vectors:
-        return VectorBenchmarkResult(name, True, chunk_count, file_count, 0, notes=["No vectors are available to benchmark."])
+        return VectorBenchmarkResult(
+            name,
+            True,
+            chunk_count,
+            file_count,
+            0,
+            artifact_status=str(status.metadata.get("artifact_status", "ready")),
+            notes=["No vectors are available to benchmark."],
+        )
 
     timings: list[float] = []
     for vector in query_vectors:
@@ -88,6 +106,7 @@ def _benchmark_one(
         chunk_count=chunk_count,
         file_count=file_count,
         query_count=len(timings),
+        artifact_status=str(status.metadata.get("artifact_status", "ready")),
         average_query_seconds=statistics.fmean(timings),
         median_query_seconds=statistics.median(timings),
         max_query_seconds=max(timings),

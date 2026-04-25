@@ -133,6 +133,8 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `list_vector_backend_names()` | Return known backend names. | `kgfs/search/backends/registry.py` |
 | `backend_availability_by_name(context)` | Report availability for all registered backends. | `kgfs/search/backends/registry.py` |
 | `get_vector_status(conn, config)` | Report semantic/vector readiness. | `kgfs/vectors/status.py` |
+| `current_backend_metadata(conn, config, backend, model)` | Build metadata used to detect stale backend artifacts. | `kgfs/vectors/metadata.py` |
+| `backend_metadata_health(conn, config, backend, model)` | Compare stored backend metadata to current chunks/config. | `kgfs/vectors/metadata.py` |
 | `benchmark_vector_backends(conn, config, ...)` | Run bounded local vector backend timings. | `kgfs/vectors/benchmark.py` |
 | `recommend_vector_backend(conn, config)` | Recommend a backend from local index state and availability. | `kgfs/vectors/recommend.py` |
 

@@ -167,9 +167,9 @@ Sources: `kgfs/search/engine.py`, `kgfs/search/registry.py`, `kgfs/search/modes/
 Current vector backend support:
 
 - `sqlite_scan`
-- `sqlite_vec` scaffold
-- `hnsw` scaffold
-- `faiss` scaffold
+- `sqlite_vec` optional accelerated backend
+- `hnsw` optional accelerated backend
+- `faiss` optional accelerated backend
 
 Sources: `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`.
 

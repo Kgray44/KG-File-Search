@@ -47,6 +47,7 @@ def doctor(
                 vector_status = get_vector_status(conn, config)
                 vector_summary = (
                     f"{vector_status.backend_name}, chunks={vector_status.chunk_count}, "
+                    f"artifact={vector_status.metadata.get('artifact_status', 'n/a')}, "
                     f"ready={vector_status.chunks_ready and vector_status.backend_available}"
                 )
             finally:

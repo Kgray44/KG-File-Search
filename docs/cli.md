@@ -239,11 +239,11 @@ kgfs vector recommend [--config PATH] [--database PATH] [--project-local]
 
 `vector status` reports semantic enablement, model name, configured backend, backend availability, optional dependency install hints, chunk count, files-with-chunks count, readiness, and warnings.
 
-`vector rebuild` rebuilds semantic chunks from already indexed `files.extracted_text` for `sqlite_scan`. It requires `semantic.enabled: true` and a known backend. `--force` is the default; `--no-force` skips files that already have chunks for the configured model. Optional backends can be selected with `--backend`, and unavailable backends print install hints instead of importing heavy packages at startup.
+`vector rebuild` rebuilds semantic chunks from already indexed `files.extracted_text` for `sqlite_scan`. It requires `semantic.enabled: true` and a known backend. `--force` is the default; `--no-force` skips files that already have chunks for the configured model. Optional accelerated backends can be selected with `--backend`; they rebuild backend artifacts from existing chunks and print install/rebuild guidance when unavailable.
 
 `vector clear` requires `--yes`. Without `--backend`, it preserves current behavior and clears KGFS chunk/vector rows for the configured semantic model. With `--backend hnsw`, `--backend faiss`, or `--backend sqlite_vec`, it clears backend artifacts only. It leaves source files, file records, and keyword FTS rows unchanged.
 
-`vector benchmark` uses existing stored vectors when no query text is supplied, so it can benchmark `sqlite_scan` without loading sentence-transformers. Optional backends that are missing or not implemented appear as unavailable rows with notes.
+`vector benchmark` uses existing stored vectors when no query text is supplied, so it can benchmark `sqlite_scan` without loading sentence-transformers. Optional backends that are missing, disabled, stale, or missing artifacts appear as unavailable rows with notes.
 
 `vector recommend` chooses a conservative backend recommendation. Small and moderate local indexes prefer `sqlite_scan`; larger indexes may recommend `hnsw` only when it is available.
 

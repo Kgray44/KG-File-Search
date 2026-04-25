@@ -37,3 +37,8 @@ def test_optional_backend_hints_do_not_import_heavy_dependencies() -> None:
     assert "sqlite_vec" not in sys.modules
     assert "hnswlib" not in sys.modules
     assert "faiss" not in sys.modules
+
+
+def test_optional_backends_expose_rebuild_hook() -> None:
+    for name in ("sqlite_vec", "hnsw", "faiss"):
+        assert callable(getattr(get_vector_backend(name), "rebuild", None))

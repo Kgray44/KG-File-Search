@@ -67,6 +67,7 @@ python -m pip install -e ".[openai]"
 ## Documentation Map
 
 - [Features](features.md): complete feature inventory with implementation and test references.
+- [KGFS vs OS Search](kgfs-vs-os-search.md): positioning against Windows Search, Copilot+ improved search, and macOS Spotlight/Finder.
 - [Settings](settings.md): config keys, environment variables, CLI flags, runtime options, defaults, and validation behavior.
 - [Usage](usage.md): end-user and local development workflows.
 - [CLI](cli.md): command-by-command CLI reference.

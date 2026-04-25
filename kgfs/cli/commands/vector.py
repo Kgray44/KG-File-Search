@@ -8,7 +8,7 @@ import typer
 from rich.table import Table
 
 from kgfs.cli.shared import connect_runtime, console
-from kgfs.search.backends import UnknownVectorBackend, get_vector_backend, list_vector_backend_names
+from kgfs.search.backends import UnknownVectorBackend, backend_availability_by_name, get_vector_backend, list_vector_backend_names
 from kgfs.search.engine import SearchContext
 from kgfs.search.semantic import SemanticUnavailableError, get_embedder
 from kgfs.vectors.benchmark import benchmark_vector_backends
@@ -35,6 +35,7 @@ def vector_status_cmd(
     _, _, _, config, conn = connect_runtime(config_path, database_path, project_local)
     try:
         status = get_vector_status(conn, config)
+        availability_by_name = backend_availability_by_name(SearchContext(conn=conn, config=config))
     finally:
         conn.close()
 
@@ -44,12 +45,23 @@ def vector_status_cmd(
     table.add_row("Semantic enabled", str(status.semantic_enabled))
     table.add_row("Model", status.model_name)
     table.add_row("Backend", status.backend_name)
+    table.add_row("Known backends", ", ".join(status.metadata.get("known_backends", [])))
     table.add_row("Backend available", str(status.backend_available))
+    table.add_row("Artifact status", str(status.metadata.get("artifact_status", "n/a")))
+    if status.artifact_path:
+        table.add_row("Artifact path", str(status.artifact_path))
     table.add_row("Semantic dependencies", str(status.semantic_dependencies_available))
     table.add_row("Chunks", str(status.chunk_count))
     table.add_row("Files with chunks", str(status.file_count_with_chunks))
     table.add_row("Ready", str(status.chunks_ready and status.backend_available))
     console.print(table)
+    backend_table = Table(title="Known Vector Backends")
+    backend_table.add_column("Backend", no_wrap=True)
+    backend_table.add_column("Available")
+    backend_table.add_column("Message")
+    for name, availability in availability_by_name.items():
+        backend_table.add_row(name, "yes" if availability.available else "no", availability.message)
+    console.print(backend_table)
     for warning in status.warnings:
         console.print(f"[yellow]Warning:[/yellow] {warning}")
 
@@ -73,20 +85,25 @@ def vector_rebuild_cmd(
             backend = get_vector_backend(selected_backend)
         except UnknownVectorBackend as exc:
             raise typer.BadParameter(str(exc)) from exc
-        if selected_backend != "sqlite_scan":
-            availability = backend.available(SearchContext(conn=conn, config=config))
-            if not availability.available:
-                message = availability.message
-                if availability.install_hint:
-                    message = f"{message} {availability.install_hint}"
-                raise typer.BadParameter(message)
-        with console.status("Rebuilding local vector index..."):
-            summary = rebuild_vector_index(config, conn, force=force)
-        console.print(
-            f"Vector rebuild complete: files considered {summary.files_considered}, "
-            f"files indexed {summary.files_indexed}, chunks indexed {summary.chunks_indexed}, "
-            f"skipped without text {summary.skipped_no_text}."
-        )
+        if backend.name == "sqlite_scan":
+            with console.status("Rebuilding local vector chunks..."):
+                summary = rebuild_vector_index(config, conn, force=force)
+            console.print(
+                f"Vector rebuild complete: files considered {summary.files_considered}, "
+                f"files indexed {summary.files_indexed}, chunks indexed {summary.chunks_indexed}, "
+                f"skipped without text {summary.skipped_no_text}."
+            )
+            console.print("sqlite_scan uses SQLite chunks directly; no backend artifact was created.")
+            return
+        try:
+            with console.status(f"Rebuilding {backend.name} vector backend artifact..."):
+                summary = backend.rebuild(SearchContext(conn=conn, config=config), model_name=config.semantic.model_name)
+        except RuntimeError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+        console.print(summary.message or f"{backend.name} backend rebuild complete.")
+        console.print(f"Chunks indexed in backend artifact: {summary.chunk_count}.")
+        if summary.artifact_path:
+            console.print(f"Artifact: {summary.artifact_path}")
     finally:
         conn.close()
 
@@ -122,12 +139,12 @@ def vector_clear_cmd(
         except UnknownVectorBackend as exc:
             raise typer.BadParameter(str(exc)) from exc
         removed = backend.clear(SearchContext(conn=conn, config=config), model_name=config.semantic.model_name)
-        if selected_backend == "sqlite_scan" and backend_name is None:
+        if backend.name == "sqlite_scan" and backend_name is None:
             console.print(f"Removed {removed} vector chunks for model {config.semantic.model_name}.")
-        elif selected_backend == "sqlite_scan":
+        elif backend.name == "sqlite_scan":
             console.print(f"Removed {removed} vector chunks for model {config.semantic.model_name}.")
         else:
-            console.print(f"Removed {removed} backend artifact entries for {selected_backend}.")
+            console.print(f"Removed {removed} backend artifact entries for {backend.name}.")
         console.print("Source files, file records, and keyword FTS rows were left unchanged.")
     finally:
         conn.close()
@@ -164,11 +181,12 @@ def vector_benchmark_cmd(
         conn.close()
 
     table = Table(title="KGFS Vector Benchmark")
-    table.add_column("Backend")
-    table.add_column("Available")
+    table.add_column("Backend", no_wrap=True)
+    table.add_column("Avail", no_wrap=True)
     table.add_column("Chunks", justify="right")
+    table.add_column("Artifact")
     table.add_column("Queries", justify="right")
-    table.add_column("Avg Query Time", justify="right")
+    table.add_column("Avg Time", justify="right", no_wrap=True)
     table.add_column("Notes")
     for item in results:
         avg = "n/a" if item.average_query_seconds is None else f"{item.average_query_seconds:.4f}s"
@@ -176,6 +194,7 @@ def vector_benchmark_cmd(
             item.backend_name,
             "yes" if item.available else "no",
             str(item.chunk_count),
+            item.artifact_status,
             str(item.query_count),
             avg,
             "; ".join(item.notes),

@@ -32,7 +32,7 @@ Sources: `kgfs/cli/commands/doctor.py`, `kgfs/cli/commands/stats.py`.
 | `kgfs search --mode semantic` reports unavailable | `semantic.enabled` false, dependency missing, model unavailable, or no chunks indexed for model. | Enable semantic config, install `.[semantic]`, ensure local model availability, run `kgfs semantic-index --rebuild`. | `kgfs/search/modes/semantic.py`, `kgfs/cli/commands/semantic.py` |
 | Auto mode warns and uses keyword search | Semantic is enabled but hybrid is unavailable. | Run `kgfs semantic-index --rebuild` and check `kgfs doctor`. | `kgfs/search/registry.py`, `kgfs/search/modes/auto.py` |
 | `kgfs vector status` warns about unknown backend | `vectors.backend` is not one of the registered names. | Use `sqlite_scan`, `sqlite_vec`, `hnsw`, or `faiss`; prefer `sqlite_scan` unless testing advanced backends. | `kgfs/search/backends/registry.py`, `kgfs/vectors/status.py` |
-| Optional vector backend reports unavailable | Optional dependency is missing, backend is disabled, or the scaffold is not fully implemented. | Use `sqlite_scan`, or install the relevant extra such as `.[hnsw]`, `.[sqlite-vec]`, or `.[faiss]` and check `kgfs vector status`. | `kgfs/search/backends/registry.py`, `kgfs/search/backends/hnsw.py`, `kgfs/search/backends/sqlite_vec.py`, `kgfs/search/backends/faiss.py` |
+| Optional vector backend reports unavailable | Optional dependency is missing, backend is disabled, artifact metadata is stale, or the backend artifact has not been rebuilt. | Use `sqlite_scan`, install the relevant extra such as `.[hnsw]`, `.[sqlite-vec]`, or `.[faiss]`, enable the backend config, then run `kgfs vector rebuild --backend NAME`. | `kgfs/search/backends/registry.py`, `kgfs/search/backends/hnsw.py`, `kgfs/search/backends/sqlite_vec.py`, `kgfs/search/backends/faiss.py` |
 | `kgfs vector benchmark` has no query timings | No semantic chunks/vectors exist. | Enable semantic search and rebuild vectors, then rerun the benchmark. | `kgfs/vectors/benchmark.py`, `kgfs/vectors/index_manager.py` |
 | `kgfs vector recommend` suggests building vectors first | The database has no chunks for the configured model. | Run `kgfs vector rebuild` after enabling semantic search and ensuring local embedding dependencies/model are available. | `kgfs/vectors/recommend.py` |
 | `kgfs vector rebuild` says semantic is disabled | `semantic.enabled` is false. | Set `semantic.enabled: true`, ensure semantic dependencies/model are available, then rebuild. | `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py` |
@@ -156,7 +156,7 @@ Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 - `max_file_size_mb` is too low.
 - `follow_symlinks` is false when your files live behind symlinks.
 - `semantic.enabled` is true but chunks have not been rebuilt.
-- `vectors.backend` is not a registered backend name, or an optional backend is selected without its dependency/implementation.
+- `vectors.backend` is not a registered backend name, or an optional backend is selected without its dependency, enablement, or rebuilt artifact.
 - `vectors.shard_strategy` is changed even though no behavior beyond the `none` placeholder was found.
 - `search.default_mode` is invalid.
 - `ai.enabled` is true but the API key env var is missing.

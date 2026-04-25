@@ -270,16 +270,16 @@ This page inventories features implemented in the repository state at this commi
 - Sources: `kgfs/search/backends/base.py`, `kgfs/search/backends/registry.py`, `kgfs/search/backends/sqlite_scan.py`.
 - Tests: `tests/test_vector_backend.py`, `tests/test_vector_backend_registry.py`, `tests/test_search_kernel.py`.
 
-### Optional Vector Backend Scaffolds
+### Optional Accelerated Vector Backends
 
-- What it does: registers optional `sqlite_vec`, `hnsw`, and `faiss` backend names with lazy availability checks and install hints.
+- What it does: registers optional `sqlite_vec`, `hnsw`, and `faiss` backend names with lazy availability checks, artifact rebuild/search/clear behavior, and install hints.
 - Use it with: `vectors.backend`, `kgfs vector status`, `kgfs vector rebuild --backend NAME`, and `kgfs vector clear --backend NAME --yes`.
 - Inputs: config/database runtime and optional backend dependency availability.
 - Outputs: `BackendAvailability`, `VectorIndexStatus`, and safe clear behavior for backend artifacts.
 - Settings: `vectors.sqlite_vec.*`, `vectors.hnsw.*`, `vectors.faiss.*`.
-- Edge cases: missing optional dependencies or incomplete backend implementations report unavailable; they do not fake successful semantic search.
-- Sources: `kgfs/search/backends/sqlite_vec.py`, `kgfs/search/backends/hnsw.py`, `kgfs/search/backends/faiss.py`, `kgfs/search/backends/_optional.py`, `kgfs/vectors/storage.py`.
-- Tests: `tests/test_vector_backend_registry.py`, `tests/test_vector_commands.py`.
+- Edge cases: missing optional dependencies, disabled backend config, missing artifacts, stale metadata, or dimension mismatches report unavailable/rebuild-needed; they do not fake successful semantic search.
+- Sources: `kgfs/search/backends/sqlite_vec.py`, `kgfs/search/backends/hnsw.py`, `kgfs/search/backends/faiss.py`, `kgfs/search/backends/_optional.py`, `kgfs/vectors/storage.py`, `kgfs/vectors/metadata.py`, `kgfs/vectors/backend_index.py`.
+- Tests: `tests/test_vector_backend_registry.py`, `tests/test_vector_backend_artifacts.py`, `tests/test_vector_backend_sqlite_vec.py`, `tests/test_vector_backend_hnsw.py`, `tests/test_vector_backend_faiss.py`, `tests/test_vector_commands.py`.
 
 ### Vector Management Commands
 

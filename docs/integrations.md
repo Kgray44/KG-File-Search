@@ -199,14 +199,14 @@ Settings:
 Known backends:
 
 - `sqlite_scan`: default, base-install backend. Scans local SQLite `chunks`, unpacks float32 BLOBs, computes cosine similarity in Python, applies filters, and returns nearest chunk hits.
-- `sqlite_vec`: optional experimental scaffold. Missing dependency or incomplete implementation reports unavailable with an install hint.
-- `hnsw`: optional hnswlib scaffold for future local ANN artifacts. Missing dependency or incomplete implementation reports unavailable with an install hint.
-- `faiss`: optional power-user scaffold. Missing dependency or incomplete implementation reports unavailable with an install hint.
+- `sqlite_vec`: optional experimental SQLite-native backend. When installed and enabled, rebuild creates a sqlite-vec table from existing chunk embeddings.
+- `hnsw`: optional hnswlib ANN backend. When installed and enabled, rebuild stores an HNSW index artifact under KGFS vector-backend storage.
+- `faiss`: optional power-user FAISS flat backend. When installed and enabled, rebuild stores a FAISS index artifact under KGFS vector-backend storage.
 
 Limitations:
 
 - Optional advanced backends are not bundled in the base package.
-- Optional backend scaffolds must not fake successful search when unavailable.
+- Optional backends must not fake successful search when dependencies, artifacts, or metadata are unavailable.
 - `vectors.shard_strategy` is present in config but has no behavior beyond the default placeholder.
 
 Tests: `tests/test_vector_backend.py`, `tests/test_vector_backend_registry.py`, `tests/test_vector_status.py`, `tests/test_vector_commands.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`.

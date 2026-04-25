@@ -150,8 +150,9 @@ Vector models:
 | `VectorSearchHit` | chunk/file IDs, chunk index/text, vector dimension, file metadata, score, offsets, metadata | Backend search result before conversion to `SearchResult`. | `kgfs/search/backends/base.py`, `kgfs/search/backends/sqlite_scan.py` |
 | `VectorIndexStatus` | backend name, semantic enabled, model, chunk counts, dependency/backend readiness, install hint, optional artifact metadata, warnings | Status returned by vector status helpers and `kgfs vector status`. | `kgfs/search/backends/base.py`, `kgfs/vectors/status.py` |
 | `VectorRebuildSummary` | files considered/indexed, chunks indexed, skipped without text, skipped existing | Summary returned by vector rebuild helper. | `kgfs/vectors/index_manager.py` |
-| `VectorBenchmarkResult` | backend, availability, chunk/file counts, query timings, notes | Result rows for `kgfs vector benchmark`. | `kgfs/vectors/benchmark.py` |
+| `VectorBenchmarkResult` | backend, availability, chunk/file counts, artifact status, query timings, notes | Result rows for `kgfs vector benchmark`. | `kgfs/vectors/benchmark.py` |
 | `VectorRecommendation` | recommended backend, configured backend, chunk count, reasons, warnings | Recommendation payload for `kgfs vector recommend`. | `kgfs/vectors/recommend.py` |
+| `VectorBackendMetadata` | backend, model, embedding dimension, chunk count/fingerprint, config hash, schema version, artifact files, timestamps | JSON metadata for backend artifact health. | `kgfs/vectors/metadata.py` |
 
 Protocols:
 
@@ -187,6 +188,12 @@ Semantic vectors are stored as little-endian float32 values:
 - Unpack: `struct.unpack(f"<{dimension}f", blob)`
 
 Sources: `kgfs/search/semantic.py`, `tests/test_semantic.py`.
+
+Optional accelerated backend artifacts live under KGFS vector-backend storage
+resolved from the database/app-data/project-local path. HNSW and FAISS store
+index files plus metadata JSON there. sqlite-vec stores its vector table in the
+KGFS SQLite database and stores metadata JSON in the same backend artifact area.
+Source files are not used for backend artifacts.
 
 ## Result ID Model
 

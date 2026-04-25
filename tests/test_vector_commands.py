@@ -100,6 +100,19 @@ def test_vector_rebuild_unknown_backend_is_helpful(tmp_path: Path) -> None:
     assert "Unknown vector backend" in result.output
 
 
+def test_vector_rebuild_explicit_sqlite_scan_mentions_no_artifact(tmp_path: Path, mocker) -> None:
+    config_path, db_path, _ = _indexed_db(tmp_path)
+    mocker.patch("kgfs.vectors.index_manager.get_embedder", return_value=FakeEmbedder())
+
+    result = runner.invoke(
+        app,
+        ["vector", "rebuild", "--backend", "sqlite_scan", "--config", str(config_path), "--database", str(db_path)],
+    )
+
+    assert result.exit_code == 0
+    assert "sqlite_scan uses SQLite chunks directly" in result.output
+
+
 def test_vector_rebuild_missing_optional_backend_is_helpful(tmp_path: Path) -> None:
     config_path, db_path, _ = _indexed_db(tmp_path)
 

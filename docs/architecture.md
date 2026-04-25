@@ -13,7 +13,7 @@ kgfs/
   indexing/            Discovery, filters, hashing, indexing, pruning
   extractors/          Text extraction by file type
   search/              Query parsing, filters, ranking, snippets, keyword/semantic/hybrid search, engines
-  search/backends/     Vector backend interfaces, registry, sqlite_scan, and optional backend scaffolds
+  search/backends/     Vector backend interfaces, registry, sqlite_scan, and optional accelerated backends
   search/modes/        Registry engine wrappers for keyword, semantic, hybrid, and auto fallback
   vectors/             Vector status, chunk lifecycle, and rebuild helpers
   web/                 FastAPI dashboard, Jinja templates, static CSS
@@ -158,11 +158,12 @@ Vector backend foundation:
 3. `kgfs/search/backends/sqlite_scan.py` is the default backend. It scans
    SQLite `chunks`, unpacks BLOB vectors, computes cosine similarity in Python,
    and applies search filters.
-4. `sqlite_vec`, `hnsw`, and `faiss` are optional advanced backend scaffolds.
-   They report clear unavailable/not-implemented status without making the base
-   install import heavy packages.
+4. `sqlite_vec`, `hnsw`, and `faiss` are optional accelerated backends. They
+   build/search from KGFS `chunks` when their dependencies are installed and
+   enabled, and otherwise report clear unavailable status without making the
+   base install import heavy packages.
 5. `kgfs/vectors/` owns vector status, clearing, rebuild lifecycle helpers,
-   artifact paths, benchmarking, and recommendation logic.
+   artifact paths, artifact metadata, benchmarking, and recommendation logic.
 6. `kgfs vector status`, `kgfs vector rebuild`, `kgfs vector clear --yes`,
    `kgfs vector benchmark`, and `kgfs vector recommend` manage or inspect local
    vector data only.

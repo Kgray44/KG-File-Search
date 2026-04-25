@@ -228,7 +228,7 @@ Sources: `kgfs/cli/commands/semantic.py`, `kgfs/search/semantic.py`, `kgfs/searc
 Semantic and hybrid search use the configured vector backend. `sqlite_scan` is
 the default and remains part of the base install. Optional backend names are
 registered for `sqlite_vec`, `hnsw`, and `faiss`, but they stay disabled and
-lazy unless their optional dependency and backend implementation are available.
+lazy unless their optional dependency is installed and the backend is enabled.
 
 Check vector readiness:
 
@@ -283,9 +283,9 @@ python -m pip install -e ".[sqlite-vec]"
 python -m pip install -e ".[faiss]"
 ```
 
-The optional backend scaffolds currently report availability and safe artifact
-clearing. They do not fake successful search when a dependency or full backend
-implementation is missing.
+The optional accelerated backends build/search from KGFS's existing local chunk
+embeddings. They do not fake successful search when a dependency, enablement, or
+backend artifact is missing.
 
 Sources: `kgfs/cli/commands/vector.py`, `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`.
 

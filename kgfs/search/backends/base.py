@@ -59,6 +59,15 @@ class VectorIndexStatus:
     metadata: dict[str, object] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class VectorBackendRebuild:
+    backend_name: str
+    chunk_count: int
+    artifact_path: Path | None = None
+    metadata_path: Path | None = None
+    message: str = ""
+
+
 class VectorBackend(Protocol):
     name: str
 
@@ -78,6 +87,9 @@ class VectorBackend(Protocol):
 
     def clear(self, context: SearchContext, *, model_name: str | None = None) -> int:
         """Clear vector data and return deleted chunk count."""
+
+    def rebuild(self, context: SearchContext, *, model_name: str | None = None) -> VectorBackendRebuild:
+        """Rebuild backend-specific vector artifacts from existing chunks."""
 
     def stats(self, context: SearchContext) -> dict[str, object]:
         return {}

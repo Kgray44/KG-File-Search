@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 
 from kgfs.core.config import KGFSConfig
-from kgfs.search.backends import UnknownVectorBackend, get_vector_backend, vector_backend_install_hint
+from kgfs.search.backends import UnknownVectorBackend, get_vector_backend, list_vector_backend_names, vector_backend_install_hint
 from kgfs.search.backends.base import VectorIndexStatus
 from kgfs.search.engine import SearchContext
 from kgfs.search.semantic import get_semantic_status
@@ -20,6 +20,9 @@ def get_vector_status(conn: sqlite3.Connection, config: KGFSConfig) -> VectorInd
     file_count = count_files_with_chunks(conn, model_name=config.semantic.model_name)
 
     backend_available = False
+    artifact_path = None
+    backend_index_exists = None
+    metadata: dict[str, object] = {"known_backends": list_vector_backend_names()}
     try:
         backend = get_vector_backend(backend_name)
         availability = backend.available(SearchContext(conn=conn, config=config))
@@ -28,9 +31,17 @@ def get_vector_status(conn: sqlite3.Connection, config: KGFSConfig) -> VectorInd
             warnings.append(availability.message)
         if not availability.available and availability.install_hint:
             warnings.append(availability.install_hint)
+        if backend.name != "sqlite_scan":
+            backend_status = backend.status(SearchContext(conn=conn, config=config))
+            artifact_path = backend_status.artifact_path
+            backend_index_exists = backend_status.backend_index_exists
+            metadata.update(backend_status.metadata)
+        else:
+            metadata["artifact_status"] = "ready"
     except UnknownVectorBackend as exc:
         warnings.append(str(exc))
         warnings.append(vector_backend_install_hint(backend_name))
+        metadata["artifact_status"] = "unknown"
 
     if config.semantic.enabled and chunk_count == 0:
         warnings.append("No semantic chunks are indexed for the configured model.")
@@ -48,4 +59,7 @@ def get_vector_status(conn: sqlite3.Connection, config: KGFSConfig) -> VectorInd
         backend_available=backend_available,
         warnings=warnings,
         install_hint=next((warning for warning in warnings if "pip install" in warning), None),
+        artifact_path=artifact_path,
+        backend_index_exists=backend_index_exists,
+        metadata=metadata,
     )

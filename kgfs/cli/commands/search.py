@@ -16,8 +16,15 @@ from kgfs.cli.shared import (
     runtime,
 )
 from kgfs.db import connect_database, initialize_database
-from kgfs.search import SearchFilters, hybrid_search, save_latest_results, search
-from kgfs.search.semantic import get_embedder
+from kgfs.search import (
+    SearchContext,
+    SearchFilters,
+    SearchModeError,
+    SearchOptions,
+    build_default_search_registry,
+    save_latest_results,
+    search,
+)
 
 
 def register(app: typer.Typer) -> None:
@@ -30,13 +37,14 @@ def search_cmd(
     config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
     database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
     project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
-    limit: int = typer.Option(10, "--limit", "-n", help="Maximum results."),
+    limit: int | None = typer.Option(None, "--limit", "-n", help="Maximum results."),
     ext: list[str] | None = typer.Option(None, "--ext", help="Filter by extension, e.g. --ext .pdf."),
     file_type: str | None = typer.Option(None, "--type", help="Filter by file type/extension, e.g. --type pdf."),
     folder: str | None = typer.Option(None, "--folder", help="Filter by folder/path substring."),
     after: str | None = typer.Option(None, "--after", help="Only files modified on/after YYYY-MM-DD."),
     before: str | None = typer.Option(None, "--before", help="Only files modified on/before YYYY-MM-DD."),
     failed_only: bool = typer.Option(False, "--failed-only", help="Show only extraction failures."),
+    mode: str | None = typer.Option(None, "--mode", help="Search mode: keyword, semantic, hybrid, or auto."),
     hybrid: bool = typer.Option(False, "--hybrid", help="Combine keyword, semantic, filename/path, and recency ranking."),
     ai_rerank: bool = typer.Option(False, "--ai-rerank", help="Use opt-in OpenAI AI Assist to rerank local results."),
     preview_ai_context: bool = typer.Option(False, "--preview-ai-context", help="Print AI context and do not send it."),
@@ -53,21 +61,26 @@ def search_cmd(
         failed_only=failed_only,
     )
     try:
-        if hybrid:
-            if not config.semantic.enabled:
-                raise typer.BadParameter("Hybrid search requires semantic.enabled: true in config.yaml")
-            embedder = get_embedder(config.semantic)
-            results = hybrid_search(
-                conn,
-                query,
-                embedder=embedder,
-                model_name=config.semantic.model_name,
-                limit=limit,
+        selected_mode = "hybrid" if hybrid else mode or config.search.default_mode
+        try:
+            options = SearchOptions(
+                mode=selected_mode,
+                limit=limit or config.search.default_limit,
                 filters=filters,
-                highlight=True,
+                highlight=config.search.highlight_matches,
+                save_latest_results=config.search.save_latest_results,
             )
-        else:
-            results = search(conn, query, limit=limit, filters=filters, highlight=True)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+        registry = build_default_search_registry()
+        context = SearchContext(conn=conn, config=config)
+        try:
+            execution = registry.search(query, options, context)
+        except SearchModeError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+        for warning in execution.warnings:
+            console.print(f"[yellow]Warning:[/yellow] {warning}")
+        results = execution.results
 
         if ai_rerank:
             try:
@@ -79,7 +92,8 @@ def search_cmd(
             except AIError as exc:
                 raise typer.BadParameter(str(exc)) from exc
 
-        save_latest_results(conn, query, results)
+        if options.save_latest_results:
+            save_latest_results(conn, query, results)
         print_results(f"Search: {query}", results)
     finally:
         conn.close()

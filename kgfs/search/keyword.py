@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import sqlite3
 from pathlib import Path
 
@@ -54,11 +53,13 @@ def semantic_search(
         """
         SELECT
             c.file_id,
+            c.id AS chunk_id,
             c.text,
             c.embedding,
             c.embedding_dim,
             f.file_name,
             f.path,
+            f.normalized_path,
             f.extension,
             f.modified_time,
             f.extraction_status
@@ -89,6 +90,11 @@ def semantic_search(
                 modified_time=float(row["modified_time"]),
                 score=score,
                 snippet=snippet,
+                normalized_path=row["normalized_path"],
+                score_breakdown={"semantic": score},
+                matched_chunk_id=int(row["chunk_id"]),
+                mode="semantic",
+                source="semantic",
             )
 
     ranked = sorted(best_by_file.values(), key=lambda item: item.score, reverse=True)[:limit]
@@ -125,7 +131,7 @@ def hybrid_search(
     placeholders = ", ".join("?" for _ in file_ids)
     rows = conn.execute(
         f"""
-        SELECT id, file_name, path, extension, modified_time, extracted_text, extraction_status
+        SELECT id, file_name, path, normalized_path, extension, modified_time, extracted_text, extraction_status
         FROM files
         WHERE id IN ({placeholders})
         """,
@@ -166,6 +172,16 @@ def hybrid_search(
                 modified_time=float(row["modified_time"]),
                 score=combined,
                 snippet=snippet,
+                normalized_path=row["normalized_path"],
+                score_breakdown={
+                    "semantic": semantic_score,
+                    "keyword": keyword_score,
+                    "filename_path": filename_score,
+                    "recency": recency_score,
+                },
+                matched_chunk_id=semantic.matched_chunk_id if semantic else None,
+                mode="hybrid",
+                source="hybrid",
             )
         )
 
@@ -190,6 +206,7 @@ def _run_search(
                 f.id,
                 f.file_name,
                 f.path,
+                f.normalized_path,
                 f.extension,
                 f.modified_time,
                 f.extracted_text,
@@ -224,6 +241,10 @@ def _run_search(
                 modified_time=float(row["modified_time"]),
                 score=score,
                 snippet=snippet,
+                normalized_path=row["normalized_path"],
+                score_breakdown={"keyword": score, "bm25": rank},
+                mode="keyword",
+                source="keyword",
             )
         )
     results.sort(key=lambda item: item.score, reverse=True)
@@ -244,5 +265,10 @@ def _renumber(result: SearchResult, result_id: int) -> SearchResult:
         modified_time=result.modified_time,
         score=result.score,
         snippet=result.snippet,
+        normalized_path=result.normalized_path,
+        score_breakdown=result.score_breakdown,
+        matched_chunk_id=result.matched_chunk_id,
+        mode=result.mode,
+        source=result.source,
+        metadata=result.metadata,
     )
-

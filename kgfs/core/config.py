@@ -105,6 +105,13 @@ class SemanticSettings(BaseModel):
     batch_size: int = 16
 
 
+class SearchSettings(BaseModel):
+    default_mode: str = "auto"
+    default_limit: int = 10
+    highlight_matches: bool = True
+    save_latest_results: bool = True
+
+
 class AISettings(BaseModel):
     enabled: bool = False
     provider: str = "openai"
@@ -135,6 +142,7 @@ class KGFSConfig(BaseModel):
     indexing: IndexingSettings = Field(default_factory=IndexingSettings)
     extraction: ExtractionSettings = Field(default_factory=ExtractionSettings)
     semantic: SemanticSettings = Field(default_factory=SemanticSettings)
+    search: SearchSettings = Field(default_factory=SearchSettings)
     ai: AISettings = Field(default_factory=AISettings)
 
     @field_validator("indexed_folders", mode="before")
@@ -285,6 +293,12 @@ semantic:
   chunk_overlap_chars: 200
   local_files_only: true
   batch_size: 16
+
+search:
+  default_mode: "auto"
+  default_limit: 10
+  highlight_matches: true
+  save_latest_results: true
 
 ai:
   enabled: false

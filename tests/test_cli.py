@@ -2,6 +2,10 @@ from typer.main import get_command
 from typer.testing import CliRunner
 
 from kgfs.cli import app
+from kgfs.config import KGFSConfig
+from kgfs.database import connect_database, initialize_database
+from kgfs.indexing import index_configured_folders
+from kgfs.search import SearchExecution, SearchMode
 
 runner = CliRunner()
 
@@ -149,7 +153,13 @@ ai:
     result_item.modified_time = 1.0
     result_item.score = 0.5
     result_item.snippet = "rerank preview snippet"
-    mocker.patch("kgfs.cli.commands.search.search", return_value=[result_item])
+    registry = mocker.Mock()
+    registry.search.return_value = SearchExecution(
+        results=[result_item],
+        mode_requested=SearchMode.AUTO,
+        mode_used=SearchMode.KEYWORD,
+    )
+    mocker.patch("kgfs.cli.commands.search.build_default_search_registry", return_value=registry)
     mocked_client = mocker.patch("kgfs.cli.commands.search.get_openai_client")
 
     result = runner.invoke(
@@ -161,3 +171,57 @@ ai:
     assert "AI Context Preview" in result.output
     assert "rerank preview snippet" in result.output
     mocked_client.assert_not_called()
+
+
+def _indexed_search_fixture(tmp_path):
+    root = tmp_path / "docs"
+    root.mkdir()
+    (root / "motor notes.md").write_text("motor torque calculations", encoding="utf-8")
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(f"indexed_folders:\n  - {root.as_posix()!r}\n", encoding="utf-8")
+    db_path = tmp_path / "kgfs.sqlite3"
+    conn = connect_database(db_path)
+    initialize_database(conn)
+    index_configured_folders(KGFSConfig(indexed_folders=[root]), conn)
+    conn.close()
+    return config_path, db_path
+
+
+def test_search_mode_keyword_works_from_cli(tmp_path) -> None:
+    config_path, db_path = _indexed_search_fixture(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["search", "motor torque", "--mode", "keyword", "--config", str(config_path), "--database", str(db_path)],
+    )
+
+    assert result.exit_code == 0
+    assert "notes.md" in result.output
+
+
+def test_search_mode_auto_works_from_cli(tmp_path) -> None:
+    config_path, db_path = _indexed_search_fixture(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["search", "motor torque", "--mode", "auto", "--config", str(config_path), "--database", str(db_path)],
+    )
+
+    assert result.exit_code == 0
+    assert "notes.md" in result.output
+
+
+def test_search_mode_semantic_unavailable_is_helpful(tmp_path) -> None:
+    config_path, db_path = _indexed_search_fixture(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8") + "\nsemantic:\n  enabled: true\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["search", "motor torque", "--mode", "semantic", "--config", str(config_path), "--database", str(db_path)],
+    )
+
+    assert result.exit_code != 0
+    assert "Semantic search is unavailable" in result.output

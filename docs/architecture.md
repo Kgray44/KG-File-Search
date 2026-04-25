@@ -12,7 +12,7 @@ kgfs/
   core/         Shared config, path, platform, resource, and model helpers
   db/           SQLite connection, schema, migrations, repositories, stats
   indexing/     Discovery, filtering, hashing, indexing, pruning
-  search/       FTS queries, filters, ranking, snippets, semantic/hybrid search
+  search/       Search kernel, FTS queries, filters, ranking, snippets, semantic/hybrid search
   extractors/   Text extraction by file type
   web/          FastAPI dashboard, templates, and static files
 ```
@@ -28,7 +28,8 @@ paths while internal code moves to the package layout.
 - Add SQLite schema changes in `kgfs/db/schema.py` and versioned migration logic
   in `kgfs/db/migrations.py`.
 - Add new indexing behavior under `kgfs/indexing/`.
-- Add new search modes under `kgfs/search/`.
+- Add new search modes under `kgfs/search/modes/` and register them from
+  `kgfs/search/registry.py`.
 - Add new file extractors under `kgfs/extractors/`.
 - Add web dashboard routes under `kgfs/web/`.
 - Add packaging changes under `packaging/` and cross-platform scripts under
@@ -41,3 +42,18 @@ paths while internal code moves to the package layout.
 - Prune/reset behavior may delete KGFS index data only.
 - Semantic search stays optional and local.
 - AI Assist stays opt-in and downstream of local search.
+
+## Search Kernel
+
+The search package is centered on a small kernel:
+
+- `kgfs/search/options.py` defines `SearchMode` and `SearchOptions`.
+- `kgfs/search/engine.py` defines the shared `SearchEngine` protocol and
+  `SearchContext`.
+- `kgfs/search/registry.py` registers engines, resolves `auto`, and returns
+  search executions with warnings.
+- `kgfs/search/modes/` wraps current keyword, semantic, and hybrid behavior.
+
+Keyword search is always the safe local fallback. Semantic and hybrid modes stay
+optional and local; they do not import or require `sentence-transformers` unless
+the selected mode or availability check needs semantic support.

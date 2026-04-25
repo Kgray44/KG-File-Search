@@ -20,6 +20,9 @@ def test_search_returns_ranked_results_with_stable_result_ids(tmp_path: Path) ->
     assert results[0].result_id == 1
     assert "pid" in results[0].file_name.lower()
     assert results[0].score >= 0
+    assert results[0].normalized_path == str(results[0].path)
+    assert results[0].mode == "keyword"
+    assert results[0].score_breakdown is not None
 
 
 def test_save_latest_results_persists_paths_for_open_commands(tmp_path: Path) -> None:
@@ -41,4 +44,3 @@ def test_save_latest_results_persists_paths_for_open_commands(tmp_path: Path) ->
     rows = conn.execute("select result_id, file_path from latest_results").fetchall()
 
     assert rows == [(1, str(tmp_path / "notes.md"))]
-

@@ -252,6 +252,12 @@ semantic:
   local_files_only: true
   batch_size: 16
 
+search:
+  default_mode: "auto"
+  default_limit: 10
+  highlight_matches: true
+  save_latest_results: true
+
 ai:
   enabled: false
   provider: "openai"
@@ -406,12 +412,34 @@ kgfs search "motor torque" --after 2025-01-01 --before 2026-01-01
 kgfs search "speaker crossover" --limit 25
 kgfs search "pdf extraction issue" --failed-only
 kgfs search "motor torque" --hybrid --ext .md
+kgfs search "motor torque" --mode auto
+kgfs search "motor torque" --mode keyword
 kgfs search "motor torque" --ai-rerank --ext .md --preview-ai-context
 ```
 
 Extension matching is case-insensitive. Folder filtering matches path text in a way that works with Windows `\` and POSIX `/` separators. Date filters use each file's modified time.
 
 Search ranking still uses SQLite FTS5 as the base, then applies lightweight boosts for filename matches, path matches, exact phrase matches in extracted text, and a modest recent-modification bonus.
+
+## Search Modes
+
+KGFS now routes search through a small search kernel. The CLI behavior stays familiar, but internally each mode implements the same simple engine interface.
+
+- `keyword` is the reliable local SQLite FTS5 mode. It does not require semantic dependencies.
+- `semantic` searches local semantic chunks when semantic search is enabled and embeddings have been built.
+- `hybrid` combines existing keyword and semantic scoring when semantic search is ready.
+- `auto` picks hybrid when semantic search is ready; otherwise it uses keyword and prints a warning if semantic was enabled but unavailable.
+
+Examples:
+
+```bash
+kgfs search "motor torque" --mode keyword
+kgfs search "motor torque" --mode semantic
+kgfs search "motor torque" --mode hybrid
+kgfs search "motor torque" --mode auto
+```
+
+`--hybrid` remains supported as a compatibility shortcut for `--mode hybrid`. Advanced vector backends, deep search, similar-file search, and multimodal/OCR search are planned for later phases and are not part of this phase.
 
 ## Semantic Search
 

@@ -119,6 +119,15 @@ vectors:
   backend: "sqlite_scan"
   shard_strategy: "none"
 
+hybrid:
+  keyword_weight: 0.35
+  semantic_weight: 0.45
+  filename_weight: 0.15
+  path_weight: 0.05
+  exact_phrase_weight: 0.10
+  recency_weight: 0.05
+  candidate_limit_multiplier: 5
+
 ai:
   enabled: false
   provider: "openai"

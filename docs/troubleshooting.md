@@ -31,10 +31,16 @@ Sources: `kgfs/cli/commands/doctor.py`, `kgfs/cli/commands/stats.py`.
 | DOCX support is missing | `python-docx` not installed. | Install base package dependencies with `python -m pip install -e ".[dev]"` or install `python-docx`. | `pyproject.toml`, `kgfs/extractors/docx.py` |
 | `kgfs search --mode semantic` reports unavailable | `semantic.enabled` false, dependency missing, model unavailable, or no chunks indexed for model. | Enable semantic config, install `.[semantic]`, ensure local model availability, run `kgfs semantic-index --rebuild`. | `kgfs/search/modes/semantic.py`, `kgfs/cli/commands/semantic.py` |
 | Auto mode warns and uses keyword search | Semantic is enabled but hybrid is unavailable. | Run `kgfs semantic-index --rebuild` and check `kgfs doctor`. | `kgfs/search/registry.py`, `kgfs/search/modes/auto.py` |
+| `kgfs vector status` warns about unknown backend | `vectors.backend` is not `sqlite_scan`. | Set `vectors.backend: "sqlite_scan"` or add/register a backend before using it. | `kgfs/search/backends/__init__.py`, `kgfs/vectors/status.py` |
+| `kgfs vector rebuild` says semantic is disabled | `semantic.enabled` is false. | Set `semantic.enabled: true`, ensure semantic dependencies/model are available, then rebuild. | `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py` |
+| `kgfs vector rebuild --no-force` skips files | Chunks already exist for the configured model. | Use the default `--force` behavior when you intentionally want to rebuild existing chunks. | `kgfs/vectors/index_manager.py` |
+| `kgfs vector clear` fails without `--yes` | Clear requires explicit confirmation. | Run `kgfs vector clear --yes` after verifying the database/config target. | `kgfs/cli/commands/vector.py` |
+| Semantic/hybrid search ignores some chunks | Stored vector BLOB is malformed or its dimension differs from the query vector. | Rebuild vectors with `kgfs vector rebuild` or `kgfs semantic-index --rebuild`. | `kgfs/search/backends/sqlite_scan.py` |
 | AI Assist says disabled | `ai.enabled` is false. | Set `ai.enabled: true` after confirming privacy settings. | `kgfs/cli/shared.py`, `kgfs/ai.py` |
 | AI Assist says missing API key | Env var named by `ai.api_key_env` is unset. | Set `OPENAI_API_KEY` or the configured env var. Do not put API keys in config. | `kgfs/ai.py`, `tests/test_ai.py` |
 | AI Assist says OpenAI SDK missing | Optional `openai` extra is not installed. | `python -m pip install -e ".[openai]"`. | `kgfs/ai.py`, `pyproject.toml` |
 | `open` or `reveal` cannot find result ID | Latest results were not saved or a new search replaced them. | Run `kgfs search` again; ensure `search.save_latest_results: true`. | `kgfs/db/latest_results.py`, `kgfs/cli/commands/open_reveal.py` |
+| `kgfs why` cannot find result ID | Latest results were not saved or a new search replaced them. | Run `kgfs search` again, then use the displayed result ID. | `kgfs/db/latest_results.py`, `kgfs/cli/commands/why.py` |
 | Search mode is unknown | `--mode` or `SearchOptions.mode` is not one of `keyword`, `semantic`, `hybrid`, or `auto`. | Use a supported mode. | `kgfs/search/options.py`, `kgfs/search/registry.py` |
 | Search limit error | `SearchOptions.limit` is below 1. | Use `--limit 1` or higher. | `kgfs/search/options.py` |
 | Date filter fails | `--after` or `--before` is not parseable by `datetime.fromisoformat`. | Use ISO dates such as `2026-04-25`. | `kgfs/search/filters.py` |
@@ -89,6 +95,7 @@ Check semantic state:
 
 ```bash
 kgfs semantic-index
+kgfs vector status
 ```
 
 Preview AI context without API calls:
@@ -129,7 +136,7 @@ Schema source: `kgfs/db/schema.py`.
 
 ## Logs
 
-`kgfs doctor` reports a log path, but the current worktree does not implement file logging. Runtime diagnostics are primarily CLI output, web responses, tests, and SQLite state.
+`kgfs doctor` reports a log path, but file logging is not implemented at this commit. Runtime diagnostics are primarily CLI output, web responses, tests, and SQLite state.
 
 Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 
@@ -144,15 +151,17 @@ Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 - `max_file_size_mb` is too low.
 - `follow_symlinks` is false when your files live behind symlinks.
 - `semantic.enabled` is true but chunks have not been rebuilt.
+- `vectors.backend` is not `sqlite_scan`.
+- `vectors.shard_strategy` is changed even though no behavior beyond the `none` placeholder was found.
 - `search.default_mode` is invalid.
 - `ai.enabled` is true but the API key env var is missing.
 
 ## Known Limitations
 
 - No auth is implemented for the web dashboard.
-- Web search is keyword-only in the current worktree.
+- Web search is keyword-only at this commit.
 - No structured logging pipeline is implemented.
 - No lint/typecheck tooling is configured.
 - AI query expansion has a config key (`ai.allow_query_expansion`) but no implemented command path was found.
-- Search explanations and backend selection have runtime fields but are not exposed in CLI/web.
+- Backend selection has a runtime field but is not exposed in CLI/web. Use `kgfs why` for user-facing result explanations.
 - Base packaged builds exclude semantic dependencies and OpenAI SDK.

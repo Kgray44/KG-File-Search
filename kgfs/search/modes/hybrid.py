@@ -30,4 +30,5 @@ class HybridSearchEngine:
             limit=options.limit,
             filters=options.filters,
             highlight=options.highlight,
+            hybrid_settings=context.config.hybrid,
         )

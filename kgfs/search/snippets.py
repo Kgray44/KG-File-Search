@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 
+from rich.markup import escape
+
 
 def make_snippet(text: str, query: str, *, max_chars: int = 180, highlight: bool = False) -> str:
     if not text:
@@ -15,7 +17,7 @@ def make_snippet(text: str, query: str, *, max_chars: int = 180, highlight: bool
 
     query_terms = [term.casefold() for term in _query_terms(query)]
     lower = compact.casefold()
-    first_hit = min((lower.find(term) for term in query_terms if lower.find(term) >= 0), default=0)
+    first_hit = _best_match_start(lower, query, query_terms)
     start = max(0, first_hit - max_chars // 3)
     has_prefix = start > 0
     has_suffix = start + max_chars < len(compact)
@@ -34,8 +36,17 @@ def _query_terms(query: str) -> list[str]:
     return [term for term in re.findall(r"[\w]+(?:[-'][\w]+)*", query, flags=re.UNICODE) if term]
 
 
+def _best_match_start(lower_text: str, query: str, query_terms: list[str]) -> int:
+    phrase = re.sub(r"\s+", " ", query).strip().casefold()
+    if phrase:
+        phrase_hit = lower_text.find(phrase)
+        if phrase_hit >= 0:
+            return phrase_hit
+    return min((lower_text.find(term) for term in query_terms if lower_text.find(term) >= 0), default=0)
+
+
 def _highlight_terms(text: str, query: str) -> str:
-    highlighted = text
+    highlighted = escape(text)
     terms = sorted(set(_query_terms(query)), key=len, reverse=True)
     for term in terms:
         pattern = re.compile(re.escape(term), flags=re.IGNORECASE)

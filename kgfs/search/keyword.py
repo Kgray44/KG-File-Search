@@ -5,13 +5,13 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from kgfs.core.config import KGFSConfig, SemanticSettings, VectorSettings
+from kgfs.core.config import HybridSettings, KGFSConfig, SemanticSettings, VectorSettings
 from kgfs.core.models import SearchResult
 from kgfs.search.backends import get_vector_backend
 from kgfs.search.backends.base import VectorSearchHit, VectorSearchOptions
 from kgfs.search.filters import SearchFilters, row_matches_filters
 from kgfs.search.query import build_fts_query
-from kgfs.search.ranking import filename_path_relevance, keyword_score, recent_modification_bonus
+from kgfs.search.ranking import combine_hybrid_score, keyword_score
 from kgfs.search.engine import SearchContext
 from kgfs.search.semantic import Embedder
 from kgfs.search.snippets import make_snippet
@@ -85,7 +85,7 @@ def semantic_search(
                 score=hit.score,
                 snippet=snippet,
                 normalized_path=hit.normalized_path,
-                score_breakdown={"semantic": hit.score},
+                score_breakdown={"semantic": hit.score, "final": hit.score},
                 matched_chunk_id=hit.chunk_id,
                 mode="semantic",
                 source="semantic",
@@ -105,8 +105,10 @@ def hybrid_search(
     limit: int = 10,
     filters: SearchFilters | None = None,
     highlight: bool = False,
+    hybrid_settings: HybridSettings | None = None,
 ) -> list[SearchResult]:
-    candidate_limit = max(limit * 5, 25)
+    settings = hybrid_settings or HybridSettings()
+    candidate_limit = max(limit * settings.candidate_limit_multiplier, 25)
     keyword_results = search(conn, query, limit=candidate_limit, filters=filters, highlight=highlight)
     semantic_results = semantic_search(
         conn,
@@ -141,15 +143,17 @@ def hybrid_search(
             continue
         keyword = keyword_by_file.get(file_id)
         semantic = semantic_by_file.get(file_id)
-        keyword_score = keyword.score if keyword else 0.0
-        semantic_score = semantic.score if semantic else 0.0
-        filename_score = filename_path_relevance(query, row["file_name"], row["path"])
-        recency_score = recent_modification_bonus(float(row["modified_time"]))
-        combined = (
-            0.45 * semantic_score
-            + 0.35 * keyword_score
-            + 0.15 * filename_score
-            + 0.05 * recency_score
+        keyword_component = keyword.score if keyword else 0.0
+        semantic_component = semantic.score if semantic else 0.0
+        combined, breakdown = combine_hybrid_score(
+            query=query,
+            file_name=row["file_name"],
+            path=row["path"],
+            extracted_text=row["extracted_text"],
+            modified_time=float(row["modified_time"]),
+            keyword_score_value=keyword_component,
+            semantic_score_value=semantic_component,
+            settings=settings,
         )
         snippet = (
             semantic.snippet
@@ -169,12 +173,7 @@ def hybrid_search(
                 score=combined,
                 snippet=snippet,
                 normalized_path=row["normalized_path"],
-                score_breakdown={
-                    "semantic": semantic_score,
-                    "keyword": keyword_score,
-                    "filename_path": filename_score,
-                    "recency": recency_score,
-                },
+                score_breakdown=breakdown,
                 matched_chunk_id=semantic.matched_chunk_id if semantic else None,
                 mode="hybrid",
                 source="hybrid",
@@ -238,7 +237,7 @@ def _run_search(
                 score=score,
                 snippet=snippet,
                 normalized_path=row["normalized_path"],
-                score_breakdown={"keyword": score, "bm25": rank},
+                score_breakdown={"keyword": score, "bm25": rank, "final": score},
                 mode="keyword",
                 source="keyword",
             )

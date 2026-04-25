@@ -71,6 +71,13 @@ def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
     assert loaded.search.default_limit == 10
     assert loaded.search.highlight_matches is True
     assert loaded.search.save_latest_results is True
+    assert loaded.hybrid.keyword_weight == 0.35
+    assert loaded.hybrid.semantic_weight == 0.45
+    assert loaded.hybrid.filename_weight == 0.15
+    assert loaded.hybrid.path_weight == 0.05
+    assert loaded.hybrid.exact_phrase_weight == 0.10
+    assert loaded.hybrid.recency_weight == 0.05
+    assert loaded.hybrid.candidate_limit_multiplier == 5
     assert loaded.vectors.backend == "sqlite_scan"
     assert loaded.vectors.shard_strategy == "none"
     assert loaded.ai.enabled is False
@@ -80,3 +87,14 @@ def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
     assert '#  - "~/Documents"' in text
     assert '#  - "~/Downloads"' in text
     assert '#  - "~/Desktop"' in text
+
+
+def test_existing_config_without_hybrid_section_uses_defaults(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("indexed_folders: []\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.hybrid.keyword_weight == 0.35
+    assert config.hybrid.semantic_weight == 0.45
+    assert config.hybrid.candidate_limit_multiplier == 5

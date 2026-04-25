@@ -117,6 +117,40 @@ class VectorSettings(BaseModel):
     shard_strategy: str = "none"
 
 
+class HybridSettings(BaseModel):
+    keyword_weight: float = 0.35
+    semantic_weight: float = 0.45
+    filename_weight: float = 0.15
+    path_weight: float = 0.05
+    exact_phrase_weight: float = 0.10
+    recency_weight: float = 0.05
+    candidate_limit_multiplier: int = 5
+
+    @field_validator(
+        "keyword_weight",
+        "semantic_weight",
+        "filename_weight",
+        "path_weight",
+        "exact_phrase_weight",
+        "recency_weight",
+        mode="before",
+    )
+    @classmethod
+    def _coerce_weight(cls, value: Any) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    @field_validator("candidate_limit_multiplier", mode="before")
+    @classmethod
+    def _coerce_candidate_limit_multiplier(cls, value: Any) -> int:
+        try:
+            return max(1, int(value))
+        except (TypeError, ValueError):
+            return 5
+
+
 class AISettings(BaseModel):
     enabled: bool = False
     provider: str = "openai"
@@ -149,6 +183,7 @@ class KGFSConfig(BaseModel):
     semantic: SemanticSettings = Field(default_factory=SemanticSettings)
     search: SearchSettings = Field(default_factory=SearchSettings)
     vectors: VectorSettings = Field(default_factory=VectorSettings)
+    hybrid: HybridSettings = Field(default_factory=HybridSettings)
     ai: AISettings = Field(default_factory=AISettings)
 
     @field_validator("indexed_folders", mode="before")
@@ -309,6 +344,15 @@ search:
 vectors:
   backend: "sqlite_scan"
   shard_strategy: "none"
+
+hybrid:
+  keyword_weight: 0.35
+  semantic_weight: 0.45
+  filename_weight: 0.15
+  path_weight: 0.05
+  exact_phrase_weight: 0.10
+  recency_weight: 0.05
+  candidate_limit_multiplier: 5
 
 ai:
   enabled: false

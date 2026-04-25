@@ -174,6 +174,36 @@ Important behavior:
 
 Tests: `tests/test_semantic.py`, `tests/test_search_kernel.py`.
 
+## Vector Backend Registry
+
+Purpose:
+
+- Route semantic and hybrid chunk search through a configured local vector backend.
+- Report vector readiness and clear/rebuild vector data.
+
+Source:
+
+- `kgfs/search/backends/base.py`
+- `kgfs/search/backends/__init__.py`
+- `kgfs/search/backends/sqlite_scan.py`
+- `kgfs/vectors/*.py`
+
+Settings:
+
+- `vectors.backend`
+- `vectors.shard_strategy`
+
+Current backend:
+
+- `sqlite_scan` scans local SQLite `chunks`, unpacks float32 BLOBs, computes cosine similarity in Python, applies filters, and returns nearest chunk hits.
+
+Limitations:
+
+- No external vector database integration is implemented.
+- `vectors.shard_strategy` is present in config but has no behavior beyond the default placeholder.
+
+Tests: `tests/test_vector_backend.py`, `tests/test_vector_status.py`, `tests/test_vector_commands.py`.
+
 ## OpenAI
 
 Purpose:

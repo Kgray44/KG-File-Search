@@ -61,6 +61,7 @@ Operations:
 - Pruning deletes stale KGFS database rows and related FTS/chunk/latest-result rows.
 - Reset deletes KGFS database files and SQLite sidecars.
 - Rebuild resets the database and reindexes configured folders.
+- Vector clear deletes KGFS chunk/vector rows only for the configured model.
 
 Sources: `kgfs/indexing/indexer.py`, `kgfs/indexing/prune.py`, `kgfs/reset.py`, `tests/test_prune.py`, `tests/test_reset_rebuild.py`.
 

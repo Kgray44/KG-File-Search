@@ -136,16 +136,27 @@ Additional dataclasses and runtime models:
 | `SearchAvailability` | available, message | Search engine availability checks. | `kgfs/search/engine.py` |
 | `SearchContext` | SQLite connection, config, optional semantic embedder, metadata | Search engine registry execution context. | `kgfs/search/engine.py` |
 | `SearchExecution` | results, requested mode, used mode, warnings | Registry search result wrapper. | `kgfs/search/registry.py` |
-| `SearchOptions` | mode, limit, filters, backend, explain, save-latest-results flag, highlight flag | Registry search options. `backend` and `explain` are not exposed by CLI/web in this worktree. | `kgfs/search/options.py` |
-| `SearchExplanation` | mode, summary, score breakdown | Default explanation object returned by `SearchEngine.explain()`. | `kgfs/search/result.py` |
+| `SearchOptions` | mode, limit, filters, backend, explain, save-latest-results flag, highlight flag | Registry search options. `backend` is not exposed by CLI/web; `why` exposes user-facing explanations. | `kgfs/search/options.py` |
+| `SearchExplanation` | mode, summary, score breakdown, result ID, file name, path, final score, snippet, notes | Explanation object used by `kgfs why` and default `SearchEngine.explain()`. | `kgfs/search/result.py` |
 | `SemanticStatus` | enabled, available, message | Semantic dependency/config status for doctor and semantic-index output. | `kgfs/search/semantic.py` |
 | `AIResult` | text, context | AI answer result with returned text and context used. | `kgfs/ai.py` |
+
+Vector models:
+
+| Model | Fields | Used for | Source |
+|---|---|---|---|
+| `BackendAvailability` | available, message | Vector backend readiness checks. | `kgfs/search/backends/base.py` |
+| `VectorSearchOptions` | model name, limit, filters | Options passed to vector backends. | `kgfs/search/backends/base.py` |
+| `VectorSearchHit` | chunk/file IDs, chunk index/text, vector dimension, file metadata, score, offsets, metadata | Backend search result before conversion to `SearchResult`. | `kgfs/search/backends/base.py`, `kgfs/search/backends/sqlite_scan.py` |
+| `VectorIndexStatus` | backend name, semantic enabled, model, chunk counts, dependency/backend readiness, warnings | Status returned by vector status helpers and `kgfs vector status`. | `kgfs/search/backends/base.py`, `kgfs/vectors/status.py` |
+| `VectorRebuildSummary` | files considered/indexed, chunks indexed, skipped without text, skipped existing | Summary returned by vector rebuild helper. | `kgfs/vectors/index_manager.py` |
 
 Protocols:
 
 | Protocol | Method/attributes | Used for | Source |
 |---|---|---|---|
 | `SearchEngine` | `name`, `available()`, `search()`, optional `explain()`, optional `stats()` | Search mode implementations. | `kgfs/search/engine.py` |
+| `VectorBackend` | `name`, `available()`, `status()`, `search()`, `clear()`, optional `stats()` | Semantic vector backend implementations. | `kgfs/search/backends/base.py` |
 | `Embedder` | `model_name`, `embed(texts)` | Semantic indexing/search; tests inject fake embedders. | `kgfs/search/semantic.py` |
 | `AIClient` | `create_response(model=..., input_text=...)` | OpenAI client abstraction and tests. | `kgfs/ai.py` |
 
@@ -160,6 +171,8 @@ Defined in `kgfs/core/config.py`.
 | `ExtractionSettings` | Extractor settings. |
 | `SemanticSettings` | Local embedding settings. |
 | `SearchSettings` | CLI search defaults. |
+| `VectorSettings` | Vector backend selection and shard strategy placeholder. |
+| `HybridSettings` | Hybrid score weights and candidate pool multiplier. |
 | `AISettings` | AI Assist privacy, provider, and size settings. |
 
 See [Settings](settings.md) for all fields and defaults.

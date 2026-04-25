@@ -17,6 +17,7 @@ from kgfs.cli.commands import (
     stats,
     vector,
     web,
+    why,
 )
 
 app = typer.Typer(help="KG File Search: private local-first file search.")
@@ -36,6 +37,7 @@ def _register_commands() -> None:
         stats,
         vector,
         web,
+        why,
     ):
         module.register(app)
 

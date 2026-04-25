@@ -48,6 +48,8 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | `extraction` | object | See below | No | `ExtractionSettings` fields | Extractors/indexer | Defaults applied. | Pydantic type validation. |
 | `semantic` | object | See below | No | `SemanticSettings` fields | Indexer/search/doctor | Defaults disabled. | Some invalid numeric values are clamped in `chunk_text()` rather than rejected. |
 | `search` | object | See below | No | `SearchSettings` fields | CLI search | Defaults applied. | Invalid mode is detected when creating `SearchOptions`, not at config load. |
+| `vectors` | object | See below | No | `VectorSettings` fields | Semantic/hybrid search and vector commands | Defaults applied. | Unknown backend names make semantic/hybrid unavailable and vector rebuild/clear fail. |
+| `hybrid` | object | See below | No | `HybridSettings` fields | Hybrid ranking | Defaults applied. | Numeric weights are coerced; invalid/negative values are made safe at runtime. |
 | `ai` | object | See below | No | `AISettings` fields | CLI ask/rerank and `kgfs/ai.py` | Defaults disabled. | Unsupported provider raises `AIError` when AI is used. |
 
 ### Default Ignored Folders
@@ -155,6 +157,27 @@ ignored_extensions:
 | `highlight_matches` | bool | `true` | bool | CLI search | Adds Rich `[bold]` markup in snippets. |
 | `save_latest_results` | bool | `true` | bool | CLI search | Saves latest result IDs for `open` and `reveal`. |
 
+### `vectors`
+
+| Key | Type | Default | Valid values | Read from | Behavior |
+|---|---|---:|---|---|---|
+| `backend` | str | `sqlite_scan` | `sqlite_scan` at this commit | `kgfs/search/backends/__init__.py`, semantic/hybrid search, vector commands | Selects the vector backend. Unknown values make vector status warn, semantic/hybrid unavailable, and vector rebuild/clear fail with a bad parameter. |
+| `shard_strategy` | str | `none` | No behavioral values found beyond `none` | Config model/default only | Present in config and tests, but no runtime behavior was found at this commit. |
+
+### `hybrid`
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `keyword_weight` | float | `0.35` | `combine_hybrid_score()` | Weight for SQLite FTS5 keyword relevance. Invalid values coerce to `0.0`; negative values are ignored at scoring time. |
+| `semantic_weight` | float | `0.45` | `combine_hybrid_score()` | Weight for semantic chunk similarity. |
+| `filename_weight` | float | `0.15` | `combine_hybrid_score()` | Weight for filename term matches. |
+| `path_weight` | float | `0.05` | `combine_hybrid_score()` | Weight for folder/path term matches. |
+| `exact_phrase_weight` | float | `0.10` | `combine_hybrid_score()` | Weight for exact query phrase in extracted text. |
+| `recency_weight` | float | `0.05` | `combine_hybrid_score()` | Modest boost for recently modified files. |
+| `candidate_limit_multiplier` | int | `5` | `hybrid_search()` | Candidate pool multiplier before final reranking. Values below 1 are clamped to 1; hybrid search still uses a floor of 25 candidates. |
+
+Hybrid weights are normalized internally, so they do not need to sum to 1.0.
+
 ### `ai`
 
 | Key | Type | Default | Read from | Behavior |
@@ -171,7 +194,7 @@ ignored_extensions:
 | `max_results_sent` | int | `12` | `build_ai_context()`, `ask_cmd()` | Limits result count sent to AI. |
 | `max_chars_per_result` | int | `1500` | `build_ai_context()` | Truncates each result block. |
 | `max_total_chars_sent` | int | `12000` | `build_ai_context()` | Truncates full context. |
-| `allow_query_expansion` | bool | `true` | Config model only in current worktree | Present but no implemented query expansion path was found. |
+| `allow_query_expansion` | bool | `true` | Config model only at this commit | Present but no implemented query expansion path was found. |
 | `allow_rerank` | bool | `true` | `ensure_ai_ready()` | Allows `kgfs search --ai-rerank`. |
 | `allow_answer_synthesis` | bool | `true` | `ensure_ai_ready()` | Allows `kgfs ask`. |
 
@@ -198,7 +221,10 @@ Important feature flags:
 | `--hybrid` | `search` | `false` | Forces hybrid mode. |
 | `--ai-rerank` | `search` | `false` | Opt-in OpenAI reranking of local results. |
 | `--preview-ai-context` | `search`, `ask` | `false` | Prints AI context and makes no API call. |
+| `--mode` | `why` | config `search.default_mode` | Reruns a specific search mode while explaining a latest result. |
 | `--rebuild` | `semantic-index` | `false` | Builds or rebuilds semantic chunks. |
+| `--force/--no-force` | `vector rebuild` | `--force` | Rebuilds chunks even when chunks already exist, or skips existing chunks with `--no-force`. |
+| `--yes` | `vector clear` | `false` | Required confirmation before clearing KGFS vector/chunk rows. |
 | `--yes` | `reset-index`, `rebuild` | `false` | Confirms index reset operations. |
 | `--host` | `web` | `127.0.0.1` | Uvicorn bind host. |
 | `--port` | `web` | `8765` | Uvicorn bind port. |
@@ -210,8 +236,13 @@ Important feature flags:
 | `get_app_paths()` | `project_local`, `project_root`, `config_dir_override`, `data_dir_override`, `cache_dir_override`, `log_dir_override` | `kgfs/core/app_dirs.py` | Used by CLI/web runtime; project-local puts config/data under `.kgfs/`. |
 | `index_configured_folders()` | `dry_run`, `semantic_embedder`, `rebuild_embeddings`, `allow_risky_root`, `force`, `verify_hashes` | `kgfs/indexing/indexer.py` | Main library indexing entry point. |
 | `SearchFilters` | `extensions`, `file_type`, `folder`, `after`, `before`, `failed_only` | `kgfs/search/filters.py` | Used by CLI, web, and search functions. |
-| `SearchOptions` | `mode`, `limit`, `filters`, `backend`, `explain`, `save_latest_results`, `highlight` | `kgfs/search/options.py` | `backend` and `explain` are currently not exposed in CLI/web. |
+| `SearchOptions` | `mode`, `limit`, `filters`, `backend`, `explain`, `save_latest_results`, `highlight` | `kgfs/search/options.py` | `backend` is not exposed in CLI/web. `explain` exists as an option field, while user-facing explanations are exposed by `kgfs why`. |
 | `SearchContext` | `conn`, `config`, `semantic_embedder`, `metadata` | `kgfs/search/engine.py` | Supplies DB/config and optional injected embedder to registry engines. |
+| `get_vector_backend()` | `name` | `kgfs/search/backends/__init__.py` | Returns the configured vector backend. Only `sqlite_scan` is supported at this commit. |
+| `VectorSearchOptions` | `model_name`, `limit`, `filters` | `kgfs/search/backends/base.py` | Passed to vector backends for semantic/hybrid chunk search. |
+| `get_vector_status()` | `conn`, `config` | `kgfs/vectors/status.py` | Reports backend availability, chunk counts, semantic dependency status, and warnings. |
+| `rebuild_vector_index()` | `config`, `conn`, `embedder`, `force` | `kgfs/vectors/index_manager.py` | Rebuilds vector chunks from already indexed extracted text. Requires semantic enabled. |
+| `clear_chunks()` | `conn`, optional `model_name` | `kgfs/vectors/chunks.py` | Deletes KGFS chunk/vector rows only and returns the removed count. |
 | `create_app()` | `config_path`, `database_path`, `project_local` | `kgfs/web/app.py` | Builds FastAPI app. |
 | `build_package.py` | `--clean`, `--mode`, `--name`, `--dist-dir`, `--work-dir`, `--spec` | `scripts/build_package.py` | Writes package archive under dist dir. |
 | `smoke_test_packaged.py` | `--package` | `scripts/smoke_test_packaged.py` | Finds executable and runs CLI smoke workflow. |
@@ -247,6 +278,19 @@ search:
   default_limit: 10
   highlight_matches: true
   save_latest_results: true
+
+vectors:
+  backend: "sqlite_scan"
+  shard_strategy: "none"
+
+hybrid:
+  keyword_weight: 0.35
+  semantic_weight: 0.45
+  filename_weight: 0.15
+  path_weight: 0.05
+  exact_phrase_weight: 0.10
+  recency_weight: 0.05
+  candidate_limit_multiplier: 5
 
 ai:
   enabled: false

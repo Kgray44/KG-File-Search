@@ -19,6 +19,10 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs ask` | Ask OpenAI using local search snippets. | `kgfs/cli/commands/search.py` |
 | `kgfs semantic` | Semantic-only search. | `kgfs/cli/commands/semantic.py` |
 | `kgfs semantic-index` | Show semantic status or rebuild semantic chunks. | `kgfs/cli/commands/semantic.py` |
+| `kgfs vector status` | Show semantic vector backend/chunk readiness. | `kgfs/cli/commands/vector.py` |
+| `kgfs vector rebuild` | Rebuild semantic chunks from indexed extracted text. | `kgfs/cli/commands/vector.py` |
+| `kgfs vector clear` | Clear KGFS vector/chunk data only. | `kgfs/cli/commands/vector.py` |
+| `kgfs why` | Explain why a latest search result matched a query. | `kgfs/cli/commands/why.py` |
 | `kgfs open` | Open a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
 | `kgfs reveal` | Reveal a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
 | `kgfs stats` | Show index/database stats. | `kgfs/cli/commands/stats.py` |
@@ -160,6 +164,23 @@ The CLI saves latest result IDs when `search.save_latest_results` is true.
 
 Sources: `kgfs/cli/commands/search.py`, `kgfs/search/filters.py`, `kgfs/search/registry.py`.
 
+## `why`
+
+```bash
+kgfs why RESULT_ID QUERY [--config PATH] [--database PATH] [--project-local]
+                         [--mode MODE]
+```
+
+Explains a result from the latest saved search without opening or revealing the
+file. KGFS reruns the requested/configured local search mode, matches the saved
+result by file ID/path, and prints the file name, path, mode used, final score,
+score breakdown, matched snippet/chunk, and a short explanation summary.
+
+If the saved result cannot be reproduced exactly, KGFS shows the saved indexed
+file with the best available local context. `why` does not call AI.
+
+Source: `kgfs/cli/commands/why.py`, `kgfs/search/explain.py`.
+
 ## `ask`
 
 ```bash
@@ -200,6 +221,22 @@ kgfs semantic-index [--config PATH] [--database PATH] [--project-local]
 With `--rebuild`, it rebuilds semantic chunks and embeddings.
 
 Source: `kgfs/cli/commands/semantic.py`.
+
+## Vector Commands
+
+```bash
+kgfs vector status [--config PATH] [--database PATH] [--project-local]
+kgfs vector rebuild [--config PATH] [--database PATH] [--project-local] [--force/--no-force]
+kgfs vector clear [--config PATH] [--database PATH] [--project-local] --yes
+```
+
+`vector status` reports semantic enablement, model name, configured backend, backend availability, semantic dependency availability, chunk count, files-with-chunks count, readiness, and warnings.
+
+`vector rebuild` rebuilds semantic chunks from already indexed `files.extracted_text`. It requires `semantic.enabled: true` and a known `vectors.backend`. `--force` is the default; `--no-force` skips files that already have chunks for the configured model.
+
+`vector clear` requires `--yes`, clears KGFS chunk/vector rows for the configured semantic model, and leaves source files, file records, and keyword FTS rows unchanged.
+
+Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py`, `kgfs/vectors/status.py`, `kgfs/search/backends/*.py`.
 
 ## Open and Reveal
 

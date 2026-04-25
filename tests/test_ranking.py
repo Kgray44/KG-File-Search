@@ -2,9 +2,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from kgfs.config import KGFSConfig
+from kgfs.config import HybridSettings
 from kgfs.database import connect_database, initialize_database
 from kgfs.indexing import index_configured_folders
 from kgfs.search import search
+from kgfs.search.ranking import combine_hybrid_score
 
 
 def test_filename_match_gets_modest_ranking_bonus(tmp_path: Path) -> None:
@@ -56,3 +58,46 @@ def test_recent_bonus_does_not_overpower_relevance(tmp_path: Path) -> None:
 
     assert results[0].file_name == "relevant.md"
 
+
+def test_hybrid_score_breakdown_contains_standard_components() -> None:
+    final_score, breakdown = combine_hybrid_score(
+        query="op amp gain",
+        file_name="op amp notes.md",
+        path="/classes/circuits/op amp notes.md",
+        extracted_text="These notes explain op amp gain and feedback.",
+        modified_time=datetime.now(timezone.utc).timestamp(),
+        keyword_score_value=0.8,
+        semantic_score_value=0.6,
+        settings=HybridSettings(),
+    )
+
+    assert final_score == breakdown["final"]
+    assert set(breakdown) == {
+        "keyword",
+        "semantic",
+        "filename",
+        "path",
+        "exact_phrase",
+        "recency",
+        "final",
+    }
+    assert breakdown["filename"] > 0
+    assert breakdown["path"] > 0
+    assert breakdown["exact_phrase"] == 1.0
+
+
+def test_negative_hybrid_weights_are_ignored_safely() -> None:
+    final_score, breakdown = combine_hybrid_score(
+        query="pid control",
+        file_name="pid.md",
+        path="/docs/pid.md",
+        extracted_text="pid control notes",
+        modified_time=datetime.now(timezone.utc).timestamp(),
+        keyword_score_value=1.0,
+        semantic_score_value=1.0,
+        settings=HybridSettings(keyword_weight=-100, semantic_weight=1.0),
+    )
+
+    assert final_score >= 0
+    assert breakdown["keyword"] == 1.0
+    assert breakdown["semantic"] == 1.0

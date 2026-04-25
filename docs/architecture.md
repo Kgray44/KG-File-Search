@@ -103,6 +103,24 @@ The CLI search command uses the registry. The web dashboard currently calls dire
 
 Sources: `kgfs/cli/commands/search.py`, `kgfs/search/keyword.py`, `kgfs/search/registry.py`, `kgfs/search/modes/*.py`, `kgfs/web/app.py`, `tests/test_search_kernel.py`, `tests/test_web.py`.
 
+## Result Explanation Lifecycle
+
+```mermaid
+flowchart TD
+    Latest["Latest result ID\nlatest_results"] --> Why["kgfs why\nkgfs/cli/commands/why.py"]
+    Query["Query + optional mode"] --> Why
+    Why --> Registry["SearchRegistry rerun\nsave_latest_results=False"]
+    Registry --> Match["Match by file ID or path"]
+    Match --> Explain["explain_result()\nkgfs/search/explain.py"]
+    Explain --> Output["Score breakdown, snippet, notes"]
+```
+
+`kgfs why` explains saved latest-result IDs. It reruns search with the requested
+mode, uses the saved file if the result no longer appears in the rerun, and
+prints score components from `SearchResult.score_breakdown`.
+
+Sources: `kgfs/cli/commands/why.py`, `kgfs/search/explain.py`, `kgfs/search/result.py`, `tests/test_cli.py`.
+
 ## Keyword Ranking
 
 Keyword search builds an FTS5 query with `build_fts_query()`:
@@ -149,13 +167,25 @@ Semantic search:
 3. Converts vector hits into `SearchResult` rows.
 4. Returns the best chunk per file.
 
-Hybrid search combines semantic score, keyword score, filename/path relevance, and recency.
+Hybrid search combines semantic score, keyword score, filename relevance, path
+relevance, exact phrase relevance, and modest recency. Hybrid results include a
+serializable score breakdown with `keyword`, `semantic`, `filename`, `path`,
+`exact_phrase`, `recency`, and `final` components. Weights live in the `hybrid`
+config section and are normalized at scoring time.
+
+Auto mode uses hybrid only when semantic/vector data is ready. If semantic is
+disabled, auto quietly uses keyword; if semantic is enabled but not ready, auto
+prints one fallback warning and uses keyword.
+
+`kgfs why RESULT_ID QUERY` reads the latest saved search result, reruns local
+search, and formats a `SearchExplanation`. It does not open files, reveal
+folders, call AI, or modify indexed source files.
 
 Sources: `kgfs/search/semantic.py`, `kgfs/search/keyword.py`, `kgfs/search/backends/*.py`, `kgfs/search/modes/semantic.py`, `kgfs/search/modes/hybrid.py`, `kgfs/vectors/*.py`, `tests/test_semantic.py`, `tests/test_vector_backend.py`, `tests/test_vector_status.py`.
 
 ## Database Architecture
 
-SQLite is the only persistence layer in the current worktree.
+SQLite is the only persistence layer at this commit.
 
 Tables:
 
@@ -225,7 +255,7 @@ Sources: `kgfs/ai.py`, `kgfs/cli/commands/search.py`, `kgfs/cli/shared.py`, `tes
 
 ## Logging and Telemetry
 
-No structured logging or telemetry pipeline is implemented in the current worktree. `kgfs doctor` reports a log path from platformdirs, but no code writes runtime logs there. Console output uses Rich through `kgfs/cli/shared.py`.
+No structured logging or telemetry pipeline is implemented at this commit. `kgfs doctor` reports a log path from platformdirs, but no code writes runtime logs there. Console output uses Rich through `kgfs/cli/shared.py`.
 
 Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/doctor.py`, `kgfs/core/app_dirs.py`.
 

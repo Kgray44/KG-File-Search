@@ -438,8 +438,8 @@ KGFS now routes search through a small search kernel. The CLI behavior stays fam
 
 - `keyword` is the reliable local SQLite FTS5 mode. It does not require semantic dependencies.
 - `semantic` searches local semantic chunks when semantic search is enabled and embeddings have been built.
-- `hybrid` combines existing keyword and semantic scoring when semantic search is ready.
-- `auto` picks hybrid when semantic search is ready; otherwise it uses keyword and prints a warning if semantic was enabled but unavailable.
+- `hybrid` combines keyword, semantic, filename, path, exact phrase, and recency scoring when semantic search is ready.
+- `auto` picks hybrid when semantic/vector data is ready; otherwise it uses keyword and prints a warning if semantic was enabled but unavailable.
 
 Examples:
 
@@ -451,6 +451,14 @@ kgfs search "motor torque" --mode auto
 ```
 
 `--hybrid` remains supported as a compatibility shortcut for `--mode hybrid`. Advanced vector backends, deep search, similar-file search, and multimodal/OCR search are planned for later phases and are not part of this phase.
+
+Explain a saved result from the latest search:
+
+```bash
+kgfs why 1 "motor torque"
+```
+
+`kgfs why` reruns local search, shows the mode used, final score, score breakdown, and matching snippet, and never calls AI.
 
 ## Semantic Search
 
@@ -506,7 +514,20 @@ Run hybrid search:
 kgfs search "motor torque calculation" --hybrid
 ```
 
-Hybrid search combines SQLite FTS5 keyword score, semantic chunk similarity, filename/path relevance, and a small recent-modification bonus. Results show the best matching snippet or semantic chunk.
+Hybrid search combines SQLite FTS5 keyword score, semantic chunk similarity, filename relevance, path relevance, exact phrase relevance, and a small recent-modification bonus. Results show the best matching snippet or semantic chunk and carry a serializable score breakdown.
+
+Tune hybrid scoring in config if needed:
+
+```yaml
+hybrid:
+  keyword_weight: 0.35
+  semantic_weight: 0.45
+  filename_weight: 0.15
+  path_weight: 0.05
+  exact_phrase_weight: 0.10
+  recency_weight: 0.05
+  candidate_limit_multiplier: 5
+```
 
 Embeddings are stored wherever the KGFS SQLite database is stored. Run `kgfs doctor` to see the database path and `kgfs stats` to see semantic chunk count and embedding storage size.
 

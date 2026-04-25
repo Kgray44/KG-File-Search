@@ -33,6 +33,7 @@ def test_cli_exposes_required_mvp_commands() -> None:
         "rebuild",
         "semantic-index",
         "vector",
+        "why",
     }.issubset(command.commands.keys())
 
 
@@ -226,3 +227,64 @@ def test_search_mode_semantic_unavailable_is_helpful(tmp_path) -> None:
 
     assert result.exit_code != 0
     assert "Semantic search is unavailable" in result.output
+
+
+def test_why_explains_latest_keyword_result(tmp_path) -> None:
+    config_path, db_path = _indexed_search_fixture(tmp_path)
+    search_result = runner.invoke(
+        app,
+        ["search", "motor torque", "--mode", "keyword", "--config", str(config_path), "--database", str(db_path)],
+    )
+    assert search_result.exit_code == 0
+
+    result = runner.invoke(
+        app,
+        ["why", "1", "motor torque", "--config", str(config_path), "--database", str(db_path)],
+    )
+
+    assert result.exit_code == 0
+    assert "Why result 1 matched" in result.output
+    assert "motor notes.md" in result.output
+    assert "Score breakdown" in result.output
+    assert "keyword" in result.output.lower()
+    assert "motor torque" in result.output.lower()
+
+
+def test_why_unknown_result_id_is_helpful(tmp_path) -> None:
+    config_path, db_path = _indexed_search_fixture(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["why", "99", "motor torque", "--config", str(config_path), "--database", str(db_path)],
+    )
+
+    assert result.exit_code != 0
+    assert "No latest search result found for ID 99" in result.output
+
+
+def test_keyword_why_does_not_use_semantic_dependencies(tmp_path, mocker) -> None:
+    config_path, db_path = _indexed_search_fixture(tmp_path)
+    search_result = runner.invoke(
+        app,
+        ["search", "motor torque", "--mode", "keyword", "--config", str(config_path), "--database", str(db_path)],
+    )
+    assert search_result.exit_code == 0
+    mocked_embedder = mocker.patch("kgfs.search.modes.semantic.get_embedder")
+
+    result = runner.invoke(
+        app,
+        [
+            "why",
+            "1",
+            "motor torque",
+            "--mode",
+            "keyword",
+            "--config",
+            str(config_path),
+            "--database",
+            str(db_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    mocked_embedder.assert_not_called()

@@ -1,6 +1,6 @@
 # Examples
 
-These examples use only behavior implemented in the current worktree.
+These examples use only behavior implemented in the repository state at this commit.
 
 ## Example 1: Basic Local Index
 
@@ -62,6 +62,16 @@ kgfs search "failed extraction" --failed-only
 ```
 
 Filter behavior source: `kgfs/search/filters.py`.
+
+Explain a saved result:
+
+```bash
+kgfs search "op amp gain" --mode auto
+kgfs why 1 "op amp gain"
+```
+
+`kgfs why` uses the latest search result IDs and prints the local score
+breakdown and snippet. It does not call AI.
 
 ## Example 5: Reindex When Metadata Is Not Enough
 
@@ -129,9 +139,36 @@ kgfs search "rotational force" --mode semantic
 kgfs search "rotational force" --hybrid
 ```
 
+Hybrid scoring can be tuned without changing the database:
+
+```yaml
+hybrid:
+  keyword_weight: 0.35
+  semantic_weight: 0.45
+  filename_weight: 0.15
+  path_weight: 0.05
+  exact_phrase_weight: 0.10
+  recency_weight: 0.05
+  candidate_limit_multiplier: 5
+```
+
 Sources: `kgfs/cli/commands/semantic.py`, `kgfs/search/semantic.py`.
 
-## Example 8: AI Preview Without API Call
+## Example 8: Vector Status and Rebuild
+
+After enabling semantic search and indexing files:
+
+```bash
+kgfs vector status
+kgfs vector rebuild
+kgfs vector clear --yes
+```
+
+`vector clear --yes` removes KGFS chunk/vector rows for the configured model only. It does not delete source files or keyword index rows.
+
+Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`.
+
+## Example 9: AI Preview Without API Call
 
 Enable AI in config for preview:
 
@@ -158,7 +195,7 @@ No API call is made when `--preview-ai-context` is used.
 
 Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/search.py`, `tests/test_cli.py`.
 
-## Example 9: OpenAI Answer Synthesis
+## Example 10: OpenAI Answer Synthesis
 
 Install OpenAI dependency:
 
@@ -191,7 +228,7 @@ kgfs ask "What do my notes say about motor torque?"
 
 Source: `kgfs/ai.py`.
 
-## Example 10: Start Web Dashboard
+## Example 11: Start Web Dashboard
 
 ```bash
 kgfs web
@@ -207,7 +244,7 @@ Use `/search?q=pid&ext=.pdf` for a filtered search URL.
 
 Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`.
 
-## Example 11: Reset and Rebuild
+## Example 12: Reset and Rebuild
 
 Dry-run reset:
 
@@ -229,7 +266,7 @@ kgfs rebuild --yes
 
 Sources: `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py`.
 
-## Example 12: Build a Package
+## Example 13: Build a Package
 
 ```bash
 python -m pip install -e ".[package]"

@@ -112,6 +112,7 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `SearchContext` | Registry search context with DB/config/embedder. | `kgfs/search/engine.py` |
 | `SearchRegistry.available_modes(context)` | Return concrete modes whose engines report available. | `kgfs/search/registry.py` |
 | `build_default_search_registry()` | Register keyword, semantic, and hybrid engines. | `kgfs/search/registry.py` |
+| `explain_result(result, query, ...)` | Build a lightweight local explanation with score breakdown and snippet. | `kgfs/search/explain.py` |
 
 ### Semantic Helpers
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from kgfs.config import KGFSConfig, SemanticSettings
+from kgfs.config import KGFSConfig, SemanticSettings, VectorSettings
 from kgfs.database import connect_database, initialize_database
 from kgfs.indexing import index_configured_folders
 from kgfs.search.engine import SearchContext
@@ -102,6 +102,24 @@ def test_auto_mode_uses_hybrid_when_semantic_is_ready(tmp_path: Path) -> None:
     assert execution.mode_used == SearchMode.HYBRID
     assert execution.results[0].mode == "hybrid"
     assert execution.results[0].file_name == "motor torque.md"
+    assert execution.results[0].score_breakdown is not None
+    assert {"keyword", "semantic", "filename", "path", "exact_phrase", "recency", "final"}.issubset(
+        execution.results[0].score_breakdown
+    )
+
+
+def test_auto_mode_unknown_vector_backend_falls_back_with_helpful_warning(tmp_path: Path) -> None:
+    conn, config = _make_index(tmp_path, semantic_enabled=True, build_chunks=True)
+    config = config.model_copy(update={"vectors": VectorSettings(backend="missing_backend")})
+    registry = build_default_search_registry()
+    context = SearchContext(conn=conn, config=config, semantic_embedder=FakeEmbedder())
+
+    execution = registry.search("motor torque", SearchOptions(mode=SearchMode.AUTO), context)
+
+    assert execution.mode_used == SearchMode.KEYWORD
+    assert len(execution.warnings) == 1
+    assert "Vector backend" in execution.warnings[0]
+    assert "keyword search instead" in execution.warnings[0]
 
 
 def test_keyword_engine_does_not_require_semantic_dependencies(tmp_path: Path, monkeypatch) -> None:

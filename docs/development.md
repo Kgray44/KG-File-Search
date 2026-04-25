@@ -150,6 +150,21 @@ Current concrete engines:
 
 Sources: `kgfs/search/engine.py`, `kgfs/search/registry.py`, `kgfs/search/modes/*.py`.
 
+## Add a New Vector Backend
+
+1. Implement the `VectorBackend` protocol from `kgfs/search/backends/base.py`.
+2. Register the backend name in `get_vector_backend()` in `kgfs/search/backends/__init__.py`.
+3. Implement clear/status behavior that preserves source files and non-vector index rows.
+4. Decide whether `vectors.backend` should document the backend as user-facing.
+5. Add tests in `tests/test_vector_backend.py`, `tests/test_vector_status.py`, and search-kernel tests if semantic/hybrid routing changes.
+6. Update [Settings](settings.md), [Features](features.md), [Architecture](architecture.md), and [Integrations](integrations.md).
+
+Current vector backend support:
+
+- `sqlite_scan`
+
+Sources: `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`.
+
 ## Add a Provider or Integration
 
 For local integrations:

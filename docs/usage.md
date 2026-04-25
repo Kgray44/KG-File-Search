@@ -1,6 +1,6 @@
 # Usage Guide
 
-KGFS can be used through its CLI, local web dashboard, and Python modules. This guide covers supported entry points found in the current worktree.
+KGFS can be used through its CLI, local web dashboard, and Python modules. This guide covers supported entry points found in the repository state at this commit.
 
 ## Install
 
@@ -45,6 +45,7 @@ Index and search:
 ```bash
 kgfs index
 kgfs search "motor torque"
+kgfs why 1 "motor torque"
 kgfs open 1
 kgfs reveal 1
 ```
@@ -55,6 +56,7 @@ Important behavior:
 - The generated config starts with `indexed_folders: []`.
 - `kgfs index` with no folders prints a setup message and exits without creating a database.
 - `kgfs open` and `kgfs reveal` use the latest saved search result IDs.
+- `kgfs why` also uses latest saved search result IDs and explains a result against a query.
 
 Sources: `kgfs/cli/commands/init.py`, `kgfs/cli/commands/index.py`, `kgfs/cli/commands/open_reveal.py`, `tests/test_cli.py`.
 
@@ -147,7 +149,10 @@ kgfs search "motor torque"
 kgfs search "motor torque" --mode auto
 ```
 
-Auto mode uses hybrid search only when semantic search is enabled, dependencies are available, and chunks exist. Otherwise it falls back to keyword search.
+Auto mode uses hybrid search only when semantic search is enabled, dependencies
+are available, vector backend is available, and chunks exist. If semantic is
+disabled, it quietly uses keyword search. If semantic is enabled but not ready,
+it prints one warning and uses keyword search.
 
 Filtered search:
 
@@ -160,6 +165,17 @@ kgfs search "pid" --before 2026-01-01
 kgfs search "bad extraction" --failed-only
 kgfs search "speaker crossover" --limit 25
 ```
+
+Explain a latest result:
+
+```bash
+kgfs why 1 "motor torque"
+kgfs why 1 "motor torque" --mode keyword
+```
+
+The explanation command reruns local search, prints the score breakdown and
+matched snippet, and notes when the saved result no longer appears in the fresh
+rerun. It does not call AI.
 
 Sources: `kgfs/cli/commands/search.py`, `kgfs/search/filters.py`, `kgfs/search/registry.py`, `tests/test_search_filters.py`, `tests/test_search_kernel.py`.
 
@@ -206,6 +222,38 @@ kgfs stats
 ```
 
 Sources: `kgfs/cli/commands/semantic.py`, `kgfs/search/semantic.py`, `kgfs/search/modes/semantic.py`, `tests/test_semantic.py`.
+
+## Vector Index Management
+
+Semantic and hybrid search use the configured vector backend. At this commit, the supported backend is `sqlite_scan`.
+
+Check vector readiness:
+
+```bash
+kgfs vector status
+```
+
+Rebuild vectors from already indexed extracted text:
+
+```bash
+kgfs vector rebuild
+kgfs vector rebuild --no-force
+```
+
+Clear only KGFS vector/chunk rows for the configured model:
+
+```bash
+kgfs vector clear --yes
+```
+
+Important behavior:
+
+- `vector rebuild` requires `semantic.enabled: true`.
+- `vector clear` requires `--yes`.
+- Vector clear does not delete source files, `files` rows, or keyword FTS rows.
+- Unknown `vectors.backend` values make vector rebuild/clear fail and semantic/hybrid search unavailable.
+
+Sources: `kgfs/cli/commands/vector.py`, `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`.
 
 ## AI Assist
 

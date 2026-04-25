@@ -2,7 +2,7 @@
 
 KG File Search (KGFS) is a private, local-first Python file search tool. It indexes only folders explicitly listed by the user, stores metadata and extracted text in a local SQLite database, searches with SQLite FTS5 keyword ranking, and can optionally add local semantic search or opt-in OpenAI AI Assist.
 
-This documentation is based on the current worktree, including modified and untracked source files. Source references point to the files that implement or test each claim.
+This documentation is based on the repository state at this commit. Source references point to the files that implement or test each claim.
 
 ## What KGFS Does
 
@@ -11,8 +11,8 @@ This documentation is based on the current worktree, including modified and untr
 - Skips noisy, system, dependency, cache, application, game, binary, media, archive, and over-size files by default.
 - Extracts text from text-like files, Markdown, code, CSV, DOCX, and PDF.
 - Stores file records, FTS rows, latest result IDs, semantic chunks, and schema metadata in SQLite.
-- Searches with keyword, semantic, hybrid, and auto modes.
-- Provides CLI commands for init, doctor, config, folder management, indexing, search, AI-assisted ask/rerank, semantic indexing/search, stats, open/reveal, prune, reset, rebuild, and a local web dashboard.
+- Searches with keyword, semantic, hybrid, and auto modes, plus score explanations for latest results.
+- Provides CLI commands for init, doctor, config, folder management, indexing, search, why, AI-assisted ask/rerank, semantic indexing/search, stats, open/reveal, prune, reset, rebuild, and a local web dashboard.
 - Packages with PyInstaller for Windows and macOS builds.
 
 Primary source files:
@@ -24,6 +24,8 @@ Primary source files:
 - Extraction: `kgfs/extractors/*.py`
 - Database: `kgfs/db/*.py`
 - Search: `kgfs/search/*.py`, `kgfs/search/modes/*.py`
+- Vector backends and management: `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`
+- Result explanations: `kgfs/search/explain.py`, `kgfs/cli/commands/why.py`
 - AI Assist: `kgfs/ai.py`
 - Web dashboard: `kgfs/web/app.py`, `kgfs/web/templates/*.html`
 - Packaging: `scripts/build_package.py`, `packaging/pyinstaller/kgfs.spec`, `.github/workflows/package.yml`
@@ -76,6 +78,7 @@ python -m pip install -e ".[openai]"
 - [Development](development.md): setup, tests, packaging, and extension guidance.
 - [Troubleshooting](troubleshooting.md): common failures, causes, and debug commands.
 - [Examples](examples.md): end-to-end workflows.
+- [Roadmap](roadmap.md): implemented vs planned behavior.
 
 ## High-Level Architecture
 
@@ -102,6 +105,7 @@ flowchart LR
 - `kgfs init` creates config and app directories but does not index.
 - `kgfs index` refuses risky roots unless `--allow-risky-root` is passed.
 - Prune and reset operations remove only KGFS database/index data, never source files.
+- Vector clear removes only KGFS chunk/vector data for the configured model.
 - Semantic search is local and optional.
 - OpenAI AI Assist is opt-in, downstream of local search, and uses snippets by default.
-- The web dashboard has no authentication in the current worktree and binds to `127.0.0.1` by default.
+- The web dashboard has no authentication at this commit and binds to `127.0.0.1` by default.

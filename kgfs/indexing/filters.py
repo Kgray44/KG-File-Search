@@ -22,7 +22,12 @@ def should_index_file(path: Path, config: KGFSConfig) -> bool:
 
     suffix = path.suffix.lower()
     is_ocr_image = config.ocr.enabled and suffix in set(config.ocr.include_extensions)
-    if not is_ocr_image:
+    is_media_photo = (
+        config.media.enabled
+        and config.media.photos.enabled
+        and suffix in set(config.media.photos.include_extensions)
+    )
+    if not (is_ocr_image or is_media_photo):
         if suffix in set(config.ignored_extensions):
             return False
         if config.include_extensions and suffix not in set(config.include_extensions):
@@ -34,7 +39,12 @@ def should_index_file(path: Path, config: KGFSConfig) -> bool:
             return False
 
     try:
-        max_size = config.ocr.max_image_size_bytes if is_ocr_image else config.max_file_size_bytes
+        if is_ocr_image:
+            max_size = config.ocr.max_image_size_bytes
+        elif is_media_photo:
+            max_size = config.media.max_media_file_size_bytes
+        else:
+            max_size = config.max_file_size_bytes
         if path.stat().st_size > max_size:
             return False
     except OSError:

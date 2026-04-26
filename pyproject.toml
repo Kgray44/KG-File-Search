@@ -33,6 +33,24 @@ semantic = [
 ocr = [
   "pillow>=10",
 ]
+photo = [
+  "pillow>=10",
+]
+exif = [
+  "pillow>=10",
+]
+media = [
+  "pillow>=10",
+]
+ocr-easyocr = [
+  "easyocr>=1.7",
+]
+ocr-paddle = [
+  "paddleocr>=2.7",
+]
+multimodal = [
+  "pillow>=10",
+]
 sqlite-vec = [
   "sqlite-vec>=0.1.6",
 ]

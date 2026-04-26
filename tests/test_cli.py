@@ -68,6 +68,7 @@ def test_cli_exposes_required_mvp_commands() -> None:
         "serve",
         "integrations",
         "tray",
+        "media",
     }.issubset(command.commands.keys())
 
 

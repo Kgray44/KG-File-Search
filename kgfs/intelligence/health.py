@@ -29,6 +29,10 @@ def build_health_report(
         "semantic_chunks": stats["total_chunks"],
         "duplicate_groups": len(duplicate_report.groups),
         "project_candidates": project_candidates,
+        "media_metadata": stats["media_metadata_count"],
+        "media_text": stats["media_text_count"],
+        "media_embeddings": stats["media_embedding_count"],
+        "media_enabled": bool(config.media.enabled),
         "database_size": stats["database_size"],
         "schema_version": stats["schema_version"],
         "ai_enabled": bool(config.ai.enabled),
@@ -81,6 +85,24 @@ def build_health_report(
                 title="AI Assist enabled",
                 detail="AI remains opt-in per command; review privacy settings before use.",
                 suggestion="kgfs config",
+            )
+        )
+    if config.media.enabled and config.media.photos.store_location_metadata:
+        issues.append(
+            HealthIssue(
+                severity="warning",
+                title="Photo location metadata enabled",
+                detail=f"Photo location metadata storage is configured as {config.media.photos.location_precision}.",
+                suggestion="Review media.photos.store_location_metadata in config.yaml",
+            )
+        )
+    if config.ocr.cloud_fallback.enabled:
+        issues.append(
+            HealthIssue(
+                severity="warning",
+                title="Cloud OCR fallback configured",
+                detail="Cloud OCR remains scaffolded and requires explicit confirmation; verify privacy settings before use.",
+                suggestion="kgfs ocr advanced-status",
             )
         )
     return HealthReport(summary=summary, issues=issues, workflow_counts=workflow_counts, suggestions=_unique(suggestions))

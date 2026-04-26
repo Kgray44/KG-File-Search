@@ -52,6 +52,7 @@ The release zip appears in `dist-packages/`:
 - Downloaded semantic embedding model caches
 - Optional advanced vector backend packages such as sqlite-vec, hnswlib, FAISS, and their caches/artifacts
 - Optional OCR Python helper packages such as Pillow/pytesseract/EasyOCR/PaddleOCR, unless a future OCR-specific package opts in
+- Optional media/model packages such as Whisper, CLIP-style stacks, Paddle, TorchVision, OpenCV, and their caches/artifacts
 - Optional Textual TUI and pystray tray dependencies
 - Tesseract executable, OCR cache rows, or OCR user data
 - OpenAI SDK, unless a future AI-specific package is intentionally created
@@ -80,6 +81,16 @@ bundled. Users who enable OCR must install Tesseract locally and configure
 `ocr.tesseract.command` if it is not on PATH. `kgfs ocr status` should explain a
 missing command cleanly. Packaged builds must not include user OCR caches or
 indexed image/PDF data.
+
+## Media and Multimodal Scaffolds
+
+Media commands are included in the base package, but optional media/model
+dependencies are excluded. `kgfs media status`, `kgfs media captions status`,
+`kgfs media audio status`, `kgfs media visual status`, and `kgfs ocr
+advanced-status` should report disabled or missing optional backends cleanly.
+Photo/EXIF indexing requires an optional Python environment with Pillow, for
+example `python -m pip install -e ".[media]"`; generated media metadata/text is
+stored only in KGFS database/cache paths.
 
 ## Local API, TUI, and Integration Scaffolds
 

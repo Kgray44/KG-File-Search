@@ -28,6 +28,11 @@ Sources: `kgfs/cli/commands/doctor.py`, `kgfs/cli/commands/stats.py`.
 | Old/deleted files still appear in search | KGFS does not delete stale DB rows during normal indexing unless asked. | Run `kgfs prune --dry-run`, then `kgfs prune`; or `kgfs index --prune`. | `kgfs/indexing/prune.py`, `kgfs/cli/commands/maintenance.py` |
 | Extraction failures appear | Parser dependency missing or parser could not read file. | Run `kgfs doctor`; inspect `kgfs web /failures` or DB `extraction_error`; install dependencies if missing. | `kgfs/extractors/pdf.py`, `kgfs/extractors/docx.py`, `kgfs/web/app.py` |
 | Image files are not indexed | OCR is disabled by default, or the image extension is not in `ocr.include_extensions`. | Set `ocr.enabled: true`, confirm extensions, then run `kgfs ocr status` and `kgfs ocr index`. | `kgfs/indexing/filters.py`, `kgfs/ocr/status.py` |
+| Photo files are not indexed for EXIF/media metadata | Media photo indexing is disabled by default, or the extension is not in `media.photos.include_extensions`. | Set `media.enabled: true` and `media.photos.enabled: true`, then run `kgfs media status` and `kgfs media index --photos`. | `kgfs/indexing/filters.py`, `kgfs/media/status.py` |
+| `kgfs media exif` says Pillow is missing | The optional image metadata dependency is not installed. | Run `python -m pip install -e ".[media]"` or install Pillow. | `kgfs/media/exif.py`, `pyproject.toml` |
+| GPS data does not appear in media metadata | Exact/coarse location storage is disabled by default. | This is intentional. Set `media.photos.store_location_metadata: true` and choose `location_precision` only if you accept the privacy tradeoff. | `kgfs/media/exif.py`, `docs/security.md` |
+| Caption/audio/visual commands say unavailable | These are scaffolded local extension points with backend `none` by default. | Keep using metadata/OCR search, or add a future local backend; KGFS does not fake captions/transcripts/visual search. | `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py` |
+| Cloud OCR fallback refuses to upload | Cloud fallback is disabled and scaffolded to refuse upload by default. | This is intentional; no provider upload path is implemented in this phase. | `kgfs/ocr/cloud.py` |
 | `kgfs ocr status` says Tesseract is missing | The configured Tesseract command is not on PATH or the command path is wrong. | Install Tesseract locally and set `ocr.tesseract.command` to `tesseract` or a full executable path. | `kgfs/ocr/tesseract.py` |
 | OCR result is an extraction error | Tesseract could not read the image or exited non-zero. | Try `kgfs ocr test PATH`; check language and command settings. | `kgfs/cli/commands/ocr.py`, `kgfs/ocr/tesseract.py` |
 | Scanned PDF text is not extracted | Full scanned-PDF rasterization is not implemented in this pass. | KGFS detects likely scanned PDFs and records a helpful error; use image OCR for screenshots/images until PDF rasterization is added. | `kgfs/extractors/pdf.py`, `kgfs/ocr/pdf.py` |
@@ -123,7 +128,18 @@ Check OCR state and one-image behavior:
 
 ```bash
 kgfs ocr status
+kgfs ocr advanced-status
 kgfs ocr test ./screenshot.png
+```
+
+Check media state:
+
+```bash
+kgfs media status
+kgfs media exif ./photo.jpg
+kgfs media captions status
+kgfs media audio status
+kgfs media visual status
 ```
 
 Check local API/TUI/integration surfaces:
@@ -167,6 +183,8 @@ SELECT extension, COUNT(*) FROM files GROUP BY extension ORDER BY COUNT(*) DESC;
 SELECT file_name, extraction_error FROM files WHERE extraction_status = 'error';
 SELECT COUNT(*) FROM chunks;
 SELECT COUNT(*) FROM ocr_cache;
+SELECT COUNT(*) FROM media_metadata;
+SELECT source_kind, COUNT(*) FROM media_text GROUP BY source_kind;
 SELECT file_name, extraction_source, extraction_error FROM files WHERE extraction_source LIKE 'ocr%';
 SELECT * FROM schema_version;
 ```
@@ -193,6 +211,9 @@ Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 - `ocr.enabled` is false when you expected image OCR.
 - `ocr.tesseract.command` is not on PATH or not an absolute executable path.
 - `ocr.include_extensions` omits a desired image suffix.
+- `media.enabled` or `media.photos.enabled` is false when you expected EXIF/photo metadata.
+- `media.photos.store_location_metadata` is false when you expected location text.
+- `ocr.cloud_fallback.enabled` is true even though cloud fallback is scaffolded/no-upload in this phase.
 - `vectors.backend` is not a registered backend name, or an optional backend is selected without its dependency, enablement, or rebuilt artifact.
 - `vectors.shard_strategy` is changed even though no behavior beyond the `none` placeholder was found.
 - `search.default_mode` is invalid.
@@ -213,4 +234,6 @@ Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 - AI query expansion has a config key (`ai.allow_query_expansion`) but no implemented command path was found.
 - Backend selection is exposed for vector management commands, but `kgfs search` does not expose a `--backend` flag at this commit.
 - Base packaged builds exclude semantic dependencies, optional vector backend dependencies, optional TUI/tray dependencies, OCR helper dependencies, and OpenAI SDK.
+- Base packaged builds exclude optional media/model dependencies such as Pillow, EasyOCR, PaddleOCR, Whisper, and CLIP-style stacks.
 - OCR PDF rasterization is scaffolded; scanned/image-only PDFs are detected and reported, while image OCR is implemented through Tesseract.
+- Captioning, audio transcription, visual semantic search, and cloud OCR fallback are scaffolded/status-only unless a future local backend/provider is implemented.

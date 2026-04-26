@@ -14,6 +14,7 @@ from kgfs.db.repositories import count_chunks_for_file, get_existing_file, upser
 from kgfs.extractors import ExtractionResult, extract_text
 from kgfs.indexing.discovery import discover_files
 from kgfs.indexing.hashing import sha256_file
+from kgfs.media.exif import extract_exif_metadata, store_photo_metadata
 from kgfs.ocr.cache import attach_ocr_cache_file_id, get_cached_ocr_result, store_ocr_cache_result
 from kgfs.search.semantic import Embedder, chunk_text, get_embedder, replace_file_chunks, semantic_model_name
 
@@ -125,11 +126,13 @@ def index_configured_folders(
             modified_time_ns=stat_mtime_ns,
             extraction=extraction,
         )
+        media_text = _index_media_metadata_if_needed(config, conn, file_id=file_id, file_path=file_path, size=stat.st_size)
+        semantic_text = "\n\n".join(part for part in (text, media_text) if part.strip())
         _index_semantic_chunks(
             config,
             conn,
             file_id,
-            text,
+            semantic_text,
             semantic_embedder=semantic_embedder,
             rebuild_embeddings=True,
         )
@@ -324,3 +327,18 @@ def _ocr_candidate_kind(config: KGFSConfig, file_path: Path) -> str | None:
     if suffix == ".pdf":
         return "pdf"
     return None
+
+
+def _index_media_metadata_if_needed(config: KGFSConfig, conn: Connection, *, file_id: int, file_path: Path, size: int) -> str:
+    if not (config.media.enabled and config.media.photos.enabled and config.media.photos.index_exif):
+        return ""
+    suffix = file_path.suffix.lower()
+    if suffix not in set(config.media.photos.include_extensions):
+        return ""
+    if size > config.media.max_media_file_size_bytes:
+        return ""
+    try:
+        metadata = extract_exif_metadata(file_path)
+        return store_photo_metadata(conn, config, file_id=file_id, metadata=metadata)
+    except Exception:
+        return ""

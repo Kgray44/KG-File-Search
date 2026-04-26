@@ -12,7 +12,7 @@ from kgfs.cli.shared import console, optional_config_runtime, runtime
 from kgfs.db import connect_database, initialize_database
 from kgfs.indexing import index_configured_folders
 from kgfs.ocr.base import OCRRequest
-from kgfs.ocr.registry import get_ocr_backend
+from kgfs.ocr.registry import get_ocr_backend, list_ocr_backends
 from kgfs.ocr.status import get_ocr_status
 
 ocr_app = typer.Typer(help="Inspect and run optional local OCR.")
@@ -87,6 +87,45 @@ def test_cmd(
         console.print(result.text[:2000])
 
 
+@ocr_app.command("advanced-status")
+def advanced_status_cmd(
+    config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
+    database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
+    project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
+) -> None:
+    """Show optional advanced OCR backend status without running OCR."""
+
+    _, _, _, config = optional_config_runtime(config_path, database_path, project_local)
+    table = Table(title="KGFS Advanced OCR Status")
+    table.add_column("Backend")
+    table.add_column("Enabled")
+    table.add_column("Available")
+    table.add_column("Message")
+    table.add_column("Install hint")
+    for name in list_ocr_backends():
+        backend = get_ocr_backend(name)
+        availability = backend.available(config)
+        enabled = _advanced_backend_enabled(name, config)
+        table.add_row(
+            _display_ocr_backend_name(name),
+            str(enabled),
+            str(availability.available),
+            availability.message,
+            availability.install_hint or "",
+        )
+    cloud = config.ocr.cloud_fallback
+    table.add_row(
+        "Cloud OCR fallback",
+        str(cloud.enabled),
+        "False",
+        "Disabled unless config, explicit CLI allow-cloud, preview, and confirmation are all present."
+        if not cloud.enabled
+        else "Configured scaffold only; no provider upload is implemented in this phase.",
+        "",
+    )
+    console.print(table)
+
+
 @ocr_app.command("index")
 def index_cmd(
     config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
@@ -121,3 +160,21 @@ def index_cmd(
         f"Discovered {summary.discovered}, indexed {summary.indexed}, "
         f"skipped unchanged {summary.skipped_unchanged}, failures {summary.failed}."
     )
+
+
+def _advanced_backend_enabled(name: str, config) -> bool:
+    if name == "tesseract":
+        return config.ocr.backend == "tesseract" and config.ocr.enabled
+    if name == "easyocr":
+        return bool(config.ocr.easyocr.enabled)
+    if name == "paddle":
+        return bool(config.ocr.paddle.enabled)
+    return False
+
+
+def _display_ocr_backend_name(name: str) -> str:
+    if name == "easyocr":
+        return "EasyOCR"
+    if name == "paddle":
+        return "PaddleOCR"
+    return name

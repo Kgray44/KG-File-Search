@@ -68,6 +68,8 @@ def smoke_test(executable: Path) -> None:
             ["serve", "--help"],
             ["integrations", "--help"],
             ["tray", "--help"],
+            ["media", "--help"],
+            ["ocr", "advanced-status", "--project-local"],
         ):
             run_command(executable, args, cwd=workspace)
         run_command(executable, ["doctor", "--project-local"], cwd=workspace)

@@ -51,8 +51,10 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs vector benchmark` | Benchmark available vector backends against existing local vectors. | `kgfs/cli/commands/vector.py` |
 | `kgfs vector recommend` | Recommend a vector backend based on local index size and availability. | `kgfs/cli/commands/vector.py` |
 | `kgfs ocr status` | Show OCR config and Tesseract availability. | `kgfs/cli/commands/ocr.py` |
+| `kgfs ocr advanced-status` | Show optional EasyOCR/PaddleOCR/cloud OCR scaffold status. | `kgfs/cli/commands/ocr.py` |
 | `kgfs ocr test` | OCR one image without indexing it. | `kgfs/cli/commands/ocr.py` |
 | `kgfs ocr index` | Run indexing with OCR-enabled extraction. | `kgfs/cli/commands/ocr.py` |
+| `kgfs media` | Inspect, index, and clear optional local media-derived metadata. | `kgfs/cli/commands/media.py` |
 | `kgfs why` | Explain why a latest search result matched a query. | `kgfs/cli/commands/why.py` |
 | `kgfs open` | Open a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
 | `kgfs reveal` | Reveal a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
@@ -110,6 +112,7 @@ Reports:
 - SQLite FTS5 availability
 - Semantic status
 - OCR status and cache/index counts
+- Media status and media-derived text counts
 - PDF/DOCX/OpenAI dependency availability
 - Configured folder existence/readability/warnings
 
@@ -399,6 +402,7 @@ Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py`, `kgfs/v
 
 ```bash
 kgfs ocr status [--config PATH] [--database PATH] [--project-local]
+kgfs ocr advanced-status [--config PATH] [--database PATH] [--project-local]
 kgfs ocr test IMAGE_PATH [--config PATH] [--project-local]
 kgfs ocr index [--config PATH] [--database PATH] [--project-local]
                [--dry-run] [--force] [--allow-risky-root]
@@ -411,6 +415,33 @@ kgfs ocr index [--config PATH] [--database PATH] [--project-local]
 `ocr index` reuses the normal indexing pipeline with OCR-capable extraction. It requires `ocr.enabled: true`, writes OCR text to the KGFS database/cache only, and never modifies source images or PDFs.
 
 Source: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`.
+
+## Media Commands
+
+```bash
+kgfs media status [--config PATH] [--database PATH] [--project-local]
+kgfs media exif PATH [--config PATH] [--project-local]
+kgfs media index [--config PATH] [--database PATH] [--project-local]
+                 [--photos] [--dry-run] [--allow-risky-root]
+kgfs media clear --yes [--config PATH] [--database PATH] [--project-local]
+kgfs media captions status [--config PATH] [--database PATH] [--project-local]
+kgfs media audio status [--config PATH] [--database PATH] [--project-local]
+kgfs media visual status [--config PATH] [--database PATH] [--project-local]
+```
+
+`media status` is read-only and works when optional dependencies are missing.
+`media exif PATH` reads local image metadata and prints searchable text without
+indexing or modifying the image. `media index --photos` indexes configured
+folders and stores local EXIF metadata for already indexed photo rows when
+media/photos are enabled. `media clear --yes` deletes KGFS media metadata,
+media text, and media embedding rows only; it does not delete source files,
+file records, OCR cache rows, vectors, or keyword FTS rows.
+
+Caption, audio, and visual commands are local scaffold/status surfaces in this
+phase. Missing or disabled backends report helpful messages rather than
+pretending to understand media.
+
+Source: `kgfs/cli/commands/media.py`, `kgfs/media/*.py`.
 
 ## Open and Reveal
 
@@ -437,7 +468,7 @@ Sources: `kgfs/cli/commands/open_reveal.py`, `kgfs/core/platform_utils.py`.
 kgfs stats [--config PATH] [--database PATH] [--project-local]
 ```
 
-Reports totals, extraction counts, OCR counts/cache entries, semantic counts, stale records, database size, schema version, file types, and largest indexed files.
+Reports totals, extraction counts, OCR counts/cache entries, media metadata/text/embedding counts, semantic counts, stale records, database size, schema version, file types, and largest indexed files.
 
 Sources: `kgfs/cli/commands/stats.py`, `kgfs/db/stats.py`.
 

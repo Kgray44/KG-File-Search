@@ -16,6 +16,7 @@ from kgfs.core.platform_utils import platform_diagnostics
 from kgfs.core.resources import executable_path, is_frozen
 from kgfs.core.safety import risk_warning
 from kgfs.db import check_fts5_available, connect_database
+from kgfs.media.status import get_media_status
 from kgfs.ocr.status import get_ocr_status
 from kgfs.search.semantic import get_semantic_status
 from kgfs.vectors.status import get_vector_status
@@ -42,6 +43,7 @@ def doctor(
     schema_version = read_schema_version_if_present(resolved_database_path) if database_exists else "not initialized"
     vector_summary = "not initialized"
     ocr_summary = "OCR is disabled in config."
+    media_summary = "media is disabled in config."
     if database_exists:
         try:
             conn = connect_database(resolved_database_path)
@@ -57,14 +59,22 @@ def doctor(
                     f"enabled={ocr_status.enabled}, backend={ocr_status.backend_name}, "
                     f"available={ocr_status.available}, cache={ocr_status.cache_entries}"
                 )
+                media_status = get_media_status(config, conn)
+                media_summary = (
+                    f"enabled={media_status.enabled}, photo_exif={media_status.photo_metadata_enabled}, "
+                    f"text={media_status.media_text_count}, cloud_fallback={media_status.cloud_fallback_enabled}"
+                )
             finally:
                 conn.close()
         except sqlite3.Error as exc:
             vector_summary = f"unreadable ({exc})"
             ocr_summary = f"unreadable ({exc})"
+            media_summary = f"unreadable ({exc})"
     else:
         ocr_status = get_ocr_status(config)
         ocr_summary = f"enabled={ocr_status.enabled}, backend={ocr_status.backend_name}, available={ocr_status.available}"
+        media_status = get_media_status(config)
+        media_summary = f"enabled={media_status.enabled}, photo_exif={media_status.photo_metadata_enabled}"
     table = Table(title="KGFS Doctor")
     table.add_column("Check")
     table.add_column("Value")
@@ -88,6 +98,7 @@ def doctor(
     table.add_row("Semantic", get_semantic_status(config.semantic).message)
     table.add_row("Vector backend", vector_summary)
     table.add_row("OCR", ocr_summary)
+    table.add_row("Media", media_summary)
     table.add_row("PDF support", "available" if find_spec("pypdf") else "missing optional dependency")
     table.add_row("DOCX support", "available" if find_spec("docx") else "missing optional dependency")
     table.add_row("OpenAI SDK", "available" if find_spec("openai") else "missing unless using AI Assist")

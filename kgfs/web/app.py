@@ -17,6 +17,7 @@ from kgfs.db import connect_database, get_database_stats, initialize_database
 from kgfs.db.latest_results import get_latest_result_path, save_latest_results
 from kgfs.intelligence.graph import build_topic_graph
 from kgfs.intelligence.health import build_health_report
+from kgfs.media.status import get_media_status
 from kgfs.ocr.status import get_ocr_status
 from kgfs.search import SearchContext, SearchFilters, SearchModeError, SearchOptions, build_default_search_registry
 from kgfs.vectors.status import get_vector_status
@@ -53,6 +54,7 @@ def create_app(
             stats = get_database_stats(conn, database)
             vector_status = get_vector_status(conn, config)
             ocr_status = get_ocr_status(config, conn)
+            media_status = get_media_status(config, conn)
             health = build_health_report(conn, config, database_path=database)
             return templates.TemplateResponse(
                 request,
@@ -61,6 +63,7 @@ def create_app(
                     "stats": stats,
                     "vector_status": vector_status,
                     "ocr_status": ocr_status,
+                    "media_status": media_status,
                     "health": health,
                 },
             )

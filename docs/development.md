@@ -33,6 +33,9 @@ python -m pip install -e ".[openai]"
 python -m pip install -e ".[package]"
 python -m pip install -e ".[tui]"
 python -m pip install -e ".[tray]"
+python -m pip install -e ".[media]"
+python -m pip install -e ".[ocr-easyocr]"
+python -m pip install -e ".[ocr-paddle]"
 python -m pip install -e ".[hnsw]"
 python -m pip install -e ".[sqlite-vec]"
 python -m pip install -e ".[faiss]"
@@ -139,7 +142,17 @@ Workflow metadata lives in the same KGFS database. When adding or changing
 profiles, saved searches, collections, tags, notes, assignments, or projects,
 keep source files untouched and put reusable DB helpers under `kgfs/workflows/`.
 
-Current schema version is `CURRENT_SCHEMA_VERSION = 4`.
+Current schema version is `CURRENT_SCHEMA_VERSION = 5`.
+
+## Add a Media Feature
+
+1. Add local-only logic under `kgfs/media/`.
+2. Keep optional imports lazy and keep heavy model dependencies out of base dependencies.
+3. Store generated metadata/text/embeddings only in KGFS SQLite/app-data/project-local paths.
+4. Never write EXIF, captions, transcripts, or embeddings back into source files or sidecars.
+5. Add status output and helpful missing-dependency messages.
+6. Add focused tests for config, schema/storage, search labels, no source modification, and no cloud calls.
+7. Update [Settings](settings.md), [CLI](cli.md), [Features](features.md), [Security](security.md), and [Data Model](data-model.md).
 
 ## Add a New Search Mode
 
@@ -255,7 +268,7 @@ The spec excludes:
 - pytest tooling
 - sentence-transformers, transformers, torch, tensorflow
 - openai
-- PIL, pytesseract, easyocr, paddleocr
+- PIL, pytesseract, easyocr, paddleocr, paddle, Whisper/CLIP-style media stacks
 - sqlite_vec, hnswlib, faiss, numpy
 - textual, pystray
 
@@ -294,6 +307,7 @@ python -m pytest tests/test_ai.py
 python -m pytest tests/test_ocr_backend.py tests/test_ocr_indexing.py tests/test_ocr_pdf.py
 python -m pytest tests/test_phase6_advanced_search.py tests/test_phase7_workflows.py tests/test_phase8_file_intelligence.py
 python -m pytest tests/test_phase9_ux_integrations.py
+python -m pytest tests/test_phase10_media.py
 python -m pytest tests/test_vector_commands.py tests/test_vector_backend_registry.py
 python -m pytest tests/test_packaging_scripts.py
 ```

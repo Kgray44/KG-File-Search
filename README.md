@@ -31,6 +31,7 @@ kgfs search "sample query" --project-local
 - Keyword, semantic, hybrid, and auto search modes.
 - Local vector backend registry with the default `sqlite_scan` backend, optional accelerated backends, and vector benchmark/recommend commands.
 - Optional local Tesseract OCR for image files and scanned-PDF detection, disabled by default.
+- Optional local media metadata expansion: photo/EXIF indexing, media-derived search text, advanced OCR backend scaffolds, caption/audio/visual scaffolds, and no-upload cloud OCR planning.
 - Result explanations with `kgfs why`.
 - Local investigation commands: `kgfs deep`, `kgfs similar`, `kgfs similar-file`, `kgfs compare`, `kgfs timeline`, and `kgfs research`.
 - Local personal workflow metadata: profiles, saved searches, collections, tags, notes, assignment mode, and manual projects.
@@ -48,6 +49,7 @@ kgfs search "sample query" --project-local
 - Noisy, system, dependency, cache, application, game, binary, media, archive, and over-size files are ignored by default.
 - Prune/reset/vector-clear operations remove only KGFS index data, not source files.
 - OCR is off by default, never writes back to images/PDFs, and stores OCR cache data only in KGFS database/cache locations.
+- Media indexing is off by default, never writes sidecars, and stores EXIF/caption/transcript/visual scaffold data only in KGFS database/cache locations. Exact GPS storage is disabled by default.
 - Workflow metadata is stored in KGFS config/database only; KGFS never writes tags, notes, or collections into source files.
 - File intelligence metadata and backups stay in KGFS database/app-data/project-local paths; KGFS never writes analysis sidecars beside source files.
 - AI Assist is off by default and sends bounded snippets only after opt-in.
@@ -90,6 +92,9 @@ python -m pip install -e ".[openai]"
 python -m pip install -e ".[package]"
 python -m pip install -e ".[tui]"
 python -m pip install -e ".[tray]"
+python -m pip install -e ".[media]"
+python -m pip install -e ".[ocr-easyocr]"
+python -m pip install -e ".[ocr-paddle]"
 python -m pip install -e ".[hnsw]"          # optional advanced vector backend dependency
 python -m pip install -e ".[sqlite-vec]"    # optional experimental SQLite vector dependency
 python -m pip install -e ".[faiss]"         # optional power-user vector dependency
@@ -126,6 +131,21 @@ kgfs ocr index
 kgfs search "text from screenshot"
 kgfs why 1 "text from screenshot"
 ```
+
+Optional media features are disabled by default and stay local:
+
+```bash
+kgfs media status
+kgfs media exif ./photo.jpg
+kgfs media index --photos
+kgfs media captions status
+kgfs media audio status
+kgfs media visual status
+kgfs ocr advanced-status
+kgfs search "TestCam photo"
+```
+
+Photo/EXIF indexing can make safe metadata searchable without modifying images. Captioning, audio transcription, visual embeddings, EasyOCR, PaddleOCR, and cloud OCR fallback remain optional/lazy scaffolds unless explicitly enabled and installed; cloud OCR cannot upload in this phase.
 
 Local investigation commands stay grounded in indexed KGFS data and do not call AI:
 

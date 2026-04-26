@@ -24,7 +24,7 @@ def get_ocr_status(config: KGFSConfig, conn: sqlite3.Connection | None = None) -
             supported_extensions=config.ocr.include_extensions,
             max_image_size_mb=config.ocr.max_image_size_mb,
             cache_enabled=config.ocr.cache_results,
-            install_hint="Set ocr.backend to tesseract.",
+            install_hint="Set ocr.backend to tesseract, easyocr, or paddle.",
             warnings=[str(exc)],
         )
     cache_entries = 0

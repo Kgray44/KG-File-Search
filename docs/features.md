@@ -99,8 +99,8 @@ This page inventories features implemented in the repository state at this commi
 - Use it with: automatic discovery filtering.
 - Inputs: file and directory paths.
 - Outputs: boolean index/skip decisions.
-- Settings: all filter-related config keys plus `ocr.enabled` and `ocr.include_extensions`.
-- Edge cases: directory matching is by directory name; extension matching is lowercase and dot-normalized during config load. Image extensions stay ignored unless OCR is explicitly enabled.
+- Settings: all filter-related config keys plus `ocr.enabled`, `ocr.include_extensions`, `media.enabled`, and `media.photos.*`.
+- Edge cases: directory matching is by directory name; extension matching is lowercase and dot-normalized during config load. Image extensions stay ignored unless OCR or media photo indexing is explicitly enabled.
 - Sources: `kgfs/indexing/filters.py`, `kgfs/core/config.py`.
 - Tests: `tests/test_file_filters.py`.
 
@@ -137,6 +137,30 @@ This page inventories features implemented in the repository state at this commi
 - Safety: KGFS never modifies images/PDFs and never writes OCR sidecars next to source files.
 - Sources: `kgfs/ocr/*.py`, `kgfs/extractors/image_ocr.py`, `kgfs/extractors/pdf.py`, `kgfs/cli/commands/ocr.py`.
 - Tests: `tests/test_ocr_*.py`.
+
+### Optional Local Media Metadata
+
+- What it does: stores local media-derived metadata/text in KGFS tables, starting with photo/EXIF metadata, while leaving source files untouched.
+- Use it with: `kgfs media status`, `kgfs media exif ./photo.jpg`, `kgfs media index --photos`, and `kgfs media clear --yes`.
+- Inputs: explicitly indexed folders and media-enabled photo extensions.
+- Outputs: `media_metadata` rows, searchable `media_text` rows, and clear source labels such as `media:exif` in search/why output.
+- Settings: `media.enabled`, `media.max_media_file_size_mb`, `media.photos.*`, `media.captions.*`, `media.audio.*`, `media.visual.*`.
+- Edge cases: Pillow is optional; missing EXIF dependencies are reported instead of crashing. GPS/location data is not stored unless explicitly enabled.
+- Safety: KGFS does not modify images/audio files and does not write XMP/JSON sidecars beside source files.
+- Sources: `kgfs/media/*.py`, `kgfs/cli/commands/media.py`, `kgfs/search/keyword.py`.
+- Tests: `tests/test_phase10_media.py`.
+
+### Advanced OCR and Multimodal Scaffolds
+
+- What it does: adds lazy, optional backend scaffolds for EasyOCR, PaddleOCR, image captions, audio transcription, visual embeddings, and cloud OCR planning.
+- Use it with: `kgfs ocr advanced-status`, `kgfs media captions status`, `kgfs media audio status`, and `kgfs media visual status`.
+- Inputs: config only unless a future/local backend is installed and enabled.
+- Outputs: helpful availability/status messages; no fake caption/transcript/visual understanding.
+- Settings: `ocr.easyocr.*`, `ocr.paddle.*`, `ocr.cloud_fallback.*`, `media.captions.*`, `media.audio.*`, `media.visual.*`.
+- Edge cases: cloud OCR fallback is disabled by default and the current scaffold still refuses upload after confirmation because no provider is implemented.
+- Safety: no cloud uploads happen by default or in tests; heavy dependencies are optional and lazy.
+- Sources: `kgfs/ocr/easyocr.py`, `kgfs/ocr/paddle.py`, `kgfs/ocr/cloud.py`, `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py`.
+- Tests: `tests/test_phase10_media.py`.
 
 ### Incremental Indexing
 
@@ -196,7 +220,7 @@ This page inventories features implemented in the repository state at this commi
 
 ### Keyword Search
 
-- What it does: searches `files_fts`, falls back from `AND` to `OR`, filters candidates, ranks with BM25-derived score plus local boosts, and returns stable result IDs.
+- What it does: searches `files_fts`, falls back from `AND` to `OR`, searches enabled media-derived `media_text`, filters candidates, ranks with BM25/media-derived score plus local boosts, and returns stable result IDs.
 - Use it with: `kgfs search --mode keyword` or `search()`.
 - Inputs: query, DB connection, filters, limit.
 - Outputs: `SearchResult` list.
@@ -377,7 +401,7 @@ This page inventories features implemented in the repository state at this commi
 
 ### Stats Command
 
-- What it does: shows indexed file counts, sizes, semantic chunk count, embedding storage, OCR cache/index counts, failures, stale records, DB size, schema version, file types, and largest files.
+- What it does: shows indexed file counts, sizes, semantic chunk count, embedding storage, OCR cache/index counts, media metadata/text/embedding counts, failures, stale records, DB size, schema version, file types, and largest files.
 - Use it with: `kgfs stats`.
 - Inputs: database path.
 - Outputs: Rich tables.
@@ -471,7 +495,7 @@ This page inventories features implemented in the repository state at this commi
 - Use it with: automatic CLI/web DB connection.
 - Inputs: SQLite connection.
 - Outputs: tables and `schema_version` row.
-- Settings: `CURRENT_SCHEMA_VERSION = 4`.
+- Settings: `CURRENT_SCHEMA_VERSION = 5`.
 - Edge cases: newer DB schema versions raise `RuntimeError`.
 - Sources: `kgfs/db/schema.py`, `kgfs/db/migrations.py`.
 - Tests: `tests/test_migrations.py`.
@@ -520,7 +544,7 @@ This page inventories features implemented in the repository state at this commi
 - Inputs: build flags.
 - Outputs: `dist-packages/KGFS-<os>-<arch>.zip`.
 - Settings: `KGFS_PYINSTALLER_MODE`, `KGFS_PACKAGE_NAME`.
-- Edge cases: base package excludes tests, semantic/model stacks, optional vector/OCR/TUI/tray dependencies, and OpenAI SDK.
+- Edge cases: base package excludes tests, semantic/model stacks, optional vector/OCR/media/TUI/tray dependencies, and OpenAI SDK.
 - Sources: `scripts/build_package.py`, `packaging/pyinstaller/kgfs.spec`.
 - Tests: `tests/test_packaging_scripts.py`.
 

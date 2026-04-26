@@ -127,6 +127,27 @@ source files.
 
 Sources: `kgfs/ocr/cache.py`, `kgfs/db/schema.py`, `tests/test_ocr_cache.py`.
 
+### Media Tables
+
+Phase 10 adds optional media metadata tables. They store KGFS-derived metadata
+only; no source image/audio bytes are copied and no sidecars are written beside
+source files.
+
+| Table | Purpose |
+|---|---|
+| `media_metadata` | One local media metadata row per indexed file, including image dimensions, camera make/model, captured timestamp, optional redacted/coarse/exact location text, and safe metadata JSON. |
+| `media_text` | Searchable generated text from sources such as `exif`, `caption`, `transcript`, `visual_label`, or `ocr`. Keyword search labels these results with `media:<source_kind>`. |
+| `media_embeddings` | Optional future/local media embeddings keyed by file, source kind, backend, and model name. |
+
+Location behavior:
+
+- `media.photos.store_location_metadata` defaults to false.
+- When disabled, KGFS omits GPS/location/latitude/longitude fields from stored
+  metadata JSON and stores `location_precision = "none"`.
+- Exact location text requires explicit config and is not the default.
+
+Sources: `kgfs/media/*.py`, `kgfs/db/schema.py`, `tests/test_phase10_media.py`.
+
 ### Workflow Metadata Tables
 
 Phase 7 adds local personal workflow metadata. These tables live only in the
@@ -175,7 +196,7 @@ Created by migrations.
 | `version` | `INTEGER NOT NULL` | Current schema version. |
 | `applied_at` | `TEXT NOT NULL` | UTC ISO timestamp. |
 
-Current version: `4`.
+Current version: `5`.
 
 Sources: `kgfs/db/migrations.py`, `tests/test_migrations.py`.
 
@@ -221,6 +242,15 @@ OCR models:
 | `OCRResult` | text, status, error, backend, language, source kind, confidence, metadata | OCR backend extraction result. | `kgfs/ocr/base.py` |
 | `OCRStatus` | enabled, backend, availability, command/language, supported extensions, cache/index counts, warnings | `kgfs ocr status`, doctor integration, tests. | `kgfs/ocr/status.py` |
 
+Media models:
+
+| Model | Fields | Used for | Source |
+|---|---|---|---|
+| `MediaStatus` | enabled flags, backend availability, media row counts, cache size, warnings | `kgfs media status`, health/stats/web status. | `kgfs/media/models.py`, `kgfs/media/status.py` |
+| `MediaTextRecord` | file ID, source kind, backend/model, text, confidence, metadata | Local media-derived searchable text storage. | `kgfs/media/models.py`, `kgfs/media/cache.py` |
+| `PhotoMetadata` | image dimensions, camera make/model, captured time, optional GPS fields, metadata dict | EXIF/photo metadata extraction and storage. | `kgfs/media/exif.py` |
+| `CaptionResult`, `TranscriptionResult`, `VisualEmbeddingResult` | scaffold result payloads with text/vector/status/error metadata | Optional caption/audio/visual scaffold behavior. | `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py` |
+
 Vector models:
 
 | Model | Fields | Used for | Source |
@@ -252,7 +282,8 @@ Defined in `kgfs/core/config.py`.
 | `KGFSConfig` | Main YAML config. |
 | `IndexingSettings` | Indexing flags. |
 | `ExtractionSettings` | Extractor settings. |
-| `OCRSettings` / `TesseractOCRSettings` | Local OCR settings and Tesseract command/language. |
+| `OCRSettings` / `TesseractOCRSettings` / `EasyOCRSettings` / `PaddleOCRSettings` / `CloudOCRFallbackSettings` | Local OCR settings, optional advanced OCR backend flags, and strict no-upload cloud fallback scaffold settings. |
+| `MediaSettings`, `PhotoSettings`, `CaptionSettings`, `AudioSettings`, `VisualSettings` | Optional local media metadata/caption/audio/visual settings, disabled by default. |
 | `SemanticSettings` | Local embedding settings. |
 | `SearchSettings` | CLI search defaults. |
 | `DeepSearchSettings`, `ResearchSettings`, `SimilarSettings`, `TimelineSettings` | Advanced local search defaults. |
@@ -305,7 +336,8 @@ Sources: `kgfs/search/keyword.py`, `kgfs/db/latest_results.py`.
 6. Ensures `ocr_cache`.
 7. Ensures workflow metadata tables.
 8. Ensures intelligence metadata tables.
-9. Sets version to `4` for fresh/older DBs.
+9. Ensures media metadata/text/embedding tables.
+10. Sets version to `5` for fresh/older DBs.
 
 Sources: `kgfs/db/migrations.py`, `tests/test_migrations.py`.
 

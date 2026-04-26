@@ -60,7 +60,7 @@ is disabled.
 | Method | Path | Query/path parameters | Response | Behavior | Source |
 |---|---|---|---|---|---|
 | `GET` | `/health` | None | JSON `APIHealth` | Reports API/local/file-action status, indexed-file count, and schema version. | `kgfs/api/routes.py`, `kgfs/api/models.py` |
-| `GET` | `/status` | None | JSON health report dict | Returns the same local index/workflow health report used by CLI health. | `kgfs/api/routes.py`, `kgfs/intelligence/health.py` |
+| `GET` | `/status` | None | JSON health report dict | Returns the same local index/workflow health report used by CLI health, including compact media counts. | `kgfs/api/routes.py`, `kgfs/intelligence/health.py` |
 | `GET` | `/search` | `q`, `mode`, `limit`, `ext`, `folder`, `after`, `before`, `failed_only` | JSON `APISearchResponse` | Runs registry search, clamps limit to 1..100, saves latest results, and returns mode/warnings/results. | `kgfs/api/routes.py`, `kgfs/search/registry.py` |
 | `GET` | `/deep` | `q`, `limit`, `mode` | JSON | Runs deterministic local deep search and returns variants, followups, and results. | `kgfs/api/routes.py`, `kgfs/search/deep.py` |
 | `GET` | `/research` | `q`, `limit`, `mode` | JSON | Builds local citation-backed research data without AI. | `kgfs/api/routes.py`, `kgfs/search/research.py` |
@@ -114,7 +114,7 @@ http://127.0.0.1:8765
 
 | Method | Path | Query/path parameters | Response | Behavior | Source |
 |---|---|---|---|---|---|
-| `GET` | `/` | None | HTML | Shows summary metrics, vector backend, OCR state, and health issue count. | `kgfs/web/app.py`, `kgfs/web/templates/index.html` |
+| `GET` | `/` | None | HTML | Shows summary metrics, vector backend, OCR state, media text count, and health issue count. | `kgfs/web/app.py`, `kgfs/web/templates/index.html` |
 | `GET` | `/search` | `q`, `mode`, `ext`, `folder`, `after`, `before`, `limit`, `failed_only` | HTML | Runs registry search when `q` is provided, saves latest results, renders mode/warnings/errors, tags, notes, and results. | `kgfs/web/app.py`, `kgfs/web/templates/search.html` |
 | `GET` | `/collections` | None | HTML | Lists local collections. | `kgfs/web/app.py`, `kgfs/web/templates/collections.html` |
 | `GET` | `/tags` | None | HTML | Lists local tag names. | `kgfs/web/app.py`, `kgfs/web/templates/tags.html` |
@@ -216,6 +216,17 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `get_cached_ocr_result(...)`, `store_ocr_cache_result(...)` | Read/write local OCR cache rows. | `kgfs/ocr/cache.py` |
 | `count_ocr_cache_entries(conn)` | Count OCR cache rows for stats/status. | `kgfs/ocr/cache.py` |
 | `extract_scanned_pdf(...)` | Scanned-PDF fallback scaffold that reports unsupported rasterization safely. | `kgfs/ocr/pdf.py` |
+
+### Media Helpers
+
+| API | Purpose | Source |
+|---|---|---|
+| `get_media_status(config, conn=None)` | Return media enabled/backend/count/warning status without processing files. | `kgfs/media/status.py` |
+| `extract_exif_metadata(path)` | Read local image dimensions/EXIF with optional Pillow. | `kgfs/media/exif.py` |
+| `store_photo_metadata(conn, config, file_id=..., metadata=...)` | Store sanitized photo metadata plus searchable `media_text`. | `kgfs/media/exif.py` |
+| `index_existing_photo_metadata(conn, config)` | Populate photo metadata for already indexed photo rows. | `kgfs/media/metadata.py` |
+| `clear_media_data(conn)` | Delete KGFS media metadata/text/embedding rows only. | `kgfs/media/cache.py` |
+| `get_caption_status()`, `get_audio_status()`, `get_visual_status()` | Report scaffold backend status for optional multimodal features. | `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py` |
 
 ### Search
 

@@ -11,7 +11,7 @@ from kgfs.ocr.tesseract import TesseractOCRBackend
 
 
 def test_ocr_registry_contains_tesseract_backend() -> None:
-    assert list_ocr_backends() == ["tesseract"]
+    assert list_ocr_backends() == ["tesseract", "easyocr", "paddle"]
     assert get_ocr_backend("tesseract").name == "tesseract"
 
 
@@ -29,7 +29,7 @@ def test_ocr_status_handles_unknown_backend_helpfully() -> None:
 
     assert status.available is False
     assert "Unknown OCR backend" in status.message
-    assert status.install_hint == "Set ocr.backend to tesseract."
+    assert status.install_hint == "Set ocr.backend to tesseract, easyocr, or paddle."
 
 
 def test_tesseract_backend_success_uses_stdout_and_does_not_modify_source(tmp_path: Path, mocker) -> None:

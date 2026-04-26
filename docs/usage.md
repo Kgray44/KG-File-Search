@@ -30,6 +30,19 @@ python -m pip install -e ".[ocr]"
 
 Tesseract itself is an external local executable and is installed separately on Windows/macOS.
 
+Optional media/photo helper dependency:
+
+```bash
+python -m pip install -e ".[media]"
+```
+
+EasyOCR and PaddleOCR are optional advanced OCR extras and are not part of the base install:
+
+```bash
+python -m pip install -e ".[ocr-easyocr]"
+python -m pip install -e ".[ocr-paddle]"
+```
+
 Optional TUI and tray-scaffold dependencies:
 
 ```bash
@@ -462,6 +475,54 @@ empty. Full PDF page rasterization is not implemented yet, so KGFS records a
 helpful extraction error rather than modifying the PDF or creating sidecars.
 
 Sources: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`, `kgfs/extractors/image_ocr.py`, `kgfs/extractors/pdf.py`.
+
+## Media and Multimodal Scaffolds
+
+Media features are disabled by default. Photo metadata indexing stores local
+EXIF/image metadata in KGFS database tables and makes generated metadata text
+searchable with labels such as `media:exif`.
+
+Enable photo metadata in config:
+
+```yaml
+media:
+  enabled: true
+  photos:
+    enabled: true
+    index_exif: true
+    store_location_metadata: false
+```
+
+Inspect status and one image:
+
+```bash
+kgfs media status
+kgfs media exif ./photo.jpg
+```
+
+Index configured folders and search media-derived text:
+
+```bash
+kgfs media index --photos
+kgfs search "TestCam photo"
+kgfs why 1 "TestCam photo"
+```
+
+Scaffold/status commands:
+
+```bash
+kgfs ocr advanced-status
+kgfs media captions status
+kgfs media audio status
+kgfs media visual status
+```
+
+Captioning, audio transcription, visual embeddings, EasyOCR, PaddleOCR, and
+cloud OCR fallback are optional/lazy. The built-in cloud fallback scaffold is
+no-upload by default and returns a not-implemented message even after explicit
+confirmation in this phase.
+
+Sources: `kgfs/cli/commands/media.py`, `kgfs/media/*.py`, `kgfs/ocr/cloud.py`, `tests/test_phase10_media.py`.
 
 ## AI Assist
 

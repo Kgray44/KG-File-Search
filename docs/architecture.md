@@ -13,6 +13,7 @@ kgfs/
   indexing/            Discovery, filters, hashing, indexing, pruning
   extractors/          Text extraction by file type
   ocr/                 Optional local OCR backend, cache, status, and PDF fallback helpers
+  media/               Optional local media metadata, EXIF, caption/audio/visual scaffolds
   search/              Query parsing, filters, ranking, snippets, citations, keyword/semantic/hybrid search, and advanced local investigation helpers
   search/backends/     Vector backend interfaces, registry, sqlite_scan, and optional accelerated backends
   search/modes/        Registry engine wrappers for keyword, semantic, hybrid, and auto fallback
@@ -60,7 +61,10 @@ flowchart TD
     OCR -->|"yes"| Tesseract["Local Tesseract OCR\nkgfs/ocr"]
     Tesseract --> Upsert["Upsert files row and FTS row"]
     OCR -->|"no"| Upsert
-    Upsert --> Chunks{"semantic.enabled?"}
+    Upsert --> Media{"media photos enabled?"}
+    Media -->|"yes"| Exif["Store local EXIF/media_text"]
+    Media -->|"no"| Chunks
+    Exif --> Chunks
     Chunks -->|"yes"| Embed["Chunk and embed locally\nkgfs/search/semantic.py"]
     Chunks -->|"no"| Summary["IndexSummary"]
     Embed --> Summary
@@ -76,6 +80,7 @@ Important details:
 - Risky roots are refused before DB initialization in the CLI and again in the library indexer.
 - Extraction failures are stored as DB records with `extraction_status = "error"` and `extraction_error`.
 - OCR is disabled by default. When enabled, OCR-supported image files are allowed through filtering, processed by local Tesseract, cached in KGFS data, and stored as normal extracted text with `extraction_source = "ocr"`.
+- Media/photo metadata is disabled by default. When enabled, configured photo extensions are allowed through filtering, local EXIF/image metadata is stored in KGFS `media_metadata`, and searchable generated text is stored in `media_text` with labels such as `media:exif`.
 - Scanned PDF candidates are detected when normal PDF text is below the configured threshold; full page rasterization is safely scaffolded for a later pass.
 - `files_fts` rows are replaced whenever a file record is inserted or updated.
 - Semantic chunks are stored in SQLite `chunks` rows with vector BLOBs.
@@ -110,6 +115,31 @@ The OCR package owns only local behavior:
 
 OCR never modifies source images/PDFs and never writes sidecars beside source files.
 
+## Media Architecture
+
+Media-derived text stays source-separated from normal extraction:
+
+```mermaid
+flowchart TD
+    Photo["Configured photo extension"] --> Filter["Filter only when media.photos.enabled"]
+    Filter --> EXIF["Local EXIF/image metadata reader"]
+    EXIF --> Metadata["media_metadata row"]
+    EXIF --> Text["media_text row\nsource_kind=exif"]
+    Text --> Keyword["Keyword search union"]
+    Text --> Semantic["Semantic chunks when semantic indexing is enabled"]
+    Keyword --> Label["SearchResult metadata\nextraction_source=media:exif"]
+```
+
+`kgfs/media/` owns photo metadata, media status/counting, safe clear behavior,
+and caption/audio/visual scaffolds. Captioning, transcription, and visual
+embeddings use `none` backends by default; they report unavailable status
+instead of faking media understanding. Advanced OCR backends and cloud OCR
+fallback are registered lazily under `kgfs/ocr/`.
+
+Cloud OCR fallback is a no-upload scaffold in this phase: it requires disabled
+by default config to be changed, an explicit allow-cloud flag, preview, and
+confirmation, and still returns "not implemented" rather than uploading.
+
 ## Search Lifecycle
 
 ```mermaid
@@ -125,11 +155,13 @@ flowchart TD
     Explicit --> Semantic["SemanticSearchEngine"]
     Explicit --> Hybrid
     Keyword --> FTS["SQLite FTS5\nfiles_fts"]
+    Keyword --> MediaText["media_text\nwhen enabled"]
     Semantic --> Backend["VectorBackend\nsqlite_scan / optional backends"]
     Backend --> Chunks["SQLite chunks\ncosine similarity"]
     Hybrid --> FTS
     Hybrid --> Chunks
     FTS --> Results["SearchResult list"]
+    MediaText --> Results
     Chunks --> Results
 ```
 
@@ -318,10 +350,11 @@ Tables:
 - `chunks`: semantic text chunks and vector BLOBs.
 - `schema_version`: migration version marker.
 - `ocr_cache`: local OCR result cache keyed by source identity/backend/language.
+- `media_metadata`, `media_text`, `media_embeddings`: optional local media metadata, searchable generated text, and future media embeddings.
 - Workflow tables: `profiles`, `saved_searches`, `collections`, `collection_items`, `tags`, `file_tags`, `file_notes`, `projects`, `project_items`, and `assignment_runs`.
 - Intelligence tables: `graph_edges`, `project_candidates`, and `metadata_backups`.
 
-`initialize_database()` creates core tables, calls `migrate_database()`, and commits. Current schema version is `4`.
+`initialize_database()` creates core tables, calls `migrate_database()`, and commits. Current schema version is `5`.
 
 Sources: `kgfs/db/schema.py`, `kgfs/db/migrations.py`, `kgfs/db/repositories.py`, `kgfs/db/latest_results.py`, [Data Model](data-model.md).
 
@@ -331,7 +364,7 @@ Sources: `kgfs/db/schema.py`, `kgfs/db/migrations.py`, `kgfs/db/repositories.py`
 
 Routes:
 
-- `GET /`: summary metrics plus vector/OCR/health status.
+- `GET /`: summary metrics plus vector/OCR/media/health status.
 - `GET /search`: registry search with mode/filter controls.
 - `GET /collections`: local collections.
 - `GET /tags`: local tags.
@@ -403,6 +436,8 @@ Sources: `kgfs/ai.py`, `kgfs/cli/commands/search.py`, `kgfs/cli/shared.py`, `tes
 | Unknown vector backend | Vector status reports unavailable; semantic/hybrid modes report a helpful unavailable message with known backend names. | `kgfs/search/backends/registry.py`, `kgfs/vectors/status.py` |
 | Optional vector backend unavailable or stale | Backend reports missing dependency, disabled config, missing artifact, stale metadata, or dimension mismatch instead of pretending search succeeded. | `kgfs/search/backends/*.py`, `kgfs/vectors/metadata.py` |
 | OCR disabled or missing Tesseract | Images remain ignored unless OCR is enabled; OCR status/extraction reports missing local command with install guidance. | `kgfs/indexing/filters.py`, `kgfs/ocr/tesseract.py` |
+| Media disabled or missing optional dependencies | Media files remain ignored unless media/photos are enabled; media status and EXIF commands report missing optional dependencies with guidance. | `kgfs/indexing/filters.py`, `kgfs/media/status.py`, `kgfs/media/exif.py` |
+| Cloud OCR fallback | Disabled by default and scaffolded to refuse upload even after confirmation until a real provider path exists. | `kgfs/ocr/cloud.py` |
 | API token missing or invalid | Missing configured token env returns HTTP 503; wrong/missing bearer token returns HTTP 401. | `kgfs/api/auth.py` |
 | API non-local bind | `kgfs serve` raises a bad-parameter error unless `--allow-network` is supplied. | `kgfs/api/auth.py`, `kgfs/cli/commands/serve.py` |
 | API file action disabled | `/open/{result_id}` and `/reveal/{result_id}` return 403 unless `api.allow_file_actions` is true. | `kgfs/api/routes.py` |
@@ -426,7 +461,7 @@ Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/doctor.py`, `kgfs/core/app_dir
 - Local JSON API requires a bearer token by default and refuses network binds unless explicitly allowed.
 - Integration scaffolds write local template files only and do not install OS integrations.
 - AI Assist is opt-in and context-bounded.
-- OCR is opt-in, local-only, and writes only KGFS database/cache data.
+- OCR and media features are opt-in, local-first, and write only KGFS database/cache data.
 
 Sources: `AGENTS.md`, `kgfs/core/safety.py`, `kgfs/core/platform_utils.py`, `tests/test_platform_boundary.py`, [Security](security.md).
 
@@ -438,6 +473,7 @@ Sources: `AGENTS.md`, `kgfs/core/safety.py`, `kgfs/core/platform_utils.py`, `tes
 | New config key | Add Pydantic field in `kgfs/core/config.py`, update `DEFAULT_CONFIG_YAML`, `config.example.yaml`, docs, and tests. | `tests/test_config.py` plus feature tests. |
 | New extractor | Add extractor module under `kgfs/extractors/`, update dispatch in `kgfs/extractors/__init__.py`, update default extensions if enabled by default. | `tests/test_extractors.py` and indexing/search tests. |
 | New OCR backend | Add backend under `kgfs/ocr/`, register it lazily, keep source files untouched, and update status/docs. | OCR backend/status/cache/indexing tests. |
+| New media backend | Add backend or helper under `kgfs/media/`, keep dependencies lazy, store generated data in KGFS DB/cache only, and update status/docs. | Media config/status/search/safety tests. |
 | New DB schema | Update `kgfs/db/schema.py`, migration logic in `kgfs/db/migrations.py`, and data-model docs. | `tests/test_migrations.py` and repository tests. |
 | New intelligence workflow | Add logic under `kgfs/intelligence/`, expose CLI under `kgfs/cli/commands/`, and keep source files untouched. | Focused Phase 8-style tests using temporary databases and source-hash checks. |
 | New search mode | Add engine under `kgfs/search/modes/`, register in `build_default_search_registry()`, extend `SearchMode` enum if user-facing. | `tests/test_search_kernel.py`, CLI tests if exposed. |

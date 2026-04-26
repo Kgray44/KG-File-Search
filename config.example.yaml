@@ -121,6 +121,66 @@ ocr:
   tesseract:
     command: "tesseract"
     language: "eng"
+  # Advanced OCR backends are optional and disabled by default.
+  easyocr:
+    enabled: false
+    languages:
+      - "en"
+    gpu: false
+  paddle:
+    enabled: false
+    language: "en"
+  # Cloud OCR fallback is scaffolded only. KGFS will not upload files unless
+  # a future provider is explicitly configured, previewed, and confirmed.
+  cloud_fallback:
+    enabled: false
+    provider: null
+    require_confirmation: true
+    preview_before_upload: true
+    max_files_per_run: 5
+
+media:
+  # Local media metadata is disabled by default. Generated media data is stored
+  # only in the KGFS database/cache, never beside source files.
+  enabled: false
+  cache_results: true
+  max_media_file_size_mb: 50
+  photos:
+    enabled: false
+    index_exif: true
+    include_extensions:
+      - ".jpg"
+      - ".jpeg"
+      - ".png"
+      - ".heic"
+      - ".tiff"
+    store_location_metadata: false
+    location_precision: "none"
+    generate_captions: false
+  captions:
+    enabled: false
+    backend: "none"
+    model_name: null
+    local_files_only: true
+    max_images_per_run: 50
+  audio:
+    enabled: false
+    transcription_enabled: false
+    backend: "none"
+    include_extensions:
+      - ".m4a"
+      - ".mp3"
+      - ".wav"
+      - ".aac"
+      - ".flac"
+    model_name: null
+    local_files_only: true
+    max_audio_minutes_per_file: 60
+  visual:
+    enabled: false
+    backend: "none"
+    model_name: null
+    local_files_only: true
 
 semantic:
   enabled: false

@@ -20,6 +20,8 @@ def explain_result(
     extraction_source = str(result.metadata.get("extraction_source", "") if result.metadata else "")
     if extraction_source.startswith("ocr"):
         explanation_notes.append("This result matched OCR-derived text stored in the local KGFS index.")
+    if extraction_source.startswith("media:"):
+        explanation_notes.append("This result matched media-derived text stored in the local KGFS index.")
     return SearchExplanation(
         mode=mode,
         summary=summary,

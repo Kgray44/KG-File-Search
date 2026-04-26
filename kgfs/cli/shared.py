@@ -83,6 +83,9 @@ def _format_result_source(result) -> str:
     if source.startswith("ocr"):
         kind = result.metadata.get("ocr_source_kind") if result.metadata else None
         return "OCR PDF" if kind == "pdf" else "OCR"
+    if source.startswith("media:"):
+        kind = source.split(":", 1)[1].replace("_", " ").upper()
+        return f"Media {kind}".strip()
     return ""
 
 

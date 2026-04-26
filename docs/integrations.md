@@ -167,6 +167,40 @@ Behavior:
 
 Tests: `tests/test_ocr_backend.py`, `tests/test_ocr_indexing.py`, `tests/test_ocr_pdf.py`.
 
+## Optional Media and Advanced OCR Packages
+
+Purpose:
+
+- Read local photo/EXIF metadata.
+- Provide lazy optional backend points for EasyOCR, PaddleOCR, captions, audio transcription, and visual embeddings.
+
+Source:
+
+- `kgfs/media/*.py`
+- `kgfs/ocr/easyocr.py`
+- `kgfs/ocr/paddle.py`
+- `kgfs/ocr/cloud.py`
+- `pyproject.toml`
+
+Install:
+
+```bash
+python -m pip install -e ".[media]"
+python -m pip install -e ".[ocr-easyocr]"
+python -m pip install -e ".[ocr-paddle]"
+```
+
+Behavior:
+
+- Media features are disabled by default.
+- Pillow is optional and used only when EXIF metadata is read.
+- EasyOCR/PaddleOCR are imported only when their backends are selected/enabled.
+- Caption/audio/visual backends default to `none`.
+- Cloud OCR fallback is disabled and scaffolded to refuse upload in this phase.
+- Generated metadata/text lives in KGFS database/cache paths only.
+
+Tests: `tests/test_phase10_media.py`.
+
 ## python-docx
 
 Purpose:
@@ -444,6 +478,7 @@ Excluded:
 - semantic model stack
 - optional vector backend packages such as sqlite-vec, hnswlib, FAISS, and numpy
 - optional OCR helper packages such as PIL/pytesseract/EasyOCR/PaddleOCR
+- optional media/model packages such as Whisper, CLIP-style stacks, Paddle, TorchVision, and OpenCV
 - Tesseract executable and OCR user cache/data
 - Textual and tray optional dependencies
 - OpenAI SDK
@@ -515,6 +550,6 @@ No implementation was found for:
 - Remote index storage.
 - External authentication provider beyond the local API bearer-token check.
 - Telemetry backend.
-- Cloud OCR providers.
+- Cloud OCR providers beyond the no-upload scaffold.
 - Automatic Raycast/Alfred/PowerToys/Finder/Explorer installation.
 - Running tray/menu-bar daemon.

@@ -325,6 +325,45 @@ Sources: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`, `tests/test_ocr_*.py`.
 
 ## Example 13: AI Preview Without API Call
 
+## Example 13: Optional Media Metadata
+
+Enable photo metadata without storing GPS/location:
+
+```yaml
+media:
+  enabled: true
+  photos:
+    enabled: true
+    index_exif: true
+    store_location_metadata: false
+```
+
+Inspect and index local metadata:
+
+```bash
+kgfs media status
+kgfs media exif ./photos/lab-bench.jpg
+kgfs media index --photos
+kgfs search "iPhone photo"
+kgfs why 1 "iPhone photo"
+```
+
+Check optional multimodal scaffolds:
+
+```bash
+kgfs ocr advanced-status
+kgfs media captions status
+kgfs media audio status
+kgfs media visual status
+```
+
+KGFS stores generated media metadata/text in the KGFS database only. Source
+images are not modified and no sidecars are created.
+
+Sources: `kgfs/media/*.py`, `kgfs/cli/commands/media.py`, `tests/test_phase10_media.py`.
+
+## Example 14: AI Preview Without API Call
+
 Enable AI in config for preview:
 
 ```yaml
@@ -350,7 +389,7 @@ No API call is made when `--preview-ai-context` is used.
 
 Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/search.py`, `tests/test_cli.py`.
 
-## Example 14: OpenAI Answer Synthesis
+## Example 15: OpenAI Answer Synthesis
 
 Install OpenAI dependency:
 
@@ -383,7 +422,7 @@ kgfs ask "What do my notes say about motor torque?"
 
 Source: `kgfs/ai.py`.
 
-## Example 15: Start Web Dashboard
+## Example 16: Start Web Dashboard
 
 ```bash
 kgfs web
@@ -399,7 +438,7 @@ Use `/search?q=pid&mode=auto&ext=.pdf` for a filtered search URL. The dashboard 
 
 Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`.
 
-## Example 16: Local API, TUI, and Integration Scaffolds
+## Example 17: Local API, TUI, and Integration Scaffolds
 
 Start the token-gated local API:
 
@@ -443,7 +482,7 @@ These commands do not edit system settings, install OS integrations, or modify i
 
 Sources: `kgfs/api/*.py`, `kgfs/tui/*.py`, `kgfs/integrations/*.py`, `tests/test_phase9_ux_integrations.py`.
 
-## Example 17: Reset and Rebuild
+## Example 18: Reset and Rebuild
 
 Dry-run reset:
 
@@ -468,7 +507,7 @@ Sources: `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py`.
 `reset-index` creates a KGFS metadata backup first when
 `metadata.auto_backup_before_reset: true`.
 
-## Example 18: Build a Package
+## Example 19: Build a Package
 
 ```bash
 python -m pip install -e ".[package]"

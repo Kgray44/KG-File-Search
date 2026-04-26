@@ -211,6 +211,55 @@ def initialize_database(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_graph_edges_type ON graph_edges(edge_type);
         CREATE INDEX IF NOT EXISTS idx_project_candidates_name ON project_candidates(name);
         CREATE INDEX IF NOT EXISTS idx_metadata_backups_created ON metadata_backups(created_at);
+
+        CREATE TABLE IF NOT EXISTS media_metadata (
+            id INTEGER PRIMARY KEY,
+            file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+            media_kind TEXT NOT NULL,
+            width INTEGER,
+            height INTEGER,
+            duration_seconds REAL,
+            camera_make TEXT,
+            camera_model TEXT,
+            captured_at TEXT,
+            location_text TEXT,
+            location_precision TEXT NOT NULL DEFAULT 'none',
+            metadata_json TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(file_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS media_text (
+            id INTEGER PRIMARY KEY,
+            file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+            source_kind TEXT NOT NULL,
+            backend TEXT,
+            model_name TEXT,
+            text TEXT NOT NULL,
+            confidence REAL,
+            metadata_json TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS media_embeddings (
+            id INTEGER PRIMARY KEY,
+            file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+            source_kind TEXT NOT NULL,
+            backend TEXT NOT NULL,
+            model_name TEXT NOT NULL,
+            embedding BLOB NOT NULL,
+            embedding_dim INTEGER NOT NULL,
+            metadata_json TEXT,
+            created_at TEXT NOT NULL,
+            UNIQUE(file_id, source_kind, backend, model_name)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_media_metadata_file ON media_metadata(file_id);
+        CREATE INDEX IF NOT EXISTS idx_media_text_file ON media_text(file_id);
+        CREATE INDEX IF NOT EXISTS idx_media_text_source ON media_text(source_kind);
+        CREATE INDEX IF NOT EXISTS idx_media_embeddings_file ON media_embeddings(file_id);
         """
     )
     migrate_database(conn)

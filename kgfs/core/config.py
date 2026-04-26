@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from kgfs.core.path_utils import expand_user_path
 
@@ -101,6 +101,54 @@ class TesseractOCRSettings(BaseModel):
     language: str = "eng"
 
 
+class EasyOCRSettings(BaseModel):
+    enabled: bool = False
+    languages: list[str] = Field(default_factory=lambda: ["en"])
+    gpu: bool = False
+
+    @field_validator("languages", mode="before")
+    @classmethod
+    def _languages(cls, value: Any) -> list[str]:
+        if value is None:
+            return ["en"]
+        languages = [str(item).strip().lower() for item in value if str(item).strip()]
+        return languages or ["en"]
+
+
+class PaddleOCRSettings(BaseModel):
+    enabled: bool = False
+    language: str = "en"
+
+    @field_validator("language", mode="before")
+    @classmethod
+    def _language(cls, value: Any) -> str:
+        text = str(value or "en").strip().lower()
+        return text or "en"
+
+
+class CloudOCRFallbackSettings(BaseModel):
+    enabled: bool = False
+    provider: str | None = None
+    require_confirmation: bool = True
+    preview_before_upload: bool = True
+    max_files_per_run: int = 5
+
+    @field_validator("provider", mode="before")
+    @classmethod
+    def _provider(cls, value: Any) -> str | None:
+        text = str(value or "").strip().lower()
+        return text or None
+
+    @field_validator("max_files_per_run", mode="before")
+    @classmethod
+    def _positive_limit(cls, value: Any) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return 5
+        return number if number > 0 else 5
+
+
 class OCRSettings(BaseModel):
     enabled: bool = False
     backend: str = "tesseract"
@@ -112,6 +160,9 @@ class OCRSettings(BaseModel):
     pdf_max_pages: int | None = None
     image_preprocessing: bool = True
     tesseract: TesseractOCRSettings = Field(default_factory=TesseractOCRSettings)
+    easyocr: EasyOCRSettings = Field(default_factory=EasyOCRSettings)
+    paddle: PaddleOCRSettings = Field(default_factory=PaddleOCRSettings)
+    cloud_fallback: CloudOCRFallbackSettings = Field(default_factory=CloudOCRFallbackSettings)
 
     @field_validator("include_extensions", mode="before")
     @classmethod
@@ -163,6 +214,130 @@ class OCRSettings(BaseModel):
     @property
     def max_image_size_bytes(self) -> int:
         return int(self.max_image_size_mb * 1024 * 1024)
+
+
+def _normalize_extension_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    extensions: list[str] = []
+    for item in value:
+        text = str(item).strip().lower()
+        if text and not text.startswith("."):
+            text = f".{text}"
+        if text:
+            extensions.append(text)
+    return extensions
+
+
+class PhotoSettings(BaseModel):
+    enabled: bool = False
+    index_exif: bool = True
+    include_extensions: list[str] = Field(default_factory=lambda: [".jpg", ".jpeg", ".png", ".heic", ".tiff"])
+    store_location_metadata: bool = False
+    location_precision: str = "none"
+    generate_captions: bool = False
+
+    @field_validator("include_extensions", mode="before")
+    @classmethod
+    def _extensions(cls, value: Any) -> list[str]:
+        return _normalize_extension_list(value)
+
+    @model_validator(mode="after")
+    def _location_safety(self):
+        precision = str(self.location_precision or "none").strip().lower()
+        if not self.store_location_metadata:
+            self.location_precision = "none"
+        elif precision not in {"none", "coarse", "exact"}:
+            self.location_precision = "none"
+        else:
+            self.location_precision = precision
+        return self
+
+
+class CaptionSettings(BaseModel):
+    enabled: bool = False
+    backend: str = "none"
+    model_name: str | None = None
+    local_files_only: bool = True
+    max_images_per_run: int = 50
+
+    @field_validator("backend", mode="before")
+    @classmethod
+    def _backend(cls, value: Any) -> str:
+        return str(value or "none").strip().lower() or "none"
+
+    @field_validator("max_images_per_run", mode="before")
+    @classmethod
+    def _positive_limit(cls, value: Any) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return 50
+        return number if number > 0 else 50
+
+
+class AudioSettings(BaseModel):
+    enabled: bool = False
+    transcription_enabled: bool = False
+    backend: str = "none"
+    include_extensions: list[str] = Field(default_factory=lambda: [".m4a", ".mp3", ".wav", ".aac", ".flac"])
+    model_name: str | None = None
+    local_files_only: bool = True
+    max_audio_minutes_per_file: int = 60
+
+    @field_validator("backend", mode="before")
+    @classmethod
+    def _backend(cls, value: Any) -> str:
+        return str(value or "none").strip().lower() or "none"
+
+    @field_validator("include_extensions", mode="before")
+    @classmethod
+    def _extensions(cls, value: Any) -> list[str]:
+        return _normalize_extension_list(value)
+
+    @field_validator("max_audio_minutes_per_file", mode="before")
+    @classmethod
+    def _positive_minutes(cls, value: Any) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return 60
+        return number if number > 0 else 60
+
+
+class VisualSettings(BaseModel):
+    enabled: bool = False
+    backend: str = "none"
+    model_name: str | None = None
+    local_files_only: bool = True
+
+    @field_validator("backend", mode="before")
+    @classmethod
+    def _backend(cls, value: Any) -> str:
+        return str(value or "none").strip().lower() or "none"
+
+
+class MediaSettings(BaseModel):
+    enabled: bool = False
+    cache_results: bool = True
+    max_media_file_size_mb: float = 50
+    photos: PhotoSettings = Field(default_factory=PhotoSettings)
+    captions: CaptionSettings = Field(default_factory=CaptionSettings)
+    audio: AudioSettings = Field(default_factory=AudioSettings)
+    visual: VisualSettings = Field(default_factory=VisualSettings)
+
+    @field_validator("max_media_file_size_mb", mode="before")
+    @classmethod
+    def _positive_size(cls, value: Any) -> float:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return 50
+        return number if number > 0 else 50
+
+    @property
+    def max_media_file_size_bytes(self) -> int:
+        return int(self.max_media_file_size_mb * 1024 * 1024)
 
 
 class SemanticSettings(BaseModel):
@@ -540,6 +715,7 @@ class KGFSConfig(BaseModel):
     indexing: IndexingSettings = Field(default_factory=IndexingSettings)
     extraction: ExtractionSettings = Field(default_factory=ExtractionSettings)
     ocr: OCRSettings = Field(default_factory=OCRSettings)
+    media: MediaSettings = Field(default_factory=MediaSettings)
     semantic: SemanticSettings = Field(default_factory=SemanticSettings)
     search: SearchSettings = Field(default_factory=SearchSettings)
     deep_search: DeepSearchSettings = Field(default_factory=DeepSearchSettings)
@@ -724,6 +900,61 @@ ocr:
   tesseract:
     command: "tesseract"
     language: "eng"
+  easyocr:
+    enabled: false
+    languages:
+      - "en"
+    gpu: false
+  paddle:
+    enabled: false
+    language: "en"
+  cloud_fallback:
+    enabled: false
+    provider: null
+    require_confirmation: true
+    preview_before_upload: true
+    max_files_per_run: 5
+
+media:
+  enabled: false
+  cache_results: true
+  max_media_file_size_mb: 50
+  photos:
+    enabled: false
+    index_exif: true
+    include_extensions:
+      - ".jpg"
+      - ".jpeg"
+      - ".png"
+      - ".heic"
+      - ".tiff"
+    store_location_metadata: false
+    location_precision: "none"
+    generate_captions: false
+  captions:
+    enabled: false
+    backend: "none"
+    model_name: null
+    local_files_only: true
+    max_images_per_run: 50
+  audio:
+    enabled: false
+    transcription_enabled: false
+    backend: "none"
+    include_extensions:
+      - ".m4a"
+      - ".mp3"
+      - ".wav"
+      - ".aac"
+      - ".flac"
+    model_name: null
+    local_files_only: true
+    max_audio_minutes_per_file: 60
+  visual:
+    enabled: false
+    backend: "none"
+    model_name: null
+    local_files_only: true
 
 semantic:
   enabled: false

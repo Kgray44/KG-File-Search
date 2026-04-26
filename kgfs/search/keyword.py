@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import re
 from pathlib import Path
 
 from kgfs.core.config import HybridSettings, KGFSConfig, SemanticSettings, VectorSettings
@@ -38,7 +39,8 @@ def search(
             filters=filters,
             highlight=highlight,
         )
-    return rows
+    media_rows = _run_media_text_search(conn, query, limit, filters=filters, highlight=highlight)
+    return _merge_keyword_and_media_results(rows, media_rows, limit)
 
 
 def semantic_search(
@@ -179,7 +181,7 @@ def hybrid_search(
                 matched_chunk_id=semantic.matched_chunk_id if semantic else None,
                 mode="hybrid",
                 source="hybrid",
-                metadata={"extraction_source": row["extraction_source"]},
+                metadata=_hybrid_metadata(row["extraction_source"], keyword, semantic),
             )
         )
 
@@ -249,6 +251,150 @@ def _run_search(
         )
     results.sort(key=lambda item: item.score, reverse=True)
     return [_renumber(result, index) for index, result in enumerate(results[:limit], start=1)]
+
+
+def _run_media_text_search(
+    conn: sqlite3.Connection,
+    query: str,
+    limit: int,
+    *,
+    filters: SearchFilters | None,
+    highlight: bool,
+) -> list[SearchResult]:
+    terms = _media_query_terms(query)
+    if not terms:
+        return []
+    try:
+        rows = conn.execute(
+            """
+            SELECT
+                f.id,
+                f.file_name,
+                f.path,
+                f.normalized_path,
+                f.extension,
+                f.modified_time,
+                f.extracted_text,
+                f.extraction_status,
+                f.extraction_source,
+                mt.id AS media_text_id,
+                mt.source_kind,
+                mt.backend,
+                mt.model_name,
+                mt.text,
+                mt.confidence
+            FROM media_text mt
+            JOIN files f ON f.id = mt.file_id
+            ORDER BY mt.updated_at DESC, mt.id DESC
+            LIMIT ?
+            """,
+            (max(limit * 20, 100),),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+
+    results: list[SearchResult] = []
+    for row in rows:
+        if not row_matches_filters(row, filters):
+            continue
+        text = str(row["text"] or "")
+        haystack = text.casefold()
+        matches = sum(1 for term in terms if term in haystack)
+        if matches <= 0:
+            continue
+        score = 0.75 + matches / max(len(terms), 1)
+        if row["confidence"] is not None:
+            score += max(0.0, min(1.0, float(row["confidence"]))) * 0.1
+        source_kind = str(row["source_kind"] or "media")
+        snippet = make_snippet(text, query, highlight=highlight) or text[:220]
+        results.append(
+            SearchResult(
+                result_id=0,
+                file_id=int(row["id"]),
+                file_name=row["file_name"],
+                path=Path(row["path"]),
+                extension=row["extension"],
+                modified_time=float(row["modified_time"]),
+                score=score,
+                snippet=snippet,
+                normalized_path=row["normalized_path"],
+                score_breakdown={"media": score, "final": score},
+                mode="keyword",
+                source="media",
+                metadata={
+                    "extraction_source": f"media:{source_kind}",
+                    "media_source_kind": source_kind,
+                    "media_backend": row["backend"],
+                    "media_text_id": int(row["media_text_id"]),
+                },
+            )
+        )
+    results.sort(key=lambda item: item.score, reverse=True)
+    return results[:limit]
+
+
+def _merge_keyword_and_media_results(
+    keyword_results: list[SearchResult],
+    media_results: list[SearchResult],
+    limit: int,
+) -> list[SearchResult]:
+    by_file: dict[int, SearchResult] = {}
+    for result in keyword_results + media_results:
+        existing = by_file.get(result.file_id)
+        if existing is None:
+            by_file[result.file_id] = result
+        else:
+            by_file[result.file_id] = _merge_same_file_result(existing, result)
+    ranked = sorted(by_file.values(), key=lambda item: item.score, reverse=True)[:limit]
+    return [_renumber(result, index) for index, result in enumerate(ranked, start=1)]
+
+
+def _merge_same_file_result(left: SearchResult, right: SearchResult) -> SearchResult:
+    media_result = _media_result(left) or _media_result(right)
+    winner = right if right.score > left.score else left
+    if media_result is None:
+        return winner
+    breakdown = dict(winner.score_breakdown or {})
+    breakdown.update({f"media_{key}": value for key, value in (media_result.score_breakdown or {}).items()})
+    breakdown["final"] = winner.score
+    snippet = media_result.snippet if not winner.snippet else winner.snippet
+    if winner.source != "media" and not winner.snippet:
+        snippet = media_result.snippet
+    return SearchResult(
+        result_id=winner.result_id,
+        file_id=winner.file_id,
+        file_name=winner.file_name,
+        path=winner.path,
+        extension=winner.extension,
+        modified_time=winner.modified_time,
+        score=winner.score,
+        snippet=snippet,
+        normalized_path=winner.normalized_path,
+        score_breakdown=breakdown,
+        matched_chunk_id=winner.matched_chunk_id,
+        mode=winner.mode,
+        source="media" if winner.source == "media" else winner.source,
+        metadata=dict(media_result.metadata),
+    )
+
+
+def _media_result(result: SearchResult) -> SearchResult | None:
+    source = str(result.metadata.get("extraction_source", "") if result.metadata else "")
+    return result if source.startswith("media:") else None
+
+
+def _hybrid_metadata(extraction_source: str, keyword: SearchResult | None, semantic: SearchResult | None) -> dict[str, object]:
+    for result in (keyword, semantic):
+        if not result or not result.metadata:
+            continue
+        source = str(result.metadata.get("extraction_source", ""))
+        if source.startswith("media:") or source.startswith("ocr"):
+            return dict(result.metadata)
+    return {"extraction_source": extraction_source}
+
+
+def _media_query_terms(query: str) -> list[str]:
+    return [term.casefold() for term in re.findall(r"[\w-]{2,}", query, flags=re.UNICODE)]
 
 
 def semantic_model_name_from_embedder(embedder: Embedder) -> str:

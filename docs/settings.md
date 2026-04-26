@@ -50,6 +50,7 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | `indexing` | object | See below | No | `IndexingSettings` fields | Indexer | Defaults applied. | Unknown behavior follows Pydantic defaults; extra-key policy is not explicitly configured in source. |
 | `extraction` | object | See below | No | `ExtractionSettings` fields | Extractors/indexer | Defaults applied. | Pydantic type validation. |
 | `ocr` | object | See below | No | `OCRSettings` fields | Image/PDF extraction, OCR commands, doctor/stats | Defaults disabled. | Image extensions are normalized; source-file modification is forced off in this phase. |
+| `media` | object | See below | No | `MediaSettings` fields | media status/indexing, EXIF storage, media search labels, health/stats | Defaults disabled. | Extension lists are normalized; non-positive sizes fall back to safe defaults; exact location storage is off by default. |
 | `semantic` | object | See below | No | `SemanticSettings` fields | Indexer/search/doctor | Defaults disabled. | Some invalid numeric values are clamped in `chunk_text()` rather than rejected. |
 | `search` | object | See below | No | `SearchSettings` fields | CLI search | Defaults applied. | Invalid mode is detected when creating `SearchOptions`, not at config load. |
 | `deep_search` | object | See below | No | `DeepSearchSettings` fields | `kgfs deep`, `kgfs research` | Defaults enabled for local-only multi-pass search. | Non-positive numeric values fall back to safe defaults. |
@@ -160,7 +161,7 @@ OCR is local-only and disabled by default. The first backend is Tesseract, which
 | Key | Type | Default | Read from | Behavior |
 |---|---|---:|---|---|
 | `enabled` | bool | `false` | filters, extractors, OCR CLI | Enables indexing configured image extensions through OCR. |
-| `backend` | str | `tesseract` | `kgfs/ocr/registry.py` | Selects OCR backend. Only `tesseract` is implemented. |
+| `backend` | str | `tesseract` | `kgfs/ocr/registry.py` | Selects OCR backend. Tesseract remains the default; EasyOCR and PaddleOCR are optional/lazy advanced backends. |
 | `include_extensions` | list | `.png`, `.jpg`, `.jpeg`, `.tiff`, `.bmp` | file filters | These image extensions are indexable only when OCR is enabled. |
 | `max_image_size_mb` | float | `15` | file filters | Separate size cap for OCR images. Invalid/non-positive values fall back to 15 MB. |
 | `cache_results` | bool | `true` | `kgfs/ocr/cache.py` | Reuses OCR text for unchanged files through the local KGFS SQLite cache. |
@@ -170,8 +171,53 @@ OCR is local-only and disabled by default. The first backend is Tesseract, which
 | `image_preprocessing` | bool | `true` | reserved | Placeholder for optional local preprocessing; no heavy dependency is required. |
 | `tesseract.command` | str | `tesseract` | Tesseract backend | Command name or full path to the local Tesseract executable. |
 | `tesseract.language` | str | `eng` | Tesseract backend | Passed to Tesseract with `-l`. |
+| `easyocr.enabled` | bool | `false` | EasyOCR backend | Enables the optional EasyOCR backend only when its extra is installed. |
+| `easyocr.languages` | list | `["en"]` | EasyOCR backend | Local EasyOCR language list. |
+| `easyocr.gpu` | bool | `false` | EasyOCR backend | Passed to EasyOCR when installed. |
+| `paddle.enabled` | bool | `false` | PaddleOCR backend | Enables the optional PaddleOCR backend scaffold only when installed. |
+| `paddle.language` | str | `en` | PaddleOCR backend | Local PaddleOCR language code. |
+| `cloud_fallback.enabled` | bool | `false` | Cloud OCR planner | Scaffold only; uploads are refused unless future provider, explicit allow-cloud, preview, and confirmation gates exist. |
+| `cloud_fallback.provider` | str or null | `null` | Cloud OCR planner | No provider is enabled by default and API keys are not stored in config. |
+| `cloud_fallback.require_confirmation` | bool | `true` | Cloud OCR planner | Confirmation gate for any future cloud OCR path. |
+| `cloud_fallback.preview_before_upload` | bool | `true` | Cloud OCR planner | Preview gate for any future cloud OCR path. |
+| `cloud_fallback.max_files_per_run` | int | `5` | Cloud OCR planner | Positive file cap for future cloud fallback runs. |
 
 OCR results are stored in `files.extracted_text` so keyword, semantic, hybrid, snippets, and `kgfs why` all use the same search pipeline. Cache rows live in the KGFS database, not beside source files.
+
+### `media`
+
+Media features are optional and disabled by default. Generated media metadata,
+captions, transcripts, and visual embeddings are KGFS data; they are never
+written into source files or sidecars.
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `enabled` | bool | `false` | media CLI, index filters | Enables media-aware discovery/indexing paths. |
+| `cache_results` | bool | `true` | media status/scaffolds | Placeholder for media-derived cache behavior. |
+| `max_media_file_size_mb` | float | `50` | file filters, media index | Size cap for media files admitted by media features. Invalid/non-positive values fall back to 50 MB. |
+| `photos.enabled` | bool | `false` | file filters, media index | Allows configured photo extensions through filters for local metadata extraction. |
+| `photos.index_exif` | bool | `true` | media index | Stores local EXIF/image metadata in KGFS tables when photos are enabled. |
+| `photos.include_extensions` | list | `.jpg`, `.jpeg`, `.png`, `.heic`, `.tiff` | file filters | Photo extensions eligible for media indexing only when media/photos are enabled. |
+| `photos.store_location_metadata` | bool | `false` | EXIF storage | Exact/coarse GPS text is not stored unless explicitly enabled. |
+| `photos.location_precision` | str | `none` | EXIF storage | `none`, `coarse`, or `exact`; forced to `none` when location storage is disabled. |
+| `photos.generate_captions` | bool | `false` | reserved | Caption generation remains separate and disabled by default. |
+| `captions.enabled` | bool | `false` | caption scaffold | Captioning is disabled unless a future/local backend is configured. |
+| `captions.backend` | str | `none` | caption scaffold | `none` is the only built-in backend in this phase. |
+| `captions.model_name` | str or null | `null` | caption scaffold | Optional future local model name. |
+| `captions.local_files_only` | bool | `true` | caption scaffold | Future local model loading should avoid downloads by default. |
+| `captions.max_images_per_run` | int | `50` | caption scaffold | Positive cap; invalid values fall back to 50. |
+| `audio.enabled` | bool | `false` | audio scaffold | Audio media features are disabled by default. |
+| `audio.transcription_enabled` | bool | `false` | audio scaffold | Transcription is disabled by default. |
+| `audio.backend` | str | `none` | audio scaffold | `none` is the only built-in backend in this phase. |
+| `audio.include_extensions` | list | `.m4a`, `.mp3`, `.wav`, `.aac`, `.flac` | audio scaffold | Audio extensions reserved for optional transcription. |
+| `audio.max_audio_minutes_per_file` | int | `60` | audio scaffold | Positive cap; invalid values fall back to 60. |
+| `visual.enabled` | bool | `false` | visual scaffold | Visual embedding/search is disabled by default. |
+| `visual.backend` | str | `none` | visual scaffold | `none` is the only built-in backend in this phase. |
+| `visual.model_name` | str or null | `null` | visual scaffold | Optional future local visual model name. |
+
+EXIF-derived text is stored in `media_text` and searched alongside `files_fts`
+with an explicit `media:exif` result label. Semantic chunks can include
+media-derived text when semantic indexing is enabled.
 
 ### `semantic`
 
@@ -400,11 +446,14 @@ Important feature flags:
 |---|---|---:|---|
 | `--allow-risky-root` | `index`, `rebuild`, `semantic-index --rebuild` | `false` | Allows broad/root scans. |
 | `--allow-risky-root` | `ocr index` | `false` | Allows broad/root scans for OCR-enabled indexing. |
+| `--allow-risky-root` | `media index` | `false` | Allows broad/root scans for media-aware indexing. |
 | `--dry-run` | `index`, `prune`, `reset-index`, `ocr index`, `serve` | `false` | Reports without DB writes/deletion or validates server settings depending on command. |
 | `--force` | `index`, `ocr index` | `false` | Re-extracts files even when metadata is unchanged. |
 | `--verify-hashes` | `index` | `false` | Hash-checks metadata-matching files. |
 | `--rebuild-embeddings` | `index` | `false` | Rebuilds semantic chunks/embeddings for unchanged files. |
 | `ocr status/test/index` | `ocr` | n/a | Inspect OCR availability, run one-file OCR preview, or run indexing with OCR-enabled extraction. |
+| `ocr advanced-status` | `ocr` | n/a | Inspect optional EasyOCR, PaddleOCR, and cloud fallback scaffolds without running OCR. |
+| `media status/exif/index/clear` | `media` | n/a | Inspect media readiness, preview EXIF metadata, index photo metadata, or clear KGFS media-derived rows. |
 | `--mode` | `search` | config `search.default_mode` | Selects `keyword`, `semantic`, `hybrid`, or `auto`. |
 | `--hybrid` | `search` | `false` | Forces hybrid mode. |
 | `--ai-rerank` | `search` | `false` | Opt-in OpenAI reranking of local results. |
@@ -437,6 +486,8 @@ Important feature flags:
 | `get_vector_backend()` | `name` | `kgfs/search/backends/registry.py` | Returns the configured vector backend. Known names are `sqlite_scan`, `sqlite_vec`, `hnsw`, and `faiss`; optional backend dependencies are lazy. |
 | `VectorSearchOptions` | `model_name`, `limit`, `filters` | `kgfs/search/backends/base.py` | Passed to vector backends for semantic/hybrid chunk search. |
 | `get_vector_status()` | `conn`, `config` | `kgfs/vectors/status.py` | Reports backend availability, chunk counts, semantic dependency status, and warnings. |
+| `get_media_status()` | `config`, optional `conn` | `kgfs/media/status.py` | Reports media feature flags, optional backend status, media row counts, and privacy warnings. |
+| `index_existing_photo_metadata()` | `conn`, `config` | `kgfs/media/metadata.py` | Stores local EXIF metadata/text for already indexed photo rows when media photos are enabled. |
 | `rebuild_vector_index()` | `config`, `conn`, `embedder`, `force` | `kgfs/vectors/index_manager.py` | Rebuilds vector chunks from already indexed extracted text. Requires semantic enabled. |
 | `clear_chunks()` | `conn`, optional `model_name` | `kgfs/vectors/chunks.py` | Deletes KGFS chunk/vector rows only and returns the removed count. |
 | `benchmark_vector_backends()` | `conn`, `config`, backend names, queries, limit | `kgfs/vectors/benchmark.py` | Measures bounded vector query timings using existing vectors when possible. |
@@ -487,6 +538,61 @@ ocr:
   tesseract:
     command: "tesseract"
     language: "eng"
+  easyocr:
+    enabled: false
+    languages:
+      - "en"
+    gpu: false
+  paddle:
+    enabled: false
+    language: "en"
+  cloud_fallback:
+    enabled: false
+    provider: null
+    require_confirmation: true
+    preview_before_upload: true
+    max_files_per_run: 5
+
+media:
+  enabled: false
+  cache_results: true
+  max_media_file_size_mb: 50
+  photos:
+    enabled: false
+    index_exif: true
+    include_extensions:
+      - ".jpg"
+      - ".jpeg"
+      - ".png"
+      - ".heic"
+      - ".tiff"
+    store_location_metadata: false
+    location_precision: "none"
+    generate_captions: false
+  captions:
+    enabled: false
+    backend: "none"
+    model_name: null
+    local_files_only: true
+    max_images_per_run: 50
+  audio:
+    enabled: false
+    transcription_enabled: false
+    backend: "none"
+    include_extensions:
+      - ".m4a"
+      - ".mp3"
+      - ".wav"
+      - ".aac"
+      - ".flac"
+    model_name: null
+    local_files_only: true
+    max_audio_minutes_per_file: 60
+  visual:
+    enabled: false
+    backend: "none"
+    model_name: null
+    local_files_only: true
 
 semantic:
   enabled: false

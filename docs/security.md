@@ -63,6 +63,7 @@ Operations:
 - Rebuild resets the database and reindexes configured folders.
 - Vector clear deletes KGFS chunk/vector rows or optional backend artifacts only; source files, file rows, and keyword FTS rows remain.
 - OCR reads source images/PDFs but writes OCR text only to KGFS database/cache data, never back to the source file or a sidecar beside it.
+- Media indexing reads image metadata and writes media-derived rows only to the KGFS database/cache. It never writes EXIF/XMP/JSON sidecars and never modifies images, audio, or PDFs.
 
 Sources: `kgfs/indexing/indexer.py`, `kgfs/indexing/prune.py`, `kgfs/reset.py`, `tests/test_prune.py`, `tests/test_reset_rebuild.py`.
 
@@ -79,6 +80,7 @@ The SQLite database can contain:
 - Latest result IDs.
 - Semantic chunks and embeddings when enabled.
 - OCR cache rows and OCR-derived text when OCR is enabled.
+- Media metadata, media-derived searchable text, and optional media embeddings when media features are enabled.
 - Workflow metadata such as profiles, saved searches, collections, tags, notes, assignments, and projects.
 - File-intelligence metadata such as graph edges, project candidates, and metadata-backup records.
 
@@ -205,6 +207,31 @@ Tesseract must be installed separately. Missing Tesseract produces status or ext
 
 Sources: `kgfs/ocr/*.py`, `kgfs/extractors/image_ocr.py`, `tests/test_ocr_*.py`.
 
+## Media and Advanced OCR Privacy
+
+Media features are disabled by default.
+
+Default media behavior:
+
+- `media.enabled: false`
+- `media.photos.enabled: false`
+- `media.photos.store_location_metadata: false`
+- caption, audio, and visual backends are `none`
+- EasyOCR and PaddleOCR are disabled and lazy
+- cloud OCR fallback is disabled and scaffolded to refuse upload
+
+When photo metadata indexing is enabled, KGFS stores safe EXIF/image metadata in
+SQLite tables. GPS/location fields are omitted by default, and exact location
+storage requires explicit config. Generated media text is labeled, for example
+`media:exif`, so search and `kgfs why` can show that a result came from
+media-derived metadata.
+
+The cloud OCR fallback scaffold does not upload files in this phase. A future
+provider path must pass config enablement, explicit allow-cloud intent, preview,
+and confirmation before any upload can be considered.
+
+Sources: `kgfs/media/*.py`, `kgfs/ocr/easyocr.py`, `kgfs/ocr/paddle.py`, `kgfs/ocr/cloud.py`, `tests/test_phase10_media.py`.
+
 ## Web Dashboard Exposure
 
 The web dashboard has no authentication at this commit, so it should stay bound to localhost unless you intentionally accept local-network exposure.
@@ -282,6 +309,7 @@ Packaged builds do not include:
 - `.kgfs/`.
 - Downloaded semantic model caches.
 - Tesseract itself and OCR cache/user data.
+- Optional media/OCR model dependencies such as Pillow, EasyOCR, PaddleOCR, Whisper, CLIP-style stacks, and their caches.
 - Optional vector backend packages and artifacts.
 - Textual/tray optional UI dependencies in the base package.
 - OpenAI SDK in the base package.

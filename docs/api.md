@@ -1,10 +1,87 @@
 # API and Programmatic Interfaces
 
-KGFS does not expose a JSON REST API at this commit. It exposes:
+KGFS exposes three programmatic surfaces in the current worktree:
 
-- An HTML/plain-text FastAPI dashboard.
+- A token-gated local JSON API started with `kgfs serve`.
+- An HTML/plain-text FastAPI dashboard started with `kgfs web`.
 - Python module functions and dataclasses.
-- CLI commands documented in [CLI](cli.md).
+
+CLI commands are documented separately in [CLI](cli.md).
+
+## Local JSON API
+
+App factory source: `kgfs/api/app.py`; route source: `kgfs/api/routes.py`.
+
+Start through CLI:
+
+```bash
+export KGFS_API_TOKEN="dev-token"
+kgfs serve
+```
+
+Default bind:
+
+```text
+http://127.0.0.1:8766
+```
+
+The API is local-first. `kgfs serve` refuses non-localhost binds unless
+`--allow-network` is supplied. Token auth is required by default and uses the
+environment variable named by `api.token_env`, default `KGFS_API_TOKEN`.
+
+### API Auth
+
+Protected requests use:
+
+```text
+Authorization: Bearer <KGFS_API_TOKEN>
+```
+
+Auth and bind behavior:
+
+| Setting/flag | Default | Behavior | Source |
+|---|---:|---|---|
+| `api.require_token` | `true` | Requires bearer token on protected routes. | `kgfs/api/auth.py` |
+| `api.token_env` | `KGFS_API_TOKEN` | Names the token environment variable. | `kgfs/api/auth.py` |
+| `--no-token` | `false` | Disables token requirement for that run. | `kgfs/cli/commands/serve.py` |
+| `api.host` / `--host` | `127.0.0.1` | API bind host. | `kgfs/cli/commands/serve.py` |
+| `--allow-network` | `false` | Explicitly allows non-localhost binds. | `kgfs/api/auth.py` |
+| `api.allow_file_actions` | `false` | Allows POST open/reveal latest-result actions only when true. | `kgfs/api/routes.py` |
+
+`api.enabled` exists in config, but the explicit `kgfs serve` command can start
+the API when invoked and does not require that flag to be true in the current
+implementation.
+
+### API Routes
+
+All routes below are protected by the bearer-token dependency unless token auth
+is disabled.
+
+| Method | Path | Query/path parameters | Response | Behavior | Source |
+|---|---|---|---|---|---|
+| `GET` | `/health` | None | JSON `APIHealth` | Reports API/local/file-action status, indexed-file count, and schema version. | `kgfs/api/routes.py`, `kgfs/api/models.py` |
+| `GET` | `/status` | None | JSON health report dict | Returns the same local index/workflow health report used by CLI health. | `kgfs/api/routes.py`, `kgfs/intelligence/health.py` |
+| `GET` | `/search` | `q`, `mode`, `limit`, `ext`, `folder`, `after`, `before`, `failed_only` | JSON `APISearchResponse` | Runs registry search, clamps limit to 1..100, saves latest results, and returns mode/warnings/results. | `kgfs/api/routes.py`, `kgfs/search/registry.py` |
+| `GET` | `/deep` | `q`, `limit`, `mode` | JSON | Runs deterministic local deep search and returns variants, followups, and results. | `kgfs/api/routes.py`, `kgfs/search/deep.py` |
+| `GET` | `/research` | `q`, `limit`, `mode` | JSON | Builds local citation-backed research data without AI. | `kgfs/api/routes.py`, `kgfs/search/research.py` |
+| `GET` | `/file/{file_id}` | indexed `file_id` | JSON file row subset | Returns indexed file metadata or 404. | `kgfs/api/routes.py` |
+| `GET` | `/collections` | None | JSON list | Lists collections. | `kgfs/api/routes.py`, `kgfs/workflows/collections.py` |
+| `GET` | `/collections/{name}` | collection name | JSON list | Lists collection items or 404. | `kgfs/api/routes.py`, `kgfs/workflows/collections.py` |
+| `GET` | `/tags` | optional `tag` | JSON list | Lists all tags, or files for one tag. | `kgfs/api/routes.py`, `kgfs/workflows/tags.py` |
+| `GET` | `/projects` | optional `name` | JSON list | Lists projects, or project items for one project. | `kgfs/api/routes.py`, `kgfs/workflows/projects.py` |
+| `GET` | `/graph` | `q` | JSON graph | Builds a bounded topic graph. | `kgfs/api/routes.py`, `kgfs/intelligence/graph.py` |
+| `GET` | `/metadata/export` | None | JSON | Exports KGFS workflow/intelligence metadata, excluding source contents and vector/OCR payloads. | `kgfs/api/routes.py`, `kgfs/intelligence/export.py` |
+| `POST` | `/open/{result_id}` | latest `result_id` | JSON | Opens a latest result only when `api.allow_file_actions` is true. | `kgfs/api/routes.py`, `kgfs/core/platform_utils.py` |
+| `POST` | `/reveal/{result_id}` | latest `result_id` | JSON | Reveals a latest result only when `api.allow_file_actions` is true. | `kgfs/api/routes.py`, `kgfs/core/platform_utils.py` |
+
+Example:
+
+```bash
+curl -H "Authorization: Bearer $KGFS_API_TOKEN" \
+  "http://127.0.0.1:8766/search?q=motor%20torque&mode=keyword&limit=5"
+```
+
+Tests: `tests/test_phase9_ux_integrations.py`.
 
 ## FastAPI Dashboard
 
@@ -26,8 +103,13 @@ http://127.0.0.1:8765
 
 | Method | Path | Query/path parameters | Response | Behavior | Source |
 |---|---|---|---|---|---|
-| `GET` | `/` | None | HTML | Shows summary metrics from `get_database_stats()`. | `kgfs/web/app.py`, `kgfs/web/templates/index.html` |
-| `GET` | `/search` | `q`, `ext`, `folder`, `after`, `before`, `limit`, `failed_only` | HTML | Runs keyword search when `q` is provided, saves latest results, renders results. | `kgfs/web/app.py`, `kgfs/web/templates/search.html` |
+| `GET` | `/` | None | HTML | Shows summary metrics, vector backend, OCR state, and health issue count. | `kgfs/web/app.py`, `kgfs/web/templates/index.html` |
+| `GET` | `/search` | `q`, `mode`, `ext`, `folder`, `after`, `before`, `limit`, `failed_only` | HTML | Runs registry search when `q` is provided, saves latest results, renders mode/warnings/errors, tags, notes, and results. | `kgfs/web/app.py`, `kgfs/web/templates/search.html` |
+| `GET` | `/collections` | None | HTML | Lists local collections. | `kgfs/web/app.py`, `kgfs/web/templates/collections.html` |
+| `GET` | `/tags` | None | HTML | Lists local tag names. | `kgfs/web/app.py`, `kgfs/web/templates/tags.html` |
+| `GET` | `/projects` | None | HTML | Lists local manual projects. | `kgfs/web/app.py`, `kgfs/web/templates/projects.html` |
+| `GET` | `/graph` | optional `q` | HTML | Builds and renders a topic graph when a query is supplied. | `kgfs/web/app.py`, `kgfs/web/templates/graph.html` |
+| `GET` | `/health` | None | HTML | Renders the local health report. | `kgfs/web/app.py`, `kgfs/web/templates/health.html` |
 | `GET` | `/stats` | None | HTML | Shows database/index stats. | `kgfs/web/app.py`, `kgfs/web/templates/stats.html` |
 | `GET` | `/config` | None | HTML | Shows resolved config path, indexed folders, and config dump. | `kgfs/web/app.py`, `kgfs/web/templates/config.html` |
 | `GET` | `/failures` | None | HTML | Shows up to 100 extraction failures ordered by latest indexed time. | `kgfs/web/app.py`, `kgfs/web/templates/failures.html` |
@@ -54,10 +136,13 @@ Framework-provided FastAPI endpoints are also present because `FastAPI(title="KG
 | `folder` | string | `""` | Case-insensitive path substring filter. |
 | `after` | string | `""` | Modified on/after ISO date. |
 | `before` | string | `""` | Modified on/before ISO date. |
-| `limit` | int | `10` | Max results. |
+| `mode` | string | `auto` | `auto`, `keyword`, `semantic`, or `hybrid`; errors are rendered in the page. |
+| `limit` | int | `10` | Max results, clamped to 1..100 in the route. |
 | `failed_only` | bool | `false` | Only extraction failures. |
 
-Current limitation: web search calls direct keyword `search()` and does not expose registry `auto`, semantic, hybrid, or AI rerank.
+Current limitation: the web dashboard has no authentication and does not expose
+AI reranking/answer synthesis. It now routes search through the local registry,
+so semantic/hybrid results are available when configured and ready.
 
 ## Python Modules
 
@@ -86,6 +171,17 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `save_latest_results(conn, query, results)` | Replace latest result ID rows. | `kgfs/db/latest_results.py` |
 | `get_latest_result_path(conn, result_id)` | Resolve latest result ID to a path. | `kgfs/db/latest_results.py` |
 
+### Local API Helpers
+
+| API | Purpose | Source |
+|---|---|---|
+| `create_api_app(config_path=..., database_path=..., project_local=...)` | Build the local JSON FastAPI app and attach routes with config-derived auth settings. | `kgfs/api/app.py` |
+| `build_router(runtime, auth_settings)` | Build API routes for health, search, workflows, graph, metadata export, and file actions. | `kgfs/api/routes.py` |
+| `APIAuthSettings` | Dataclass carrying token requirement and token env var name. | `kgfs/api/auth.py` |
+| `validate_api_bind(host, allow_network=...)` | Refuse non-localhost binds unless explicitly allowed. | `kgfs/api/auth.py` |
+| `require_api_token(settings, authorization=...)` | FastAPI dependency that checks bearer token header. | `kgfs/api/auth.py` |
+| `APIHealth`, `APIResult`, `APISearchResponse` | Pydantic response models for JSON API health/search payloads. | `kgfs/api/models.py` |
+
 ### Indexing
 
 | API | Purpose | Source |
@@ -98,6 +194,17 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `prune_stale_files(conn, dry_run=False)` | Remove stale DB rows and related rows. | `kgfs/indexing/prune.py` |
 | `reset_index(database_path, ...)` | Remove KGFS DB files only. | `kgfs/reset.py` |
 | `rebuild_index(config, database_path, ...)` | Reset DB and index. | `kgfs/reset.py` |
+
+### OCR Helpers
+
+| API | Purpose | Source |
+|---|---|---|
+| `list_ocr_backends()` | List registered OCR backend names. | `kgfs/ocr/registry.py` |
+| `get_ocr_backend(name)` | Resolve an OCR backend by name. | `kgfs/ocr/registry.py` |
+| `get_ocr_status(config, conn=None)` | Return OCR enabled/backend/cache/index status and warnings. | `kgfs/ocr/status.py` |
+| `get_cached_ocr_result(...)`, `store_ocr_cache_result(...)` | Read/write local OCR cache rows. | `kgfs/ocr/cache.py` |
+| `count_ocr_cache_entries(conn)` | Count OCR cache rows for stats/status. | `kgfs/ocr/cache.py` |
+| `extract_scanned_pdf(...)` | Scanned-PDF fallback scaffold that reports unsupported rasterization safely. | `kgfs/ocr/pdf.py` |
 
 ### Search
 
@@ -113,6 +220,12 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `SearchRegistry.available_modes(context)` | Return concrete modes whose engines report available. | `kgfs/search/registry.py` |
 | `build_default_search_registry()` | Register keyword, semantic, and hybrid engines. | `kgfs/search/registry.py` |
 | `explain_result(result, query, ...)` | Build a lightweight local explanation with score breakdown and snippet. | `kgfs/search/explain.py` |
+| `deep_search(conn, query, config, ...)` | Run deterministic local query variants and fuse results. | `kgfs/search/deep.py` |
+| `similar_from_result(...)`, `similar_file(...)` | Find similar indexed files using vectors or term-overlap fallback. | `kgfs/search/similar.py` |
+| `compare_results(...)` | Compare two latest results locally. | `kgfs/search/compare.py` |
+| `timeline_search(...)` | Sort/group local search results chronologically. | `kgfs/search/timeline.py` |
+| `research_query(...)` | Build local citation-backed research data without AI. | `kgfs/search/research.py` |
+| `format_citation(...)`, `format_citation_block(...)` | Format KGFS local citation labels and blocks. | `kgfs/search/citations.py` |
 
 ### Workflow Helpers
 
@@ -125,6 +238,17 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `add_note()`, `list_notes()` | Store local notes for indexed files. | `kgfs/workflows/notes.py` |
 | `assignment_working_set()` | Build a local assignment working set. | `kgfs/workflows/assignments.py` |
 | `create_project()`, `add_results_to_project()`, `project_search()` | Manage manual local projects and project-scoped search. | `kgfs/workflows/projects.py` |
+
+### TUI and Integration Helpers
+
+| API | Purpose | Source |
+|---|---|---|
+| `textual_available()` | Check whether optional Textual dependency can be imported. | `kgfs/tui/app.py` |
+| `launch_tui(...)` | Launch the minimal Textual UI or raise `TextualUnavailableError`. | `kgfs/tui/app.py` |
+| `build_tui_search_options(mode=..., limit=...)` | Build search options for future non-interactive TUI search plumbing. | `kgfs/tui/actions.py` |
+| `get_integration_status()` | Return read-only support/scaffold/installed status rows. | `kgfs/integrations/status.py` |
+| `export_raycast()`, `export_alfred()` | Write local launcher script scaffolds. | `kgfs/integrations/raycast.py`, `kgfs/integrations/alfred.py` |
+| `scaffold_powertoys()`, `scaffold_finder()`, `scaffold_explorer()`, `scaffold_tray()` | Write local template/scaffold files without changing system settings. | `kgfs/integrations/*.py` |
 
 ### Intelligence Helpers
 

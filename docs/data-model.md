@@ -61,7 +61,9 @@ Sources: `kgfs/db/schema.py`, `kgfs/db/repositories.py`.
 
 ### `latest_results`
 
-Stores the latest search result IDs for `open` and `reveal`.
+Stores the latest search result IDs for `open`, `reveal`, `why`, local workflow
+commands, web/API file actions, and other follow-up commands that operate on
+the latest result set.
 
 | Column | Type | Meaning |
 |---|---|---|
@@ -206,6 +208,9 @@ Additional dataclasses and runtime models:
 | `AIResult` | text, context | AI answer result with returned text and context used. | `kgfs/ai.py` |
 | `Profile`, `SavedSearch`, `Collection`, `WorkflowItem`, `FileNote`, `AssignmentReport`, `Project` | local workflow metadata and report fields | Profiles, saved searches, collections, tags, notes, assignments, and projects. | `kgfs/workflows/models.py` |
 | `DuplicateGroup`, `VersionCandidate`, `ProjectCandidate`, `GraphResult`, `HealthReport`, `MetadataExportSummary` | local intelligence and metadata backup result fields | Duplicates, versions, project candidates, graphs, health, and metadata import/export. | `kgfs/intelligence/models.py` |
+| `APIHealth`, `APIResult`, `APISearchResponse` | JSON API response payloads | Local API health/search routes. | `kgfs/api/models.py` |
+| `TUIState` | query, mode, selected result ID | Optional TUI state. | `kgfs/tui/state.py` |
+| `IntegrationStatus` | name, supported, scaffold availability, installed flag, command, notes | Integration scaffold status rows. | `kgfs/integrations/status.py` |
 
 OCR models:
 
@@ -253,6 +258,9 @@ Defined in `kgfs/core/config.py`.
 | `DeepSearchSettings`, `ResearchSettings`, `SimilarSettings`, `TimelineSettings` | Advanced local search defaults. |
 | `ProfilePresetSettings`, `AssignmentSettings`, `ProjectsSettings` | Phase 7 workflow presets and limits. |
 | `IntelligenceSettings`, `MetadataSettings` | Phase 8 file intelligence thresholds/limits and metadata backup behavior. |
+| `UISettings` | UI surface defaults and placeholder launch preferences. |
+| `APISettings` | Local JSON API host/port/token/file-action settings. |
+| `IntegrationSettings` | Local launcher/tray scaffold feature flags. |
 | `VectorSettings` | Vector backend selection, shard strategy placeholder, and optional sqlite-vec/HNSW/FAISS settings. |
 | `HybridSettings` | Hybrid score weights and candidate pool multiplier. |
 | `AISettings` | AI Assist privacy, provider, and size settings. |
@@ -273,6 +281,11 @@ resolved from the database/app-data/project-local path. HNSW and FAISS store
 index files plus metadata JSON there. sqlite-vec stores its vector table in the
 KGFS SQLite database and stores metadata JSON in the same backend artifact area.
 Source files are not used for backend artifacts.
+
+At CLI runtime, KGFS resolves `config.database_path`, so backend artifacts
+normally live beside the selected KGFS database under `vector-backends/`.
+Programmatic callers that build a config without `database_path` fall back to a
+project-local/current-working-directory `.kgfs/vector-backends` location.
 
 ## Result ID Model
 

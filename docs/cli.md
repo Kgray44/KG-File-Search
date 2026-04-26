@@ -39,6 +39,10 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs graph` / `kgfs graph-export` | Build or export a bounded local file/topic graph. | `kgfs/cli/commands/graph.py` |
 | `kgfs health` | Show a read-only local index health report. | `kgfs/cli/commands/health.py` |
 | `kgfs metadata` | Export/import/backup/restore KGFS metadata. | `kgfs/cli/commands/metadata.py` |
+| `kgfs serve` | Start the token-gated local JSON API. | `kgfs/cli/commands/serve.py` |
+| `kgfs tui` | Launch or check the optional Textual terminal UI. | `kgfs/cli/commands/tui.py` |
+| `kgfs integrations` | Inspect and export local launcher integration scaffolds. | `kgfs/cli/commands/integrations.py` |
+| `kgfs tray` | Inspect or scaffold the optional tray/menu-bar integration. | `kgfs/cli/commands/integrations.py` |
 | `kgfs semantic` | Semantic-only search. | `kgfs/cli/commands/semantic.py` |
 | `kgfs semantic-index` | Show semantic status or rebuild semantic chunks. | `kgfs/cli/commands/semantic.py` |
 | `kgfs vector status` | Show semantic vector backend/chunk readiness. | `kgfs/cli/commands/vector.py` |
@@ -303,6 +307,9 @@ OCR cache text, vector blobs, API keys, and model caches. Imports match metadata
 back to currently indexed files using content hash, normalized path, and
 filename/size fallback.
 
+`reset-index --yes` creates a metadata backup first when
+`metadata.auto_backup_before_reset: true` and the database exists.
+
 Sources: `kgfs/intelligence/*.py`, `kgfs/cli/commands/duplicates.py`, `kgfs/cli/commands/versions.py`, `kgfs/cli/commands/graph.py`, `kgfs/cli/commands/health.py`, `kgfs/cli/commands/metadata.py`.
 
 ## `why`
@@ -463,9 +470,53 @@ Defaults:
 - Host: `127.0.0.1`
 - Port: `8765`
 
-Starts Uvicorn with the FastAPI app from `kgfs/web/app.py`.
+Starts Uvicorn with the FastAPI HTML dashboard from `kgfs/web/app.py`. The dashboard includes search with mode/filter controls, latest-result open/reveal links, stats/config/failure pages, and local pages for collections, tags, projects, graph, and health.
 
 Source: `kgfs/cli/commands/web.py`.
+
+## `serve`
+
+```bash
+kgfs serve [--config PATH] [--database PATH] [--project-local]
+           [--host HOST] [--port PORT] [--local-only/--no-local-only]
+           [--allow-network] [--no-token] [--dry-run]
+```
+
+Starts the JSON API from `kgfs/api/app.py`. The default bind is `127.0.0.1:8766`. Non-localhost hosts are refused unless `--allow-network` is supplied, and bearer-token auth is required by default using the environment variable named by `api.token_env` (`KGFS_API_TOKEN` by default).
+
+`--dry-run` validates the bind/token/file-action settings without starting Uvicorn.
+
+API open/reveal endpoints are latest-result actions only and return 403 unless
+`api.allow_file_actions: true`.
+
+Source: `kgfs/cli/commands/serve.py`.
+
+## `tui`
+
+```bash
+kgfs tui [--config PATH] [--database PATH] [--project-local] [--check]
+```
+
+Checks or launches the optional Textual TUI. Textual is imported lazily only when this command runs. If the dependency is missing, KGFS prints an install hint for `python -m pip install -e ".[tui]"`.
+
+Source: `kgfs/cli/commands/tui.py`.
+
+## Integration Scaffolds
+
+```bash
+kgfs integrations status [--config PATH] [--database PATH] [--project-local]
+kgfs integrations raycast export [--output DIR] [--config PATH] [--database PATH] [--project-local]
+kgfs integrations alfred export [--output DIR] [--config PATH] [--database PATH] [--project-local]
+kgfs integrations powertoys scaffold [--output DIR] [--config PATH] [--database PATH] [--project-local]
+kgfs integrations finder scaffold [--output DIR] [--config PATH] [--database PATH] [--project-local]
+kgfs integrations explorer scaffold [--output DIR] [--config PATH] [--database PATH] [--project-local]
+kgfs tray status
+kgfs tray scaffold [--output DIR] [--config PATH] [--database PATH] [--project-local]
+```
+
+These commands inspect or write local scaffold files only. They do not install OS integrations, edit the Windows registry, write Finder/Raycast/Alfred locations, or require administrator rights.
+
+Source: `kgfs/cli/commands/integrations.py`.
 
 ## Script CLIs
 

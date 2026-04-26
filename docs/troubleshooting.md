@@ -44,7 +44,7 @@ Sources: `kgfs/cli/commands/doctor.py`, `kgfs/cli/commands/stats.py`.
 | `kgfs vector rebuild --no-force` skips files | Chunks already exist for the configured model. | Use the default `--force` behavior when you intentionally want to rebuild existing chunks. | `kgfs/vectors/index_manager.py` |
 | `kgfs vector clear` fails without `--yes` | Clear requires explicit confirmation. | Run `kgfs vector clear --yes` after verifying the database/config target. | `kgfs/cli/commands/vector.py` |
 | Semantic/hybrid search ignores some chunks | Stored vector BLOB is malformed or its dimension differs from the query vector. | Rebuild vectors with `kgfs vector rebuild` or `kgfs semantic-index --rebuild`. | `kgfs/search/backends/sqlite_scan.py` |
-| Tags/notes/collections disappear after reset | Workflow metadata is stored in the KGFS database. | Avoid `reset-index` unless you are okay rebuilding KGFS metadata; export collections before reset if needed. | `kgfs/workflows/*.py`, `kgfs/reset.py` |
+| Tags/notes/collections disappear after reset | Workflow metadata is stored in the KGFS database. | Keep `metadata.auto_backup_before_reset: true`, or run `kgfs metadata export` / `kgfs metadata backup` before reset and restore after reindexing. | `kgfs/workflows/*.py`, `kgfs/reset.py`, `kgfs/intelligence/export.py` |
 | `kgfs tag` or `kgfs note` says latest result missing | Tags and notes attach through latest search result IDs. | Run `kgfs search`, `kgfs deep`, `kgfs run-search`, or another command that saves latest results first. | `kgfs/db/latest_results.py`, `kgfs/workflows/tags.py`, `kgfs/workflows/notes.py` |
 | `kgfs duplicates --semantic` finds nothing | Semantic duplicate detection uses existing local vector chunks. | Run `kgfs vector status` and `kgfs vector rebuild`, or use exact duplicate mode. | `kgfs/intelligence/duplicates.py` |
 | `kgfs metadata import` reports unmatched files | Backup metadata is matched to the current index by hash/path/name/size. | Re-index the same folders first, then rerun import with `--yes`. | `kgfs/intelligence/export.py` |
@@ -57,8 +57,14 @@ Sources: `kgfs/cli/commands/doctor.py`, `kgfs/cli/commands/stats.py`.
 | Search mode is unknown | `--mode` or `SearchOptions.mode` is not one of `keyword`, `semantic`, `hybrid`, or `auto`. | Use a supported mode. | `kgfs/search/options.py`, `kgfs/search/registry.py` |
 | Search limit error | `SearchOptions.limit` is below 1. | Use `--limit 1` or higher. | `kgfs/search/options.py` |
 | Date filter fails | `--after` or `--before` is not parseable by `datetime.fromisoformat`. | Use ISO dates such as `2026-04-25`. | `kgfs/search/filters.py` |
-| Web dashboard search does not use semantic/hybrid | Current web route calls keyword `search()` directly. | Use CLI for semantic/hybrid search. | `kgfs/web/app.py`, `kgfs/search/keyword.py` |
+| Web dashboard mode returns an error | The requested semantic/hybrid mode is unavailable, usually because semantic config/dependencies/chunks or the configured vector backend are not ready. | Use `--mode keyword`, run `kgfs vector status`, or rebuild semantic vectors. | `kgfs/web/app.py`, `kgfs/search/registry.py`, `kgfs/vectors/status.py` |
 | Web dashboard accessible beyond localhost | `kgfs web --host` was changed from default. | Bind to `127.0.0.1` unless you intentionally expose it. No auth is implemented. | `kgfs/cli/commands/web.py`, `kgfs/web/app.py` |
+| `kgfs serve` says API token is missing | `api.require_token` is true and the env var named by `api.token_env` is unset. | Set `KGFS_API_TOKEN` or pass `--no-token` only for localhost development. | `kgfs/cli/commands/serve.py`, `kgfs/api/auth.py` |
+| `kgfs serve` refuses a host | The host is not localhost and `--allow-network` was not supplied. | Use `127.0.0.1`, or pass `--allow-network --no-local-only` only if you intend network exposure. | `kgfs/api/auth.py`, `kgfs/cli/commands/serve.py` |
+| API returns 401 | Missing or wrong `Authorization: Bearer <token>` header. | Send the configured token header or disable token auth only for local development. | `kgfs/api/auth.py` |
+| API returns 403 for open/reveal | `api.allow_file_actions` is false. | Set `api.allow_file_actions: true` only when you want API-triggered latest-result file actions. | `kgfs/api/routes.py` |
+| `kgfs tui` says Textual is missing | The optional TUI dependency is not installed. | Run `python -m pip install -e ".[tui]"`, or continue using CLI/web. | `kgfs/tui/app.py`, `pyproject.toml` |
+| Integration scaffold command wrote files but did not install anything | Scaffolds are manual-install templates by design. | Inspect the README/scripts in the output directory and install manually if desired. | `kgfs/integrations/*.py` |
 | Packaged app cannot find templates/static files | Package was built without web asset data or from stale output. | Rebuild cleanly with `python scripts/build_package.py --clean`; smoke test. | `packaging/pyinstaller/kgfs.spec`, `scripts/build_package.py` |
 | Packaged semantic search missing | Base package excludes semantic dependencies/model caches. | Use Python install with `.[semantic]` or build a future semantic-specific package. | `packaging/pyinstaller/kgfs.spec`, `packaging/README-packaging.md` |
 | Build script refuses to remove a path | `scripts/build_package.py --clean` only removes build/dist paths inside the project root. | Use paths under the project or remove external paths manually if you really intend to. | `scripts/build_package.py` |
@@ -118,6 +124,15 @@ Check OCR state and one-image behavior:
 ```bash
 kgfs ocr status
 kgfs ocr test ./screenshot.png
+```
+
+Check local API/TUI/integration surfaces:
+
+```bash
+kgfs serve --dry-run
+kgfs tui --check
+kgfs integrations status
+kgfs tray status
 ```
 
 Preview AI context without API calls:
@@ -182,14 +197,20 @@ Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 - `vectors.shard_strategy` is changed even though no behavior beyond the `none` placeholder was found.
 - `search.default_mode` is invalid.
 - `ai.enabled` is true but the API key env var is missing.
+- `api.require_token` is true but the env var named by `api.token_env` is missing.
+- `api.host` is non-local and `kgfs serve` is run without `--allow-network`.
+- `api.allow_file_actions` is false when API open/reveal is expected.
 
 ## Known Limitations
 
 - No auth is implemented for the web dashboard.
-- Web search is keyword-only at this commit.
+- The local JSON API has bearer-token auth by default but no external auth provider or role model.
+- Web search exposes local registry modes, but not AI rerank or vector backend overrides.
+- The TUI is an optional minimal launcher scaffold at this commit.
+- Integration scaffolds are generated for manual installation; KGFS does not auto-install them.
 - No structured logging pipeline is implemented.
 - No lint/typecheck tooling is configured.
 - AI query expansion has a config key (`ai.allow_query_expansion`) but no implemented command path was found.
 - Backend selection is exposed for vector management commands, but `kgfs search` does not expose a `--backend` flag at this commit.
-- Base packaged builds exclude semantic dependencies and OpenAI SDK.
+- Base packaged builds exclude semantic dependencies, optional vector backend dependencies, optional TUI/tray dependencies, OCR helper dependencies, and OpenAI SDK.
 - OCR PDF rasterization is scaffolded; scanned/image-only PDFs are detected and reported, while image OCR is implemented through Tesseract.

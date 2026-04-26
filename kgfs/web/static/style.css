@@ -55,7 +55,8 @@ h1 {
   max-width: 760px;
 }
 
-input {
+input,
+select {
   border: 1px solid #b8c4bd;
   border-radius: 6px;
   flex: 1;
@@ -65,7 +66,8 @@ input {
 
 .searchbar input[type="text"],
 .searchbar input[type="date"],
-.searchbar input[type="number"] {
+.searchbar input[type="number"],
+.searchbar select {
   flex: 0 1 130px;
 }
 
@@ -114,6 +116,31 @@ button {
   display: flex;
   gap: 16px;
   justify-content: space-between;
+}
+
+.statusline,
+.meta-row,
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.statusline span,
+.meta-row span,
+.chips span {
+  background: #e8eee8;
+  border: 1px solid #d9ded6;
+  border-radius: 6px;
+  color: #245b4f;
+  font-size: 13px;
+  padding: 4px 8px;
+}
+
+.note {
+  color: #5c6962;
+  font-style: italic;
 }
 
 .actions {

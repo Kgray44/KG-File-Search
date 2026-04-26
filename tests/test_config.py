@@ -107,6 +107,16 @@ def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
     assert loaded.intelligence.graph_max_nodes == 40
     assert loaded.metadata.auto_backup_before_reset is True
     assert loaded.metadata.export_format == "json"
+    assert loaded.ui.default_surface == "cli"
+    assert loaded.ui.tui_enabled is True
+    assert loaded.api.enabled is False
+    assert loaded.api.host == "127.0.0.1"
+    assert loaded.api.port == 8766
+    assert loaded.api.require_token is True
+    assert loaded.api.allow_file_actions is False
+    assert loaded.integrations.enabled is True
+    assert loaded.integrations.raycast_enabled is False
+    assert loaded.integrations.tray_enabled is False
     assert loaded.ai.enabled is False
     assert loaded.ai.api_key_env == "OPENAI_API_KEY"
     assert loaded.ai.send_file_paths is False
@@ -149,3 +159,6 @@ def test_existing_config_without_hybrid_section_uses_defaults(tmp_path: Path) ->
     assert config.projects.default_limit == 20
     assert config.intelligence.graph_max_edges == 120
     assert config.metadata.auto_backup_before_reset is True
+    assert config.ui.web_enabled is True
+    assert config.api.require_token is True
+    assert config.integrations.enabled is True

@@ -52,6 +52,13 @@ advanced-search = [
 openai = [
   "openai>=1.68.0",
 ]
+tui = [
+  "textual>=0.80",
+]
+tray = [
+  "pystray>=0.19",
+  "pillow>=10",
+]
 package = [
   "pyinstaller>=6.6",
 ]

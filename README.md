@@ -1,6 +1,6 @@
 # KG File Search (KGFS)
 
-KGFS is a private, local-first file search tool. It indexes only folders you choose, extracts text from common document and code formats, stores the index in local SQLite, and searches with SQLite FTS5 keyword ranking plus optional local semantic search.
+KGFS is a private, local-first file search tool. It indexes only folders you choose, extracts text from common document and code formats, stores the index in local SQLite, and searches with SQLite FTS5 keyword ranking plus optional local semantic search, OCR, workflow metadata, and file-intelligence tools.
 
 ## Quickstart
 
@@ -36,7 +36,7 @@ kgfs search "sample query" --project-local
 - Local personal workflow metadata: profiles, saved searches, collections, tags, notes, assignment mode, and manual projects.
 - Local file intelligence: exact/semantic duplicates, versions, project candidates, file/topic graphs, health reports, and metadata backups.
 - Optional OpenAI AI Assist for answer synthesis and reranking after local search.
-- Typer CLI and a local FastAPI dashboard.
+- Typer CLI, local FastAPI dashboard, token-gated local JSON API, optional Textual TUI launcher, and local integration scaffolds.
 - PyInstaller packaging scripts and GitHub Actions workflows.
 
 ## Safety Defaults
@@ -88,6 +88,8 @@ python -m pip install -e ".[semantic]"
 python -m pip install -e ".[ocr]"
 python -m pip install -e ".[openai]"
 python -m pip install -e ".[package]"
+python -m pip install -e ".[tui]"
+python -m pip install -e ".[tray]"
 python -m pip install -e ".[hnsw]"          # optional advanced vector backend dependency
 python -m pip install -e ".[sqlite-vec]"    # optional experimental SQLite vector dependency
 python -m pip install -e ".[faiss]"         # optional power-user vector dependency
@@ -170,6 +172,24 @@ kgfs metadata import kgfs-metadata-backup.json --yes
 ```
 
 `reset-index` can automatically create a KGFS metadata backup when `metadata.auto_backup_before_reset: true`, but it still deletes the active KGFS database/index files after the backup.
+
+Local UX and integration commands are opt-in and keep their boundaries local:
+
+```bash
+kgfs web
+export KGFS_API_TOKEN="dev-token"
+kgfs serve
+kgfs tui --check
+kgfs integrations status
+kgfs integrations raycast export --output ./kgfs-raycast
+kgfs integrations alfred export --output ./kgfs-alfred
+kgfs integrations powertoys scaffold --output ./kgfs-powertoys
+kgfs integrations finder scaffold --output ./kgfs-finder
+kgfs integrations explorer scaffold --output ./kgfs-explorer
+kgfs tray scaffold --output ./kgfs-tray
+```
+
+The dashboard binds to localhost by default. The JSON API requires a bearer token by default and refuses non-localhost binds unless explicitly allowed. Integration commands write scaffold files only; they do not install OS integrations or change system settings.
 
 Build a packaged executable:
 

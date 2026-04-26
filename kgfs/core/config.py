@@ -374,6 +374,59 @@ class MetadataSettings(BaseModel):
         return text if text in {"json"} else "json"
 
 
+class UISettings(BaseModel):
+    default_surface: str = "cli"
+    tui_enabled: bool = True
+    web_enabled: bool = True
+    open_browser_on_web_start: bool = False
+
+    @field_validator("default_surface", mode="before")
+    @classmethod
+    def _surface(cls, value: Any) -> str:
+        text = str(value or "cli").strip().lower()
+        return text if text in {"cli", "web", "tui"} else "cli"
+
+
+class APISettings(BaseModel):
+    enabled: bool = False
+    host: str = "127.0.0.1"
+    port: int = 8766
+    require_token: bool = True
+    token_env: str = "KGFS_API_TOKEN"
+    allow_file_actions: bool = False
+
+    @field_validator("host", mode="before")
+    @classmethod
+    def _host(cls, value: Any) -> str:
+        text = str(value or "127.0.0.1").strip()
+        return text or "127.0.0.1"
+
+    @field_validator("port", mode="before")
+    @classmethod
+    def _port(cls, value: Any) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return 8766
+        return number if 0 < number < 65536 else 8766
+
+    @field_validator("token_env", mode="before")
+    @classmethod
+    def _token_env(cls, value: Any) -> str:
+        text = str(value or "KGFS_API_TOKEN").strip()
+        return text or "KGFS_API_TOKEN"
+
+
+class IntegrationSettings(BaseModel):
+    enabled: bool = True
+    raycast_enabled: bool = False
+    alfred_enabled: bool = False
+    powertoys_enabled: bool = False
+    finder_enabled: bool = False
+    explorer_enabled: bool = False
+    tray_enabled: bool = False
+
+
 class SqliteVecSettings(BaseModel):
     enabled: bool = False
     experimental: bool = True
@@ -498,6 +551,9 @@ class KGFSConfig(BaseModel):
     projects: ProjectsSettings = Field(default_factory=ProjectsSettings)
     intelligence: IntelligenceSettings = Field(default_factory=IntelligenceSettings)
     metadata: MetadataSettings = Field(default_factory=MetadataSettings)
+    ui: UISettings = Field(default_factory=UISettings)
+    api: APISettings = Field(default_factory=APISettings)
+    integrations: IntegrationSettings = Field(default_factory=IntegrationSettings)
     vectors: VectorSettings = Field(default_factory=VectorSettings)
     hybrid: HybridSettings = Field(default_factory=HybridSettings)
     ai: AISettings = Field(default_factory=AISettings)
@@ -750,6 +806,29 @@ metadata:
   backup_dir: null
   auto_backup_before_reset: true
   export_format: "json"
+
+ui:
+  default_surface: "cli"
+  tui_enabled: true
+  web_enabled: true
+  open_browser_on_web_start: false
+
+api:
+  enabled: false
+  host: "127.0.0.1"
+  port: 8766
+  require_token: true
+  token_env: "KGFS_API_TOKEN"
+  allow_file_actions: false
+
+integrations:
+  enabled: true
+  raycast_enabled: false
+  alfred_enabled: false
+  powertoys_enabled: false
+  finder_enabled: false
+  explorer_enabled: false
+  tray_enabled: false
 
 vectors:
   backend: "sqlite_scan"

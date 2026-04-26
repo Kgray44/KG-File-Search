@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Health</h1>
+<section class="grid">
+  {% for key, value in health.summary.items() %}
+  <div class="metric"><span>{{ key }}</span><strong>{{ value }}</strong></div>
+  {% endfor %}
+</section>
+<h2>Issues</h2>
+<table>
+  <tr><th>Severity</th><th>Title</th><th>Detail</th><th>Suggestion</th></tr>
+  {% for issue in health.issues %}
+  <tr><td>{{ issue.severity }}</td><td>{{ issue.title }}</td><td>{{ issue.detail }}</td><td>{{ issue.suggestion or "" }}</td></tr>
+  {% else %}
+  <tr><td colspan="4">No health issues.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

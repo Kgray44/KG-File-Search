@@ -64,6 +64,10 @@ def test_cli_exposes_required_mvp_commands() -> None:
         "graph-export",
         "health",
         "metadata",
+        "tui",
+        "serve",
+        "integrations",
+        "tray",
     }.issubset(command.commands.keys())
 
 

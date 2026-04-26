@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Graph</h1>
+<form action="/graph" method="get" class="searchbar">
+  <input type="search" name="q" value="{{ query }}" placeholder="speaker crossover">
+  <button type="submit">Build Graph</button>
+</form>
+{% if graph %}
+<h2>Nodes</h2>
+<table>
+  <tr><th>Type</th><th>Label</th></tr>
+  {% for node in graph.nodes %}
+  <tr><td>{{ node.type }}</td><td>{{ node.label }}</td></tr>
+  {% endfor %}
+</table>
+<h2>Edges</h2>
+<table>
+  <tr><th>Source</th><th>Type</th><th>Target</th><th>Weight</th></tr>
+  {% for edge in graph.edges %}
+  <tr><td>{{ edge.source }}</td><td>{{ edge.type }}</td><td>{{ edge.target }}</td><td>{{ "%.3f"|format(edge.weight) }}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

@@ -1,6 +1,6 @@
 # Usage Guide
 
-KGFS can be used through its CLI, local web dashboard, and Python modules. This guide covers supported entry points found in the repository state at this commit.
+KGFS can be used through its CLI, local web dashboard, token-gated local JSON API, optional TUI launcher, local integration scaffolds, and Python modules. This guide covers supported entry points found in the repository state at this commit.
 
 ## Install
 
@@ -29,6 +29,13 @@ python -m pip install -e ".[ocr]"
 ```
 
 Tesseract itself is an external local executable and is installed separately on Windows/macOS.
+
+Optional TUI and tray-scaffold dependencies:
+
+```bash
+python -m pip install -e ".[tui]"
+python -m pip install -e ".[tray]"
+```
 
 Sources: `pyproject.toml`, `README.md`.
 
@@ -231,7 +238,9 @@ kgfs profile search school "op amp gain"
 
 `collection export` writes Markdown to stdout unless you redirect it yourself.
 `reset-index` deletes the KGFS database/index files, so workflow metadata in
-that database is not preserved in this phase.
+that database is removed unless you export/backup and later restore it.
+`metadata.auto_backup_before_reset: true` creates a KGFS metadata backup before
+`reset-index --yes` deletes database files.
 
 Sources: `kgfs/workflows/*.py`, `kgfs/cli/commands/*`, `tests/test_phase7_workflows.py`.
 
@@ -520,14 +529,108 @@ kgfs web --host 127.0.0.1 --port 9000
 
 Pages:
 
-- `/`: home and summary metrics.
-- `/search`: keyword search form with filters.
+- `/`: home, summary metrics, semantic chunk count, vector backend, OCR state, and health issue count.
+- `/search`: local registry search form with `auto`, `keyword`, `semantic`, and `hybrid` modes plus filters.
+- `/collections`: local collection list.
+- `/tags`: local tag list.
+- `/projects`: local project list.
+- `/graph?q=...`: local topic graph view.
+- `/health`: local health report.
 - `/stats`: database/index stats.
 - `/config`: active config display.
 - `/failures`: latest extraction failures.
 - `/open/{result_id}` and `/reveal/{result_id}`: open or reveal latest search result paths.
 
-Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`, `tests/test_web.py`.
+The dashboard has no authentication at this commit, so keep it bound to
+`127.0.0.1` unless you intentionally expose local KGFS data.
+
+Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`, `tests/test_web.py`, `tests/test_phase9_ux_integrations.py`.
+
+## Local JSON API
+
+Start the local API:
+
+```bash
+export KGFS_API_TOKEN="dev-token"
+kgfs serve
+```
+
+Default URL:
+
+```text
+http://127.0.0.1:8766
+```
+
+Useful development checks:
+
+```bash
+kgfs serve --dry-run
+kgfs serve --host 127.0.0.1 --port 9001 --dry-run
+kgfs serve --no-token --dry-run
+```
+
+Query with bearer auth:
+
+```bash
+curl -H "Authorization: Bearer $KGFS_API_TOKEN" \
+  "http://127.0.0.1:8766/search?q=motor%20torque&mode=keyword"
+```
+
+Important behavior:
+
+- Token auth is required by default from `api.token_env`, default `KGFS_API_TOKEN`.
+- Non-localhost binds are refused unless `--allow-network` is passed.
+- API open/reveal endpoints use latest result IDs and return 403 unless `api.allow_file_actions: true`.
+- `api.enabled` is a config flag, but the explicit `kgfs serve` command starts the API when invoked and checks bind/token settings.
+
+Sources: `kgfs/api/*.py`, `kgfs/cli/commands/serve.py`, `tests/test_phase9_ux_integrations.py`.
+
+## Optional TUI
+
+Check whether Textual is installed:
+
+```bash
+kgfs tui --check
+```
+
+Launch the current TUI shell:
+
+```bash
+python -m pip install -e ".[tui]"
+kgfs tui
+```
+
+The current TUI is intentionally minimal and lazy-loaded. It provides a
+Textual shell with a search input placeholder and directs full behavior back to
+CLI search while the TUI grows.
+
+Sources: `kgfs/tui/*.py`, `kgfs/cli/commands/tui.py`, `tests/test_phase9_ux_integrations.py`.
+
+## Integration Scaffolds
+
+Inspect scaffold status:
+
+```bash
+kgfs integrations status
+kgfs tray status
+```
+
+Write local launcher scaffolds:
+
+```bash
+kgfs integrations raycast export --output ./kgfs-raycast
+kgfs integrations alfred export --output ./kgfs-alfred
+kgfs integrations powertoys scaffold --output ./kgfs-powertoys
+kgfs integrations finder scaffold --output ./kgfs-finder
+kgfs integrations explorer scaffold --output ./kgfs-explorer
+kgfs tray scaffold --output ./kgfs-tray
+```
+
+These commands only write files under the chosen output directory or KGFS app
+data. They do not install plugins, edit registry/system settings, create
+autostart entries, or modify source files.
+
+Sources: `kgfs/integrations/*.py`, `kgfs/cli/commands/integrations.py`, `tests/test_phase9_ux_integrations.py`.
 
 ## Maintenance
 

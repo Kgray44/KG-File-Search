@@ -395,11 +395,48 @@ Open:
 http://127.0.0.1:8765
 ```
 
-Use `/search?q=pid&ext=.pdf` for a filtered search URL.
+Use `/search?q=pid&mode=auto&ext=.pdf` for a filtered search URL. The dashboard also includes local collection, tag, project, graph, and health pages.
 
 Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`.
 
-## Example 16: Reset and Rebuild
+## Example 16: Local API, TUI, and Integration Scaffolds
+
+Start the token-gated local API:
+
+```bash
+export KGFS_API_TOKEN="dev-token"
+kgfs serve
+```
+
+Validate API settings without starting a server:
+
+```bash
+kgfs serve --dry-run
+```
+
+Check the optional TUI dependency:
+
+```bash
+kgfs tui --check
+```
+
+Generate local launcher scaffolds into chosen directories:
+
+```bash
+kgfs integrations status
+kgfs integrations raycast export --output ./kgfs-raycast
+kgfs integrations alfred export --output ./kgfs-alfred
+kgfs integrations powertoys scaffold --output ./kgfs-powertoys
+kgfs integrations finder scaffold --output ./kgfs-finder
+kgfs integrations explorer scaffold --output ./kgfs-explorer
+kgfs tray scaffold --output ./kgfs-tray
+```
+
+These commands do not edit system settings or install OS integrations.
+
+Sources: `kgfs/api/*.py`, `kgfs/tui/*.py`, `kgfs/integrations/*.py`.
+
+## Example 17: Reset and Rebuild
 
 Dry-run reset:
 
@@ -424,7 +461,7 @@ Sources: `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py`.
 `reset-index` creates a KGFS metadata backup first when
 `metadata.auto_backup_before_reset: true`.
 
-## Example 17: Build a Package
+## Example 18: Build a Package
 
 ```bash
 python -m pip install -e ".[package]"

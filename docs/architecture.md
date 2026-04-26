@@ -16,10 +16,13 @@ kgfs/
   search/              Query parsing, filters, ranking, snippets, citations, keyword/semantic/hybrid search, and advanced local investigation helpers
   search/backends/     Vector backend interfaces, registry, sqlite_scan, and optional accelerated backends
   search/modes/        Registry engine wrappers for keyword, semantic, hybrid, and auto fallback
-  vectors/             Vector status, chunk lifecycle, and rebuild helpers
+  vectors/             Vector status, chunk lifecycle, backend artifacts, and rebuild helpers
   workflows/           Local profiles, saved searches, collections, tags, notes, assignments, and projects
   intelligence/         Local duplicates, versions, project candidates, graph, health, metadata backup
   web/                 FastAPI dashboard, Jinja templates, static CSS
+  api/                 Token-gated local JSON API app, auth, routes, response models
+  tui/                 Optional Textual TUI launcher and small state/action helpers
+  integrations/        Raycast/Alfred/PowerToys/Finder/Explorer/tray scaffolds
 ```
 
 Compatibility modules such as `kgfs/config.py`, `kgfs/database.py`, `kgfs/file_discovery.py`, `kgfs/file_filters.py`, `kgfs/hashing.py`, `kgfs/migrations.py`, `kgfs/models.py`, `kgfs/path_utils.py`, `kgfs/platform_utils.py`, `kgfs/prune.py`, `kgfs/resources.py`, `kgfs/safety.py`, `kgfs/semantic.py`, and `kgfs/snippets.py` alias the newer package locations with `sys.modules`.
@@ -30,7 +33,7 @@ Sources: `kgfs/core/*.py`, `kgfs/db/*.py`, `kgfs/indexing/*.py`, `kgfs/search/*.
 
 ```mermaid
 flowchart TD
-    User["User command or web request"] --> Runtime["Runtime path/config resolution\nkgfs/cli/shared.py or kgfs/web/app.py"]
+    User["User command, web request, API request, or TUI launch"] --> Runtime["Runtime path/config resolution\nkgfs/cli/shared.py\nkgfs/web/app.py\nkgfs/api/app.py"]
     Runtime --> Config["Load YAML config\nkgfs/core/config.py"]
     Runtime --> DB["Connect and initialize SQLite\nkgfs/db/connection.py\nkgfs/db/schema.py"]
     Config --> Index["Indexing path"]
@@ -38,7 +41,7 @@ flowchart TD
     Config --> Maintenance["Maintenance path"]
 ```
 
-CLI runtime lives in `kgfs/cli/shared.py`. Web runtime is an inner helper in `kgfs/web/app.py`. Both resolve config/database paths and initialize the database before command-specific work.
+CLI runtime lives in `kgfs/cli/shared.py`. Web/API runtimes are inner helpers in `kgfs/web/app.py` and `kgfs/api/app.py`. These surfaces resolve config/database paths and initialize the database before command-specific work.
 
 ## Indexing Lifecycle
 
@@ -135,7 +138,7 @@ Search has two layers:
 - Direct functions in `kgfs/search/keyword.py`: `search()`, `semantic_search()`, and `hybrid_search()`.
 - A mode registry in `kgfs/search/registry.py` and `kgfs/search/modes/*.py`.
 
-The CLI search command uses the registry. The web dashboard currently calls direct keyword `search()` and does not expose semantic/hybrid modes.
+The CLI search command, local JSON API, and web dashboard search page use the registry. The web dashboard exposes keyword, semantic, hybrid, and auto modes, but it does not expose AI rerank or vector backend overrides.
 
 Sources: `kgfs/cli/commands/search.py`, `kgfs/search/keyword.py`, `kgfs/search/registry.py`, `kgfs/search/modes/*.py`, `kgfs/web/app.py`, `tests/test_search_kernel.py`, `tests/test_web.py`.
 
@@ -328,14 +331,39 @@ Sources: `kgfs/db/schema.py`, `kgfs/db/migrations.py`, `kgfs/db/repositories.py`
 
 Routes:
 
-- `GET /`: summary metrics.
-- `GET /search`: keyword search with filters.
+- `GET /`: summary metrics plus vector/OCR/health status.
+- `GET /search`: registry search with mode/filter controls.
+- `GET /collections`: local collections.
+- `GET /tags`: local tags.
+- `GET /projects`: local projects.
+- `GET /graph`: bounded local topic graph.
+- `GET /health`: local health report.
 - `GET /stats`: database stats.
 - `GET /config`: active config dump.
 - `GET /failures`: recent extraction failures.
 - `GET /open/{result_id}` and `GET /reveal/{result_id}`: OS open/reveal actions for latest results.
 
 Sources: `kgfs/web/app.py`, `kgfs/core/resources.py`, `kgfs/web/templates/*.html`, `tests/test_web.py`.
+
+## Local API, TUI, and Integration Architecture
+
+The additional UX surfaces are intentionally local and lightweight:
+
+```mermaid
+flowchart TD
+    Serve["kgfs serve"] --> API["FastAPI JSON API\nkgfs/api"]
+    API --> Auth["Bearer token + localhost bind checks"]
+    API --> Registry["Search registry"]
+    API --> Workflows["Workflow/intelligence helpers"]
+    TuiCmd["kgfs tui"] --> Lazy["Lazy Textual import"]
+    Integrations["kgfs integrations / tray"] --> Files["Scaffold files in chosen/app-data dirs"]
+```
+
+The API requires bearer-token auth by default, refuses non-localhost binds unless explicitly allowed, and keeps open/reveal endpoints disabled unless `api.allow_file_actions` is true. File actions use latest result IDs only.
+
+The TUI imports Textual only when `kgfs tui` runs. Integration scaffold commands write templates/README files only; they do not install OS plugins or edit system settings.
+
+Sources: `kgfs/api/*.py`, `kgfs/tui/*.py`, `kgfs/integrations/*.py`, `tests/test_phase9_ux_integrations.py`.
 
 ## AI Assist Architecture
 
@@ -373,7 +401,12 @@ Sources: `kgfs/ai.py`, `kgfs/cli/commands/search.py`, `kgfs/cli/shared.py`, `tes
 | Unknown search mode | Raises `UnknownSearchMode`; CLI reports bad parameter. | `kgfs/search/registry.py`, `kgfs/cli/commands/search.py` |
 | Semantic unavailable | Raises `SearchModeUnavailable` for explicit semantic/hybrid search. Auto falls back to keyword with warning. | `kgfs/search/registry.py`, `kgfs/search/modes/semantic.py` |
 | Unknown vector backend | Vector status reports unavailable; semantic/hybrid modes report a helpful unavailable message with known backend names. | `kgfs/search/backends/registry.py`, `kgfs/vectors/status.py` |
+| Optional vector backend unavailable or stale | Backend reports missing dependency, disabled config, missing artifact, stale metadata, or dimension mismatch instead of pretending search succeeded. | `kgfs/search/backends/*.py`, `kgfs/vectors/metadata.py` |
 | OCR disabled or missing Tesseract | Images remain ignored unless OCR is enabled; OCR status/extraction reports missing local command with install guidance. | `kgfs/indexing/filters.py`, `kgfs/ocr/tesseract.py` |
+| API token missing or invalid | Missing configured token env returns HTTP 503; wrong/missing bearer token returns HTTP 401. | `kgfs/api/auth.py` |
+| API non-local bind | `kgfs serve` raises a bad-parameter error unless `--allow-network` is supplied. | `kgfs/api/auth.py`, `kgfs/cli/commands/serve.py` |
+| API file action disabled | `/open/{result_id}` and `/reveal/{result_id}` return 403 unless `api.allow_file_actions` is true. | `kgfs/api/routes.py` |
+| TUI dependency missing | `kgfs tui --check` reports missing Textual; launch raises a user-facing dependency error. | `kgfs/tui/app.py`, `kgfs/cli/commands/tui.py` |
 | AI disabled, missing SDK, missing API key, unsupported provider | Raises `AIError`; CLI reports bad parameter. | `kgfs/ai.py`, `kgfs/cli/commands/search.py` |
 | Newer DB schema | Raises `RuntimeError`. | `kgfs/db/migrations.py` |
 
@@ -390,6 +423,8 @@ Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/doctor.py`, `kgfs/core/app_dir
 - Prune/reset do not delete source files.
 - Open/reveal behavior is isolated in `kgfs/core/platform_utils.py`; tests enforce that `platform.system()` checks are not scattered.
 - Web dashboard has no authentication and should stay bound to localhost unless the operator understands the exposure.
+- Local JSON API requires a bearer token by default and refuses network binds unless explicitly allowed.
+- Integration scaffolds write local template files only and do not install OS integrations.
 - AI Assist is opt-in and context-bounded.
 - OCR is opt-in, local-only, and writes only KGFS database/cache data.
 
@@ -407,4 +442,7 @@ Sources: `AGENTS.md`, `kgfs/core/safety.py`, `kgfs/core/platform_utils.py`, `tes
 | New intelligence workflow | Add logic under `kgfs/intelligence/`, expose CLI under `kgfs/cli/commands/`, and keep source files untouched. | Focused Phase 8-style tests using temporary databases and source-hash checks. |
 | New search mode | Add engine under `kgfs/search/modes/`, register in `build_default_search_registry()`, extend `SearchMode` enum if user-facing. | `tests/test_search_kernel.py`, CLI tests if exposed. |
 | New web route | Add route in `kgfs/web/app.py` and template/static assets as needed. | `tests/test_web.py`. |
+| New JSON API route | Add route/model logic under `kgfs/api/`, preserve local bind/token/file-action boundaries, and document the endpoint. | API tests in `tests/test_phase9_ux_integrations.py` or focused API tests. |
+| New TUI behavior | Add lazy Textual-backed code under `kgfs/tui/`; keep base CLI imports independent of Textual. | TUI dependency-check tests and focused state/action tests. |
+| New local integration scaffold | Add writer under `kgfs/integrations/`, expose it in `kgfs/cli/commands/integrations.py`, and ensure it writes only to the selected output directory. | Scaffold tests that verify no source/system changes. |
 | New packaging asset | Update `packaging/pyinstaller/kgfs.spec` and `scripts/build_package.py` archive contents. | `tests/test_packaging_scripts.py`, packaged smoke test. |

@@ -18,17 +18,17 @@ That difference matters. KGFS should be judged by whether it is controlled, insp
 | Explicit selected-folder corpus | Core model through `indexed_folders` and folder commands. | Possible through indexing options or folder-scoped File Explorer search, but not KGFS-style corpus management. | Possible through Windows indexing settings, within OS semantics. | Possible through Finder location search and Spotlight privacy/settings, but not KGFS-style corpus config. |
 | Project-local mode | Implemented with `.kgfs/` via `--project-local`. | Not a project-local search/index database workflow. | Not a project-local search/index database workflow. | Not a project-local search/index database workflow. |
 | CLI-first workflow | Implemented through Typer commands such as `kgfs index`, `kgfs search`, `kgfs why`, and `kgfs vector`. | Primarily GUI/taskbar/File Explorer. | Primarily GUI/taskbar/File Explorer. | Primarily Spotlight UI and Finder UI. |
-| Web/local dashboard | Implemented as a local FastAPI dashboard; current web search is keyword-only. | OS UI, not a KGFS-style local dashboard. | OS UI, not a KGFS-style local dashboard. | OS UI, not a KGFS-style local dashboard. |
+| Web/local dashboard | Implemented as a local FastAPI dashboard with search modes, workflow pages, graph, health, latest-result actions, plus a separate token-gated local JSON API. | OS UI, not a KGFS-style local dashboard/API. | OS UI, not a KGFS-style local dashboard/API. | OS UI, not a KGFS-style local dashboard/API. |
 | SQLite inspectable index | Implemented; file records, FTS rows, latest results, chunks, and schema version live in SQLite. | Uses Windows indexing internals, not a user-facing KGFS SQLite database. | Uses Windows semantic/indexing internals, not a user-facing KGFS SQLite database. | Uses Spotlight metadata stores, not a user-facing KGFS SQLite database. |
 | Keyword search | Implemented with SQLite FTS5, filters, snippets, and ranking boosts. | Implemented by the OS index and File Explorer/taskbar search. | Implemented as part of Windows Search. | Implemented by Spotlight/Finder search. |
-| Semantic search | Optional and local when `semantic.enabled` is true and dependencies/chunks/backend are ready; CLI/search kernel only at this commit. | Traditional Windows Search is primarily lexical/property/content indexing. | Implemented by Windows on supported Copilot+ PCs, supported languages, and supported file types. | Spotlight is highly integrated OS search, but KGFS-style local embedding search is not a documented Spotlight/Finder feature. |
-| Hybrid search | Implemented in CLI/search kernel when semantic search is ready; combines keyword, semantic, filename, path, phrase, and recency signals. | Not exposed as KGFS-style configurable hybrid ranking. | Microsoft describes semantic indexing alongside traditional indexing, but not KGFS-style configurable hybrid weights. | Not exposed as KGFS-style configurable hybrid ranking. |
+| Semantic search | Optional and local when `semantic.enabled` is true and dependencies/chunks/backend are ready; exposed through CLI, local API, and web search mode selection. | Traditional Windows Search is primarily lexical/property/content indexing. | Implemented by Windows on supported Copilot+ PCs, supported languages, and supported file types. | Spotlight is highly integrated OS search, but KGFS-style local embedding search is not a documented Spotlight/Finder feature. |
+| Hybrid search | Implemented when semantic search is ready; combines keyword, semantic, filename, path, phrase, and recency signals through CLI/API/web search surfaces. | Not exposed as KGFS-style configurable hybrid ranking. | Microsoft describes semantic indexing alongside traditional indexing, but not KGFS-style configurable hybrid weights. | Not exposed as KGFS-style configurable hybrid ranking. |
 | Explainable ranking / `kgfs why` | Implemented for latest saved KGFS results, including score breakdown and snippets. | OS ranking is not exposed as a KGFS-style explanation command. | OS ranking is not exposed as a KGFS-style explanation command. | OS ranking is not exposed as a KGFS-style explanation command. |
 | Open/reveal results | Implemented from latest result IDs through platform-specific helpers. | Native OS behavior. | Native OS behavior. | Native OS behavior. |
 | AI assistance | Optional OpenAI-only AI Assist, disabled by default, downstream of local snippets, with preview/confirmation/redaction settings. | May include web/cloud/account results depending on Windows settings; not KGFS-style bounded context preview. | Semantic indexing is on-device per Microsoft; not KGFS-style OpenAI snippet workflow. | Spotlight can show suggestions/actions; not KGFS-style bounded context preview. |
 | Privacy defaults | No folders indexed and no AI calls by default; selected local folders only. | Indexing is enabled for OS convenience and can include local, cloud, web, and account results depending on settings. | Microsoft says semantic index data is stored locally on the PC, with supported Copilot+ behavior and settings. | OS-managed local search with configurable result categories and privacy exclusions. |
 | Source-file modification policy | Indexing, prune, reset, rebuild, and vector clear do not delete, move, rename, or overwrite indexed source files. | Search itself is for finding/opening; File Explorer can modify files when users perform file actions. | Same Windows file-management boundary. | Search itself is for finding/opening; Finder can modify files when users perform file actions. |
-| Advanced workflows / roadmap | CLI workflows include deep search, similar, compare, timeline, research, profiles, collections, tags, notes, duplicates, versions, project candidates, graphs, and metadata backups. Optional local image OCR is implemented first. | Best at OS convenience, launch, settings, and broad file lookup. | Best at OS-integrated semantic file/photo/settings search on supported hardware. | Best at Mac-wide convenience, app launch, Finder organization, and OS actions. |
+| Advanced workflows / roadmap | Workflows include deep search, similar, compare, timeline, research, profiles, collections, tags, notes, duplicates, versions, project candidates, graphs, metadata backups, OCR, API/TUI entry points, and integration scaffolds. | Best at OS convenience, launch, settings, and broad file lookup. | Best at OS-integrated semantic file/photo/settings search on supported hardware. | Best at Mac-wide convenience, app launch, Finder organization, and OS actions. |
 | Best audience | Users who want controlled project/corpus indexing, reproducible search, inspectable data, and privacy-bounded AI assistance. | Everyday Windows users who want fast broad desktop search. | Copilot+ PC users who want natural-language Windows search without managing a separate corpus. | Mac users who want fast built-in search, app launching, previews, actions, and Finder workflows. |
 
 ## What KGFS Is Good At
@@ -95,7 +95,7 @@ Implemented sources: `kgfs/db/schema.py`, `kgfs/db/repositories.py`, `kgfs/db/la
 
 ### Optional Semantic and Hybrid Search
 
-Semantic search is optional and local when enabled. Hybrid search is available through the CLI/search kernel when semantic/vector readiness checks pass. The web dashboard search is keyword-only at this commit.
+Semantic search is optional and local when enabled. Hybrid search is available through the CLI/search kernel when semantic/vector readiness checks pass. The web dashboard now uses the same search registry and exposes keyword, semantic, hybrid, and auto modes.
 
 Implemented sources: `kgfs/search/semantic.py`, `kgfs/search/registry.py`, `kgfs/search/modes/*.py`, `kgfs/web/app.py`, `docs/features.md`.
 
@@ -121,7 +121,11 @@ The advanced roadmap points KGFS toward a local knowledge workbench rather than 
 - Project mode.
 - Duplicate and version finding.
 - File/topic/project graph features.
-- OCR beyond the initial local Tesseract image layer, including full scanned-PDF rasterization.
+- Metadata export/import/backups.
+- Optional local Tesseract image OCR and scanned-PDF candidate reporting.
+- A token-gated local JSON API, optional minimal Textual TUI launcher, and manual local integration scaffolds.
+
+Planned workflow expansion includes full scanned-PDF rasterization, richer web/TUI editing surfaces, deeper research/graph UX, OCR backend expansion, photos/image metadata, audio transcription, and visual search.
 
 Roadmap sources: `docs/roadmap.md`, `KGFS_Advanced_Roadmap_Canvas.md`.
 
@@ -158,7 +162,7 @@ Use KGFS when:
 - "Use semantic or hybrid search over a controlled corpus."
 - "Preview exactly what context would be sent to AI."
 - "Keep search data in an inspectable local SQLite database."
-- "Build future collections, tags, notes, profiles, research, or project workflows."
+- "Use local collections, tags, notes, profiles, research, assignment, project, duplicate/version, graph, metadata, API, TUI, or integration-scaffold workflows."
 
 ## Product Positioning
 
@@ -183,7 +187,7 @@ This comparison suggests a clear product direction:
 - Keep privacy and local-first defaults central.
 - Keep optional heavy dependencies optional.
 - Treat OS integrations as launch points into KGFS, not replacements for Spotlight or Windows Search.
-- Keep the web dashboard honest about current capability; at this commit, dashboard search is keyword-only.
+- Keep the web/API/TUI surfaces honest about current capability; the dashboard can search with local registry modes, but AI Assist remains CLI-only and the TUI/integration features are still lightweight scaffolds.
 
 ## Current Status vs Roadmap
 
@@ -191,12 +195,13 @@ This comparison suggests a clear product direction:
 |---|---|---|---|---|
 | Scope and safety | Explicit-folder indexing, empty default config, risky-root refusal, source-file-safe maintenance. | Broad scans require `--allow-risky-root`. | Better profiles and corpus management. | Whole-drive indexing by default. |
 | Project workflows | `--project-local` stores config/data under `.kgfs/`; profiles, saved searches, collections, tags, notes, assignment mode, and manual projects are implemented. | Project workflow is CLI-driven. | Richer web UX and workflow export polish. | Replacing OS project/file managers. |
-| Keyword search | SQLite FTS5 keyword search, snippets, filters, latest result IDs. | Web dashboard search is keyword-only. | Better dashboard search UX. | Replacing OS global instant search. |
-| Semantic search | Optional local embeddings and chunk storage when enabled. | CLI/search kernel only; requires readiness checks and local dependencies. | More advanced vector backends and quality work. | Cloud semantic indexing by default. |
-| Hybrid search | CLI/search kernel hybrid mode with configurable ranking weights. | Not exposed in the current web dashboard. | Better hybrid quality and dashboard controls. | Opaque ranking without explanation. |
+| Keyword search | SQLite FTS5 keyword search, snippets, filters, latest result IDs. | Local dashboard and API expose registry search modes. | Better everyday UX. | Replacing OS global instant search. |
+| Semantic search | Optional local embeddings and chunk storage when enabled. | Requires readiness checks and local dependencies. | More advanced vector quality work. | Cloud semantic indexing by default. |
+| Hybrid search | Hybrid mode with configurable ranking weights. | Requires semantic/vector readiness. | Better hybrid quality and dashboard controls. | Opaque ranking without explanation. |
 | Explainability | `kgfs why` explains latest saved results with snippets and score breakdown. | Explanation is a CLI command, not a web feature. | Broader explanations for future deep/research modes. | Hiding why results ranked. |
 | Vector backends | Default `sqlite_scan`, backend registry, vector status/rebuild/clear/benchmark/recommend. | Optional `sqlite_vec`, `hnsw`, and `faiss` work when their dependencies are installed, enabled, and rebuilt. | More backend tuning, persistence polish, and larger-index UX. | Base install that requires heavy vector dependencies. |
-| Web UI | Local FastAPI dashboard for home, keyword search, stats, config, failures, open, and reveal. | No authentication; semantic/hybrid search not exposed in web search. | Better dashboard, local API, TUI, launcher integrations. | Becoming a public hosted search service. |
+| Web UI | Local FastAPI dashboard for home, search modes, workflow metadata, graph, health, stats, config, failures, open, and reveal. | No dashboard authentication; keep bound to localhost. | Richer local UX. | Becoming a public hosted search service. |
+| Local API and integrations | Token-gated localhost API plus launcher scaffold exports. | Scaffolds are manual-install only; API action endpoints are disabled by default. | Optional launcher workflows. | Remote sync or public API service. |
 | AI Assist | Optional OpenAI answer synthesis and reranking, disabled by default, bounded by local snippets. | OpenAI-only; no implemented query expansion despite config key. | Privacy-protected advanced ask/research workflows. | Always-on cloud assistant behavior. |
 | OCR and media | Optional local Tesseract image OCR is implemented and disabled by default. Scanned-PDF rasterization is scaffolded with safe error reporting. | Full scanned-PDF rasterization, photos/image metadata, audio transcription, and visual search are planned. | OCR, photos/image metadata, audio transcription, visual search. | Modifying source images, PDFs, or media files. |
 | Knowledge workflows | Basic search, open/reveal, stats, doctor, prune/reset/rebuild; deep, similar, compare, timeline, research, profiles, collections, tags, notes, duplicates, versions, graphs, health, and metadata backups. | Reproducible corpus workflows exist mostly through CLI. | More web/dashboard workflow surfaces and richer graph visualization. | Replacing the operating system shell. |

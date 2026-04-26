@@ -71,11 +71,11 @@ This page inventories features implemented in the repository state at this commi
 
 ### Doctor Diagnostics
 
-- What it does: reports platform, Python version, packaged status, app paths, DB state, schema version, FTS5, semantic status, optional dependencies, and folder warnings.
+- What it does: reports platform, Python version, packaged status, app paths, DB state, schema version, FTS5, semantic status, OCR status, optional dependencies, and folder warnings.
 - Use it with: `kgfs doctor`.
 - Inputs: optional config/database/project-local flags.
 - Outputs: Rich diagnostic tables.
-- Settings: app path env vars, `semantic.*`.
+- Settings: app path env vars, `semantic.*`, `ocr.*`, vector/optional dependency state.
 - Edge cases: if config is missing, doctor uses default `KGFSConfig()` for diagnostics.
 - Sources: `kgfs/cli/commands/doctor.py`, `kgfs/core/platform_utils.py`, `kgfs/core/resources.py`.
 - Tests: `tests/test_cli.py`, `tests/test_resources.py`.
@@ -267,7 +267,7 @@ This page inventories features implemented in the repository state at this commi
 - Inputs: `SearchOptions`, `SearchContext`.
 - Outputs: `SearchExecution`.
 - Settings: `SearchOptions.mode`, `SearchOptions.limit`, `SearchOptions.filters`.
-- Edge cases: web search currently calls keyword search directly and does not use registry modes.
+- Edge cases: `SearchOptions.backend` exists but is not exposed by CLI or web search; vector management commands expose backend selection.
 - Sources: `kgfs/search/engine.py`, `kgfs/search/registry.py`, `kgfs/search/modes/*.py`.
 - Tests: `tests/test_search_kernel.py`, `tests/test_cli.py`.
 
@@ -306,7 +306,7 @@ This page inventories features implemented in the repository state at this commi
 
 ### Latest Result IDs
 
-- What it does: stores the most recent search result IDs for `open`, `reveal`, and `why`.
+- What it does: stores the most recent search result IDs for `open`, `reveal`, `why`, and workflow commands that attach local metadata to latest results.
 - Use it with: automatic CLI/web search saving when enabled.
 - Inputs: query and results.
 - Outputs: `latest_results` rows.
@@ -399,14 +399,47 @@ This page inventories features implemented in the repository state at this commi
 
 ### Web Dashboard
 
-- What it does: provides local HTML pages for home, keyword search, stats, config, extraction failures, and latest-result open/reveal.
+- What it does: provides local HTML pages for home, search, collections, tags, projects, graph, health, stats, config, extraction failures, and latest-result open/reveal.
 - Use it with: `kgfs web` at `http://127.0.0.1:8765` by default.
-- Inputs: browser requests.
+- Inputs: browser requests, search query/filter/mode parameters, latest result IDs.
 - Outputs: HTML/plain text responses.
-- Settings: `--host`, `--port`, config/database flags.
-- Edge cases: web search is keyword-only; no authentication is implemented.
+- Settings: `--host`, `--port`, config/database flags, search mode query parameter.
+- Edge cases: no authentication is implemented for the dashboard; search mode errors render in-page instead of crashing. Dashboard open/reveal use latest result IDs.
 - Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`, `kgfs/web/templates/*.html`.
-- Tests: `tests/test_web.py`.
+- Tests: `tests/test_web.py`, `tests/test_phase9_ux_integrations.py`.
+
+### Local JSON API
+
+- What it does: starts a local FastAPI JSON API for health/status, search, deep search, research, indexed file metadata, collections, tags, projects, graph data, metadata export, and gated latest-result open/reveal.
+- Use it with: `kgfs serve`; default API bind is `http://127.0.0.1:8766`.
+- Inputs: HTTP requests with `Authorization: Bearer <token>` when token auth is active.
+- Outputs: JSON health/status/search/workflow/graph/metadata payloads, or JSON action acknowledgements.
+- Settings: `api.enabled`, `api.host`, `api.port`, `api.require_token`, `api.token_env`, `api.allow_file_actions`; CLI `--host`, `--port`, `--allow-network`, `--no-token`, `--dry-run`.
+- Edge cases: `api.enabled` is a config flag but the explicit `kgfs serve` command can start the API when invoked; non-local binds are refused unless explicitly allowed; file actions return 403 unless `api.allow_file_actions` is true; missing token env returns startup errors or HTTP 503.
+- Sources: `kgfs/api/*.py`, `kgfs/cli/commands/serve.py`.
+- Tests: `tests/test_phase9_ux_integrations.py`.
+
+### Optional Textual TUI Launcher
+
+- What it does: provides a lazy optional Textual-based terminal UI launcher and dependency check.
+- Use it with: `kgfs tui --check` or `kgfs tui` after installing `.[tui]`.
+- Inputs: config/database/project-local flags.
+- Outputs: console dependency status or a minimal Textual app shell.
+- Settings: `ui.default_surface`, `ui.tui_enabled`; CLI `--check`.
+- Edge cases: Textual is optional and imported only when needed; the current TUI shell tells users to use CLI search for full behavior while the TUI grows.
+- Sources: `kgfs/tui/*.py`, `kgfs/cli/commands/tui.py`, `pyproject.toml`.
+- Tests: `tests/test_phase9_ux_integrations.py`.
+
+### Local Integration Scaffolds
+
+- What it does: reports integration scaffold status and writes local scaffold/template files for Raycast, Alfred, PowerToys Run, Finder Quick Action, Explorer context-menu experiments, and tray/menu-bar experiments.
+- Use it with: `kgfs integrations status`, `kgfs integrations raycast export`, `kgfs integrations alfred export`, `kgfs integrations powertoys scaffold`, `kgfs integrations finder scaffold`, `kgfs integrations explorer scaffold`, and `kgfs tray scaffold`.
+- Inputs: optional output directory and normal config/database/project-local flags.
+- Outputs: scaffold scripts, README files, JSON/template files, or status tables.
+- Settings: `integrations.*`, `ui.*`; current scaffold writers do not enforce the per-integration enabled flags.
+- Edge cases: scaffold commands do not install plugins, edit registry/system settings, create `.kgfs` in the output tree, or modify source files. Explorer `.reg` output is a template only.
+- Sources: `kgfs/integrations/*.py`, `kgfs/cli/commands/integrations.py`.
+- Tests: `tests/test_phase9_ux_integrations.py`.
 
 ## Maintenance
 
@@ -427,9 +460,9 @@ This page inventories features implemented in the repository state at this commi
 - Use it with: `kgfs reset-index --dry-run`, `kgfs reset-index --yes`, `kgfs rebuild --yes`.
 - Inputs: database path and config.
 - Outputs: removed database files and new indexed data.
-- Settings: `--yes`, `--dry-run`, `--allow-risky-root`.
-- Edge cases: source files and config files are not removed; rebuild force-indexes by default.
-- Sources: `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py`.
+- Settings: `--yes`, `--dry-run`, `--allow-risky-root`, `metadata.auto_backup_before_reset`.
+- Edge cases: source files and config files are not removed; rebuild force-indexes by default. `reset-index --yes` creates a metadata backup first when configured and the database exists.
+- Sources: `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py`, `kgfs/intelligence/export.py`.
 - Tests: `tests/test_reset_rebuild.py`.
 
 ### Schema Initialization and Migrations
@@ -487,7 +520,7 @@ This page inventories features implemented in the repository state at this commi
 - Inputs: build flags.
 - Outputs: `dist-packages/KGFS-<os>-<arch>.zip`.
 - Settings: `KGFS_PYINSTALLER_MODE`, `KGFS_PACKAGE_NAME`.
-- Edge cases: base package excludes tests, semantic dependencies/model caches, and OpenAI SDK.
+- Edge cases: base package excludes tests, semantic/model stacks, optional vector/OCR/TUI/tray dependencies, and OpenAI SDK.
 - Sources: `scripts/build_package.py`, `packaging/pyinstaller/kgfs.spec`.
 - Tests: `tests/test_packaging_scripts.py`.
 
@@ -516,7 +549,9 @@ This page inventories features implemented in the repository state at this commi
 ## Unclear or Needs Verification
 
 - `KGFS_PROJECT_LOCAL` is implemented in `kgfs/core/app_dirs.py` when `get_app_paths(project_local=None)` is used, but most CLI commands pass an explicit default `False` unless `--project-local` is supplied. For CLI use, prefer `--project-local`.
-- `SearchOptions.backend` exists in `kgfs/search/options.py`, but no CLI/web path currently exposes backend selection.
+- `SearchOptions.backend` exists in `kgfs/search/options.py`, but no CLI/web search path currently exposes backend selection. Vector management commands expose `--backend`.
 - `SearchOptions.explain` and `SearchEngine.explain()` exist as runtime fields/hooks. User-facing explanation is implemented through `kgfs why`, not through a generic `--explain` search flag.
 - `ai.allow_query_expansion` exists in `kgfs/core/config.py`, but no implemented query expansion command path was found.
 - `vectors.shard_strategy` exists in config defaults and `VectorSettings`, but no behavior beyond storing/validating the setting was found.
+- `ui.open_browser_on_web_start`, `ui.web_enabled`, `ui.tui_enabled`, and `integrations.*_enabled` are present in config, but current CLI commands do not enforce them as launch gates.
+- `api.enabled` is present in config, but `kgfs serve` is an explicit command and does not require it to be true.

@@ -55,6 +55,8 @@ excludes = [
     "hnswlib",
     "faiss",
     "numpy",
+    "textual",
+    "pystray",
 ]
 
 a = Analysis(

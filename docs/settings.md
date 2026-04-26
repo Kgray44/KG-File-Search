@@ -12,6 +12,7 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | Search mode | CLI `--hybrid` > CLI `--mode` > `search.default_mode` | `kgfs/cli/commands/search.py` |
 | Search limit | CLI `--limit` > `search.default_limit` for search; `ai.max_results_sent` for ask | `kgfs/cli/commands/search.py` |
 | AI API key | Environment variable named by `ai.api_key_env` | `kgfs/ai.py` |
+| Local JSON API token | Environment variable named by `api.token_env` | `kgfs/api/auth.py`, `kgfs/cli/commands/serve.py` |
 
 ## Environment Variables
 
@@ -26,6 +27,8 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | `KGFS_PROJECT_LOCAL` | false | `1`, `true`, `yes`, `on` are truthy | No | `get_app_paths(project_local=None)` in `kgfs/core/app_dirs.py`; smoke script also sets it | Prefer CLI `--project-local` for KGFS commands because current CLI commands pass an explicit boolean default. |
 | `OPENAI_API_KEY` | None | OpenAI API key string | Required only for AI Assist with default `ai.api_key_env` | `get_openai_api_key()` in `kgfs/ai.py` | Missing raises `AIError`; CLI reports it as a bad parameter. |
 | Custom AI key env var | None | Env var named by `ai.api_key_env` | Required if `ai.api_key_env` is changed and AI is used | `kgfs/ai.py` | Missing raises `AIError` naming the configured variable. |
+| `KGFS_API_TOKEN` | None | Bearer token string | Required for `kgfs serve` unless `api.require_token: false` or `--no-token` is used | `kgfs/api/auth.py`, `kgfs/cli/commands/serve.py` | Missing makes the API return HTTP 503; `kgfs serve` refuses startup unless `--no-token` is passed. |
+| Custom API token env var | None | Env var named by `api.token_env` | Required if `api.token_env` is changed and token auth is active | `kgfs/api/auth.py` | Missing returns HTTP 503 for protected API routes and blocks normal `kgfs serve` startup. |
 | `KGFS_PYINSTALLER_MODE` | `onedir` | `onedir`, `onefile` | No | `packaging/pyinstaller/kgfs.spec`, set by `scripts/build_package.py` | Controls PyInstaller spec branch. `scripts/build_package.py --mode` should set this. |
 | `KGFS_PACKAGE_NAME` | `KGFS` | Folder/name string | No | `packaging/pyinstaller/kgfs.spec`, set by `scripts/build_package.py` | Used for onedir `COLLECT` name. |
 | `COLUMNS` | Unset | Integer text | No | `scripts/smoke_test_packaged.py` sets `160` for subprocess output | Only affects packaged smoke-test terminal formatting. |
@@ -58,6 +61,9 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | `projects` | object | See below | No | `ProjectsSettings` fields | `kgfs project search` | Defaults applied. | Non-positive limit falls back to the default. |
 | `intelligence` | object | See below | No | `IntelligenceSettings` fields | duplicates, versions, graph, health, project inference | Defaults applied. | Scores are clamped to 0..1 and limits are clamped positive. |
 | `metadata` | object | See below | No | `MetadataSettings` fields | metadata backup/export and reset-index auto-backup | Defaults applied. | Only JSON export format is supported in this phase. |
+| `ui` | object | See below | No | `UISettings` fields | TUI/web/default-surface settings | Defaults applied. | Invalid `default_surface` falls back to `cli`. Some fields are config scaffolds rather than enforced switches. |
+| `api` | object | See below | No | `APISettings` fields | `kgfs serve` and local JSON API auth/file actions | Defaults disabled/tokened/local. | Invalid/empty host falls back to localhost; invalid port falls back to 8766. |
+| `integrations` | object | See below | No | `IntegrationSettings` fields | Integration status/scaffold settings | Defaults applied. | Current CLI scaffolds do not enforce per-integration enabled flags. |
 | `vectors` | object | See below | No | `VectorSettings` fields | Semantic/hybrid search and vector commands | Defaults applied. | Unknown backend names make semantic/hybrid unavailable and vector rebuild/clear fail with known-backend guidance. |
 | `hybrid` | object | See below | No | `HybridSettings` fields | Hybrid ranking | Defaults applied. | Numeric weights are coerced; invalid/negative values are made safe at runtime. |
 | `ai` | object | See below | No | `AISettings` fields | CLI ask/rerank and `kgfs/ai.py` | Defaults disabled. | Unsupported provider raises `AIError` when AI is used. |
@@ -276,6 +282,50 @@ model caches.
 | `auto_backup_before_reset` | bool | `true` | `kgfs reset-index` | Creates a KGFS metadata backup before deleting database/index files. |
 | `export_format` | str | `json` | config validation | Only `json` is supported in this phase. |
 
+### `ui`
+
+These settings describe preferred user-interface surfaces. At this commit, the
+implemented CLI commands still launch explicitly through `kgfs web`, `kgfs
+serve`, and `kgfs tui`; these keys do not automatically start background UI
+processes.
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `default_surface` | str | `cli` | config validation | Accepted values are `cli`, `web`, and `tui`; invalid values fall back to `cli`. No automatic launcher behavior was found. |
+| `tui_enabled` | bool | `true` | config/defaults/tests | Declares that the optional TUI surface is allowed; `kgfs tui` still requires the `textual` dependency. |
+| `web_enabled` | bool | `true` | config/defaults/tests | Declares that the web surface is allowed; `kgfs web` currently starts when invoked even though no enforcement path was found. |
+| `open_browser_on_web_start` | bool | `false` | config/defaults | Present in config; no browser-opening behavior was found in `kgfs web`. |
+
+### `api`
+
+The JSON API is local-first and disabled in config by default, but the explicit
+`kgfs serve` command can start it when token/bind checks pass.
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `enabled` | bool | `false` | config/defaults | Declares API enablement. The explicit `kgfs serve` command does not require this to be true at this commit. |
+| `host` | str | `127.0.0.1` | `kgfs serve` default host | Empty/invalid text falls back to localhost. Non-local hosts are refused unless `--allow-network` is used. |
+| `port` | int | `8766` | `kgfs serve` default port | Values outside `1..65535` fall back to `8766`. |
+| `require_token` | bool | `true` | API auth and `kgfs serve` | Protected API routes require `Authorization: Bearer <token>` unless disabled by config or `--no-token`. |
+| `token_env` | str | `KGFS_API_TOKEN` | API auth and `kgfs serve` | Names the environment variable containing the bearer token. Empty values fall back to `KGFS_API_TOKEN`. |
+| `allow_file_actions` | bool | `false` | `/open/{result_id}`, `/reveal/{result_id}` | API open/reveal endpoints return 403 unless this is true. |
+
+### `integrations`
+
+These settings are feature flags for local integration scaffolds. The current
+commands write templates/scaffolds only; they do not install OS integrations or
+modify system settings.
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `enabled` | bool | `true` | config/defaults | Global integration flag. No enforcement path was found in scaffold commands. |
+| `raycast_enabled` | bool | `false` | config/defaults | Placeholder/flag for Raycast script-command scaffolds. |
+| `alfred_enabled` | bool | `false` | config/defaults | Placeholder/flag for Alfred workflow scaffolds. |
+| `powertoys_enabled` | bool | `false` | config/defaults | Placeholder/flag for PowerToys Run scaffold notes/templates. |
+| `finder_enabled` | bool | `false` | config/defaults | Placeholder/flag for Finder Quick Action scaffolds. |
+| `explorer_enabled` | bool | `false` | config/defaults | Placeholder/flag for Explorer context-menu scaffold templates. |
+| `tray_enabled` | bool | `false` | config/defaults | Placeholder/flag for tray/menu-bar scaffold templates. |
+
 ### `vectors`
 
 | Key | Type | Default | Valid values | Read from | Behavior |
@@ -349,8 +399,9 @@ Important feature flags:
 | Flag | Command | Default | Behavior |
 |---|---|---:|---|
 | `--allow-risky-root` | `index`, `rebuild`, `semantic-index --rebuild` | `false` | Allows broad/root scans. |
-| `--dry-run` | `index`, `prune`, `reset-index` | `false` | Reports without DB writes or deletion depending on command. |
-| `--force` | `index` | `false` | Re-extracts files even when metadata is unchanged. |
+| `--allow-risky-root` | `ocr index` | `false` | Allows broad/root scans for OCR-enabled indexing. |
+| `--dry-run` | `index`, `prune`, `reset-index`, `ocr index`, `serve` | `false` | Reports without DB writes/deletion or validates server settings depending on command. |
+| `--force` | `index`, `ocr index` | `false` | Re-extracts files even when metadata is unchanged. |
 | `--verify-hashes` | `index` | `false` | Hash-checks metadata-matching files. |
 | `--rebuild-embeddings` | `index` | `false` | Rebuilds semantic chunks/embeddings for unchanged files. |
 | `ocr status/test/index` | `ocr` | n/a | Inspect OCR availability, run one-file OCR preview, or run indexing with OCR-enabled extraction. |
@@ -365,6 +416,14 @@ Important feature flags:
 | `--yes` | `reset-index`, `rebuild` | `false` | Confirms index reset operations. |
 | `--host` | `web` | `127.0.0.1` | Uvicorn bind host. |
 | `--port` | `web` | `8765` | Uvicorn bind port. |
+| `--mode` | `web /search` query parameter | `auto` | Selects `auto`, `keyword`, `semantic`, or `hybrid` for dashboard search. |
+| `--host` | `serve` | config `api.host` | Local JSON API bind host. Non-local hosts need `--allow-network`. |
+| `--port` | `serve` | config `api.port` | Local JSON API bind port. |
+| `--local-only/--no-local-only` | `serve` | `--local-only` | Refuses non-localhost binds unless paired with explicit network allowance. |
+| `--allow-network` | `serve` | `false` | Explicitly permits non-localhost API binds. |
+| `--no-token` | `serve` | `false` | Disables API bearer-token requirement for that run. |
+| `--check` | `tui` | `false` | Checks whether optional Textual dependency is installed without launching. |
+| `--output` | `integrations ... export/scaffold`, `tray scaffold` | app data integration path | Writes integration scaffold files to a chosen directory. |
 
 ## Runtime Options and Library Objects
 
@@ -383,6 +442,12 @@ Important feature flags:
 | `benchmark_vector_backends()` | `conn`, `config`, backend names, queries, limit | `kgfs/vectors/benchmark.py` | Measures bounded vector query timings using existing vectors when possible. |
 | `recommend_vector_backend()` | `conn`, `config` | `kgfs/vectors/recommend.py` | Returns a conservative local backend recommendation with reasons and warnings. |
 | `create_app()` | `config_path`, `database_path`, `project_local` | `kgfs/web/app.py` | Builds FastAPI app. |
+| `create_api_app()` | `config_path`, `database_path`, `project_local` | `kgfs/api/app.py` | Builds the token-gated local JSON API app. |
+| `build_router()` | `runtime`, `auth_settings` | `kgfs/api/routes.py` | Creates API routes for health, search, deep, research, workflow, graph, metadata export, and gated file actions. |
+| `validate_api_bind()` | `host`, `allow_network` | `kgfs/api/auth.py` | Refuses non-local API binds unless explicitly allowed. |
+| `launch_tui()` | `config_path`, `database_path`, `project_local` | `kgfs/tui/app.py` | Launches the optional Textual UI or raises a dependency error. |
+| `get_integration_status()` | none | `kgfs/integrations/status.py` | Returns read-only scaffold/support status. |
+| Integration scaffold writers | output directory | `kgfs/integrations/*.py` | Write local scaffolds/templates only; no system settings are changed. |
 | `build_package.py` | `--clean`, `--mode`, `--name`, `--dist-dir`, `--work-dir`, `--spec` | `scripts/build_package.py` | Writes package archive under dist dir. |
 | `smoke_test_packaged.py` | `--package` | `scripts/smoke_test_packaged.py` | Finds executable and runs CLI smoke workflow. |
 
@@ -486,9 +551,45 @@ metadata:
   auto_backup_before_reset: true
   export_format: "json"
 
+ui:
+  default_surface: "cli"
+  tui_enabled: true
+  web_enabled: true
+  open_browser_on_web_start: false
+
+api:
+  enabled: false
+  host: "127.0.0.1"
+  port: 8766
+  require_token: true
+  token_env: "KGFS_API_TOKEN"
+  allow_file_actions: false
+
+integrations:
+  enabled: true
+  raycast_enabled: false
+  alfred_enabled: false
+  powertoys_enabled: false
+  finder_enabled: false
+  explorer_enabled: false
+  tray_enabled: false
+
 vectors:
   backend: "sqlite_scan"
   shard_strategy: "none"
+  sqlite_vec:
+    enabled: false
+    experimental: true
+  hnsw:
+    enabled: false
+    space: "cosine"
+    m: 16
+    ef_construction: 200
+    ef_search: 50
+  faiss:
+    enabled: false
+    index_type: "flat"
+    use_gpu: false
 
 hybrid:
   keyword_weight: 0.35

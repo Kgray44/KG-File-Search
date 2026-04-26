@@ -61,7 +61,7 @@ Operations:
 - Pruning deletes stale KGFS database rows and related FTS/chunk/latest-result rows.
 - Reset deletes KGFS database files and SQLite sidecars.
 - Rebuild resets the database and reindexes configured folders.
-- Vector clear deletes KGFS chunk/vector rows only for the configured model.
+- Vector clear deletes KGFS chunk/vector rows or optional backend artifacts only; source files, file rows, and keyword FTS rows remain.
 - OCR reads source images/PDFs but writes OCR text only to KGFS database/cache data, never back to the source file or a sidecar beside it.
 
 Sources: `kgfs/indexing/indexer.py`, `kgfs/indexing/prune.py`, `kgfs/reset.py`, `tests/test_prune.py`, `tests/test_reset_rebuild.py`.
@@ -79,6 +79,8 @@ The SQLite database can contain:
 - Latest result IDs.
 - Semantic chunks and embeddings when enabled.
 - OCR cache rows and OCR-derived text when OCR is enabled.
+- Workflow metadata such as profiles, saved searches, collections, tags, notes, assignments, and projects.
+- File-intelligence metadata such as graph edges, project candidates, and metadata-backup records.
 
 If `indexing.store_extracted_text` is false, stored extracted text is empty, which also limits keyword and semantic usefulness.
 
@@ -163,7 +165,14 @@ OpenAI API keys are read from the environment variable named by `ai.api_key_env`
 OPENAI_API_KEY
 ```
 
-Sources: `kgfs/ai.py`, `config.example.yaml`.
+Local JSON API bearer tokens are read from the environment variable named by
+`api.token_env`. Default:
+
+```bash
+KGFS_API_TOKEN
+```
+
+Sources: `kgfs/ai.py`, `kgfs/api/auth.py`, `config.example.yaml`.
 
 ## Semantic Search Privacy
 
@@ -171,6 +180,7 @@ Semantic search is local at this commit:
 
 - Embeddings are generated with local sentence-transformers.
 - Vectors are stored in the local SQLite database.
+- Optional accelerated vector backends may store local artifact files and metadata JSON under KGFS vector-backend storage.
 - `semantic.local_files_only` defaults to true.
 
 No cloud call is made by KGFS semantic search code. The local model must exist in cache or be available as a local path when local-only loading is enabled.
@@ -197,7 +207,7 @@ Sources: `kgfs/ocr/*.py`, `kgfs/extractors/image_ocr.py`, `tests/test_ocr_*.py`.
 
 ## Web Dashboard Exposure
 
-The web dashboard has no authentication at this commit.
+The web dashboard has no authentication at this commit, so it should stay bound to localhost unless you intentionally accept local-network exposure.
 
 Default bind:
 
@@ -215,9 +225,42 @@ Avoid binding to `0.0.0.0` or a LAN/public interface unless you intentionally ex
 
 Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`.
 
+## Local JSON API Exposure
+
+The JSON API is separate from the HTML dashboard and is started explicitly with:
+
+```bash
+kgfs serve
+```
+
+Default API behavior:
+
+- Binds to `127.0.0.1:8766`.
+- Requires `Authorization: Bearer <token>` by default.
+- Reads the token from the environment variable named by `api.token_env`, default `KGFS_API_TOKEN`.
+- Refuses non-localhost binds unless `--allow-network` is supplied.
+- Keeps open/reveal actions disabled unless `api.allow_file_actions: true`.
+
+The API does not expose arbitrary path open/reveal endpoints. File actions use latest result IDs from KGFS search results.
+
+Sources: `kgfs/api/*.py`, `kgfs/cli/commands/serve.py`, `tests/test_phase9_ux_integrations.py`.
+
+## TUI and Integration Scaffold Safety
+
+`kgfs tui`, `kgfs integrations`, and `kgfs tray` are local UI/integration
+surfaces. They do not install OS plugins, edit registry keys, create Finder
+services, write Raycast/Alfred/PowerToys locations, configure startup items, or
+require administrator rights.
+
+`kgfs tui` imports Textual lazily and launches only a local terminal UI shell.
+
+Use `--output` to choose where scaffold files are written. Without `--output`, scaffolds are written under KGFS app-data/project-local integration directories.
+
+Sources: `kgfs/tui/*.py`, `kgfs/integrations/*.py`, `kgfs/cli/commands/integrations.py`, `tests/test_phase9_ux_integrations.py`.
+
 ## Open and Reveal Actions
 
-`kgfs open`, `kgfs reveal`, and web `/open/{result_id}` and `/reveal/{result_id}` invoke OS file manager behavior for paths saved in latest results.
+`kgfs open`, `kgfs reveal`, web `/open/{result_id}` and `/reveal/{result_id}`, and gated API `/open/{result_id}` and `/reveal/{result_id}` invoke OS file manager behavior for paths saved in latest results.
 
 Boundaries:
 
@@ -238,6 +281,8 @@ Packaged builds do not include:
 - `.kgfs/`.
 - Downloaded semantic model caches.
 - Tesseract itself and OCR cache/user data.
+- Optional vector backend packages and artifacts.
+- Textual/tray optional UI dependencies in the base package.
 - OpenAI SDK in the base package.
 
 Sources: `packaging/README-packaging.md`, `packaging/pyinstaller/kgfs.spec`, `scripts/build_package.py`.
@@ -246,7 +291,8 @@ Sources: `packaging/README-packaging.md`, `packaging/pyinstaller/kgfs.spec`, `sc
 
 No implementation was found for:
 
-- User authentication.
+- Web dashboard authentication.
+- External authentication provider integration beyond the local API bearer-token check.
 - Role-based access control.
 - Encryption at rest.
 - Secure secret storage.

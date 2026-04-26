@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Projects</h1>
+<table>
+  <tr><th>Name</th><th>Description</th></tr>
+  {% for project in projects %}
+  <tr><td>{{ project.name }}</td><td>{{ project.description or "" }}</td></tr>
+  {% else %}
+  <tr><td colspan="2">No projects.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

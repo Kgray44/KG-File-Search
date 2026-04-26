@@ -204,6 +204,29 @@ metadata:
   auto_backup_before_reset: true
   export_format: "json"
 
+ui:
+  default_surface: "cli"
+  tui_enabled: true
+  web_enabled: true
+  open_browser_on_web_start: false
+
+api:
+  enabled: false
+  host: "127.0.0.1"
+  port: 8766
+  require_token: true
+  token_env: "KGFS_API_TOKEN"
+  allow_file_actions: false
+
+integrations:
+  enabled: true
+  raycast_enabled: false
+  alfred_enabled: false
+  powertoys_enabled: false
+  finder_enabled: false
+  explorer_enabled: false
+  tray_enabled: false
+
 vectors:
   backend: "sqlite_scan"
   shard_strategy: "none"

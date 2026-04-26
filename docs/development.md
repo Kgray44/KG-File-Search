@@ -31,6 +31,8 @@ python -m pip install -e ".[semantic]"
 python -m pip install -e ".[ocr]"
 python -m pip install -e ".[openai]"
 python -m pip install -e ".[package]"
+python -m pip install -e ".[tui]"
+python -m pip install -e ".[tray]"
 python -m pip install -e ".[hnsw]"
 python -m pip install -e ".[sqlite-vec]"
 python -m pip install -e ".[faiss]"
@@ -219,6 +221,16 @@ Current AI provider support is OpenAI only.
 4. Add tests in `tests/test_web.py`.
 5. If the route exposes file paths or actions, update [Security](security.md).
 
+## Add a Local API Route or UX Scaffold
+
+1. Add JSON routes under `kgfs/api/routes.py` and keep `create_api_app()` in `kgfs/api/app.py` token-gated.
+2. Do not add arbitrary path action endpoints; use latest result IDs or indexed file IDs.
+3. Keep non-localhost API binds explicit through `--allow-network`.
+4. For TUI/tray/integration work, keep optional imports lazy and optional dependencies out of base installs.
+5. Scaffold commands should write only to explicit output directories or KGFS app-data/project-local paths.
+6. Add focused tests in `tests/test_phase9_ux_integrations.py` or similar.
+7. Update [CLI](cli.md), [API](api.md), [Integrations](integrations.md), and [Security](security.md).
+
 ## Packaging Workflow
 
 Local packaging:
@@ -232,6 +244,7 @@ python scripts/smoke_test_packaged.py --package dist-packages/KGFS
 The spec includes:
 
 - Web templates and CSS.
+- Local API, TUI, and integration scaffold modules.
 - `config.example.yaml`.
 - `README.md`.
 - `LICENSE`.
@@ -242,7 +255,9 @@ The spec excludes:
 - pytest tooling
 - sentence-transformers, transformers, torch, tensorflow
 - openai
+- PIL, pytesseract, easyocr, paddleocr
 - sqlite_vec, hnswlib, faiss, numpy
+- textual, pystray
 
 Sources: `packaging/pyinstaller/kgfs.spec`.
 
@@ -276,6 +291,10 @@ python -m pytest tests/test_indexing.py
 python -m pytest tests/test_search_kernel.py
 python -m pytest tests/test_web.py
 python -m pytest tests/test_ai.py
+python -m pytest tests/test_ocr_backend.py tests/test_ocr_indexing.py tests/test_ocr_pdf.py
+python -m pytest tests/test_phase6_advanced_search.py tests/test_phase7_workflows.py tests/test_phase8_file_intelligence.py
+python -m pytest tests/test_phase9_ux_integrations.py
+python -m pytest tests/test_vector_commands.py tests/test_vector_backend_registry.py
 python -m pytest tests/test_packaging_scripts.py
 ```
 

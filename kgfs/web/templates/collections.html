@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Collections</h1>
+<table>
+  <tr><th>Name</th><th>Description</th></tr>
+  {% for collection in collections %}
+  <tr><td>{{ collection.name }}</td><td>{{ collection.description or "" }}</td></tr>
+  {% else %}
+  <tr><td colspan="2">No collections.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

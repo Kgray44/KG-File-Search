@@ -1,12 +1,12 @@
 # Integrations
 
-KGFS is local-first. Most integrations are local libraries or local OS features. The only cloud integration at this commit is optional OpenAI AI Assist.
+KGFS is local-first. Most integrations are local libraries, local UI surfaces, local OS helpers, or scaffold files that shell out to the KGFS CLI. The only cloud integration at this commit is optional OpenAI AI Assist.
 
 ## SQLite and FTS5
 
 Purpose:
 
-- Store indexed file metadata, extracted text, latest results, schema version, and semantic chunks.
+- Store indexed file metadata, extracted text, latest results, schema version, semantic chunks, OCR cache rows, workflow metadata, and file-intelligence metadata.
 - Provide keyword search through SQLite FTS5.
 
 Source:
@@ -311,33 +311,103 @@ Tests: `tests/test_ai.py`, `tests/test_cli.py`.
 
 Purpose:
 
-- Local web dashboard.
+- Local web dashboard and local JSON API server.
 
 Source:
 
 - `kgfs/web/app.py`
 - `kgfs/web/templates/*.html`
 - `kgfs/web/static/style.css`
+- `kgfs/api/*.py`
 - `kgfs/cli/commands/web.py`
+- `kgfs/cli/commands/serve.py`
 - `pyproject.toml`
 
 Run:
 
 ```bash
 kgfs web
+export KGFS_API_TOKEN="dev-token"
+kgfs serve
 ```
 
 Default:
 
-- Host `127.0.0.1`
-- Port `8765`
+- Dashboard host `127.0.0.1`, port `8765`
+- API host `127.0.0.1`, port `8766`
 
-Limitations:
+Safety:
 
-- No authentication at this commit.
-- Web search is keyword-only.
+- The HTML dashboard has no auth and should stay localhost-only.
+- The JSON API requires a bearer token by default.
+- `kgfs serve` refuses non-localhost binds unless `--allow-network` is supplied.
+- API open/reveal actions are disabled unless `api.allow_file_actions: true`, and they use latest result IDs rather than arbitrary paths.
 
-Tests: `tests/test_web.py`.
+Tests: `tests/test_web.py`, `tests/test_phase9_ux_integrations.py`.
+
+## Textual TUI
+
+Purpose:
+
+- Optional terminal UI launcher for everyday local search workflows.
+
+Source:
+
+- `kgfs/tui/*.py`
+- `kgfs/cli/commands/tui.py`
+- `pyproject.toml`
+
+Install:
+
+```bash
+python -m pip install -e ".[tui]"
+```
+
+Run:
+
+```bash
+kgfs tui --check
+kgfs tui
+```
+
+Behavior:
+
+- Textual is imported lazily only when `kgfs tui` runs.
+- Missing Textual prints an install hint and does not break normal CLI startup.
+- The current TUI is a minimal scaffold for search-focused interaction.
+
+Tests: `tests/test_phase9_ux_integrations.py`.
+
+## Launcher and OS Integration Scaffolds
+
+Purpose:
+
+- Generate local templates users can inspect and install manually for Raycast, Alfred, PowerToys Run, Finder Quick Actions, Explorer context-menu experiments, and tray/menu-bar experiments.
+
+Source:
+
+- `kgfs/integrations/*.py`
+- `kgfs/cli/commands/integrations.py`
+
+Commands:
+
+```bash
+kgfs integrations status
+kgfs integrations raycast export --output ./kgfs-raycast
+kgfs integrations alfred export --output ./kgfs-alfred
+kgfs integrations powertoys scaffold --output ./kgfs-powertoys
+kgfs integrations finder scaffold --output ./kgfs-finder
+kgfs integrations explorer scaffold --output ./kgfs-explorer
+kgfs tray scaffold --output ./kgfs-tray
+```
+
+Safety:
+
+- Scaffold commands write only to the chosen output directory or KGFS app-data integration directory.
+- They do not edit the Windows registry, Finder services, Raycast, Alfred, PowerToys, startup items, or system paths.
+- Explorer `.reg` output is a template only.
+
+Tests: `tests/test_phase9_ux_integrations.py`.
 
 ## PyInstaller
 
@@ -372,7 +442,10 @@ Excluded:
 - tests
 - pytest tooling
 - semantic model stack
+- optional vector backend packages such as sqlite-vec, hnswlib, FAISS, and numpy
+- optional OCR helper packages such as PIL/pytesseract/EasyOCR/PaddleOCR
 - Tesseract executable and OCR user cache/data
+- Textual and tray optional dependencies
 - OpenAI SDK
 
 Smoke test:
@@ -440,6 +513,8 @@ No implementation was found for:
 - Background job scheduler or daemon.
 - Non-OpenAI AI providers.
 - Remote index storage.
-- Authentication provider.
+- External authentication provider beyond the local API bearer-token check.
 - Telemetry backend.
 - Cloud OCR providers.
+- Automatic Raycast/Alfred/PowerToys/Finder/Explorer installation.
+- Running tray/menu-bar daemon.

@@ -11,6 +11,9 @@
   <div class="metric"><span>Total files</span><strong>{{ stats.total_files }}</strong></div>
   <div class="metric"><span>Failures</span><strong>{{ stats.extraction_failures }}</strong></div>
   <div class="metric"><span>Last indexed</span><strong>{{ stats.last_indexed or "Never" }}</strong></div>
+  <div class="metric"><span>Semantic chunks</span><strong>{{ stats.total_chunks }}</strong></div>
+  <div class="metric"><span>Vector backend</span><strong>{{ vector_status.backend_name }}</strong></div>
+  <div class="metric"><span>OCR</span><strong>{{ "on" if ocr_status.enabled else "off" }}</strong></div>
+  <div class="metric"><span>Health issues</span><strong>{{ health.issues|length }}</strong></div>
 </section>
 {% endblock %}
-

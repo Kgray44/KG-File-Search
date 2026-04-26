@@ -2,6 +2,11 @@
 {% block content %}
 <form action="/search" method="get" class="searchbar">
   <input type="search" name="q" value="{{ query }}" placeholder="Find notes about op-amps" autofocus>
+  <select name="mode">
+    {% for candidate in modes %}
+    <option value="{{ candidate }}" {% if filters.mode == candidate %}selected{% endif %}>{{ candidate }}</option>
+    {% endfor %}
+  </select>
   <input type="text" name="ext" value="{{ filters.ext if filters else '' }}" placeholder=".pdf">
   <input type="text" name="folder" value="{{ filters.folder if filters else '' }}" placeholder="folder">
   <input type="date" name="after" value="{{ filters.after if filters else '' }}">
@@ -9,6 +14,13 @@
   <input type="number" name="limit" value="{{ filters.limit if filters else 10 }}" min="1" max="100">
   <button type="submit">Search</button>
 </form>
+{% if query %}
+<section class="statusline">
+  <span>Mode used: {{ mode_used }}</span>
+  {% if error %}<strong>{{ error }}</strong>{% endif %}
+  {% for warning in warnings %}<span>{{ warning }}</span>{% endfor %}
+</section>
+{% endif %}
 <section class="results">
   {% for result in results %}
   <article class="result">
@@ -16,7 +28,20 @@
       <strong>{{ result.result_id }}. {{ result.file_name }}</strong>
       <span>{{ "%.3f"|format(result.score) }}</span>
     </div>
+    <div class="meta-row">
+      <span>{{ result.extension }}</span>
+      <span>{{ result.mode or result.source or "" }}</span>
+      {% if result.metadata and result.metadata.get("extraction_source", "").startswith("ocr") %}
+      <span>OCR</span>
+      {% endif %}
+      {% for tag in result_metadata.get(result.file_id, {}).get("tags", []) %}
+      <span>#{{ tag }}</span>
+      {% endfor %}
+    </div>
     <p>{{ result.snippet }}</p>
+    {% for note in result_metadata.get(result.file_id, {}).get("notes", []) %}
+    <p class="note">Note: {{ note.note }}</p>
+    {% endfor %}
     <code>{{ result.path }}</code>
     <div class="actions">
       <a href="/open/{{ result.result_id }}">Open</a>

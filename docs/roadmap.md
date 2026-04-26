@@ -18,7 +18,7 @@ This roadmap separates behavior implemented in the repository state at this comm
 - Local workflow metadata: profiles, saved searches, collections, tags, notes, assignment mode, and manual projects.
 - Local file intelligence: exact/semantic duplicates, likely versions, project candidates, bounded graphs, health reports, and metadata export/import/backup/restore.
 - Optional OpenAI AI Assist for snippet-bounded answer synthesis and reranking.
-- Typer CLI, local FastAPI dashboard, and PyInstaller packaging scripts.
+- Typer CLI, enhanced local FastAPI dashboard, token-gated local JSON API, optional Textual TUI launcher, local integration scaffolds, and PyInstaller packaging scripts.
 - GitHub Actions CI and package artifact workflow.
 
 Source anchors:
@@ -42,6 +42,8 @@ The following are not implemented as user-facing KGFS features at this commit:
 - Full scanned-PDF OCR rasterization, OCR backend expansion, or multimodal file search.
 - Background daemon/index scheduler.
 - Web dashboard authentication.
+- Richer web/TUI workflow editing surfaces beyond the current read/search/list views.
+- Automatic installation for Raycast, Alfred, PowerToys, Finder, Explorer, tray/menu-bar, and VS Code integrations.
 - Structured file logging or telemetry backend.
 - Encrypted index storage.
 - Docker, Kubernetes, or cloud deployment manifests.
@@ -49,5 +51,6 @@ The following are not implemented as user-facing KGFS features at this commit:
 - AI-driven query expansion, despite the `ai.allow_query_expansion` config key. Local deep-search query variants are implemented.
 - Search-time backend selection in CLI/web, despite the `SearchOptions.backend` runtime field. Vector management commands expose `--backend`.
 - Generic `--explain` search flag, despite the `SearchOptions.explain` runtime field. Use `kgfs why` for implemented result explanations.
+- Background tray/menu-bar daemon behavior; current tray support is a scaffold writer only.
 
 When adding planned work, update [features](features.md), [settings](settings.md), [cli](cli.md), [architecture](architecture.md), [data model](data-model.md), [security](security.md), and this roadmap in the same change.

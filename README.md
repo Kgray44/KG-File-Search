@@ -33,6 +33,7 @@ kgfs search "sample query" --project-local
 - Optional local Tesseract OCR for image files and scanned-PDF detection, disabled by default.
 - Result explanations with `kgfs why`.
 - Local investigation commands: `kgfs deep`, `kgfs similar`, `kgfs similar-file`, `kgfs compare`, `kgfs timeline`, and `kgfs research`.
+- Local personal workflow metadata: profiles, saved searches, collections, tags, notes, assignment mode, and manual projects.
 - Optional OpenAI AI Assist for answer synthesis and reranking after local search.
 - Typer CLI and a local FastAPI dashboard.
 - PyInstaller packaging scripts and GitHub Actions workflows.
@@ -46,6 +47,7 @@ kgfs search "sample query" --project-local
 - Noisy, system, dependency, cache, application, game, binary, media, archive, and over-size files are ignored by default.
 - Prune/reset/vector-clear operations remove only KGFS index data, not source files.
 - OCR is off by default, never writes back to images/PDFs, and stores OCR cache data only in KGFS database/cache locations.
+- Workflow metadata is stored in KGFS config/database only; KGFS never writes tags, notes, or collections into source files.
 - AI Assist is off by default and sends bounded snippets only after opt-in.
 
 ## Documentation
@@ -133,6 +135,22 @@ kgfs research "amplifier noise floor"
 ```
 
 `kgfs ask` remains optional AI Assist. It now includes local KGFS result citations such as `[1] notes.md` in the bounded snippet context, while keeping AI disabled by default.
+
+Local personal workflow commands store metadata in the KGFS database/config only:
+
+```bash
+kgfs profile create school --ext .pdf --ext .docx --ext .md
+kgfs profile search school "op amp gain"
+kgfs save-search "circuits labs" "op amp OR Thevenin"
+kgfs run-search "circuits labs"
+kgfs collection create "Motor Project"
+kgfs collection add "Motor Project" 1 3 5
+kgfs tag 1 circuits lab-report important
+kgfs note 1 "Torque derivation is here."
+kgfs assignment "robotics motor lab"
+kgfs project create "Audio Crossover"
+kgfs project search "Audio Crossover" "frequency response"
+```
 
 Build a packaged executable:
 

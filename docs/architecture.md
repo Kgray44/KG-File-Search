@@ -17,6 +17,7 @@ kgfs/
   search/backends/     Vector backend interfaces, registry, sqlite_scan, and optional accelerated backends
   search/modes/        Registry engine wrappers for keyword, semantic, hybrid, and auto fallback
   vectors/             Vector status, chunk lifecycle, and rebuild helpers
+  workflows/           Local profiles, saved searches, collections, tags, notes, assignments, and projects
   web/                 FastAPI dashboard, Jinja templates, static CSS
 ```
 
@@ -164,6 +165,31 @@ silently, and do not modify source files.
 
 Sources: `kgfs/search/deep.py`, `kgfs/search/similar.py`, `kgfs/search/compare.py`, `kgfs/search/timeline.py`, `kgfs/search/research.py`, `kgfs/search/citations.py`, `tests/test_phase6_advanced_search.py`.
 
+## Personal Workflow Lifecycle
+
+Workflow features sit beside search; they never write back to indexed source
+files:
+
+```mermaid
+flowchart TD
+    Search["Search/deep/research results"] --> Latest["latest_results"]
+    Latest --> Tags["tags + file_tags"]
+    Latest --> Notes["file_notes"]
+    Latest --> Collections["collections + collection_items"]
+    Latest --> Projects["projects + project_items"]
+    Profiles["profiles"] --> ProfileSearch["profile search"]
+    Saved["saved_searches"] --> Run["run-search"]
+    Assignment["assignment"] --> Deep["local deep search"]
+    Deep --> Collections
+```
+
+Tags and notes resolve transient result IDs through `latest_results` and then
+attach to stable `file_id` values. Collections and projects also store `file_id`
+references. SQLite foreign keys cascade these rows when file records are
+removed.
+
+Sources: `kgfs/workflows/*.py`, `kgfs/cli/commands/profiles.py`, `kgfs/cli/commands/saved_searches.py`, `kgfs/cli/commands/collections.py`, `kgfs/cli/commands/tags.py`, `kgfs/cli/commands/notes.py`, `kgfs/cli/commands/assignment.py`, `kgfs/cli/commands/projects.py`, `tests/test_phase7_workflows.py`.
+
 ## Result Explanation Lifecycle
 
 ```mermaid
@@ -264,6 +290,7 @@ Tables:
 - `chunks`: semantic text chunks and vector BLOBs.
 - `schema_version`: migration version marker.
 - `ocr_cache`: local OCR result cache keyed by source identity/backend/language.
+- Workflow tables: `profiles`, `saved_searches`, `collections`, `collection_items`, `tags`, `file_tags`, `file_notes`, `projects`, `project_items`, and `assignment_runs`.
 
 `initialize_database()` creates core tables, calls `migrate_database()`, and commits. Current schema version is `2`.
 

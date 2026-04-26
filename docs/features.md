@@ -327,6 +327,18 @@ This page inventories features implemented in the repository state at this commi
 - Sources: `kgfs/search/deep.py`, `kgfs/search/similar.py`, `kgfs/search/compare.py`, `kgfs/search/timeline.py`, `kgfs/search/research.py`, `kgfs/search/citations.py`, `kgfs/cli/commands/deep.py`, `kgfs/cli/commands/similar.py`, `kgfs/cli/commands/compare.py`, `kgfs/cli/commands/timeline.py`, `kgfs/cli/commands/research.py`.
 - Tests: `tests/test_phase6_advanced_search.py`, `tests/test_cli.py`, `tests/test_config.py`.
 
+### Personal Knowledge Workflows
+
+- What it does: stores local user-curated workflow metadata for profiles, saved searches, collections, tags, notes, assignments, and manual projects.
+- Use it with: `kgfs profile`, `kgfs save-search`, `kgfs run-search`, `kgfs collection`, `kgfs tag`, `kgfs note`, `kgfs assignment`, and `kgfs project`.
+- Inputs: latest search result IDs, indexed file IDs, names, tags, notes, and local search queries.
+- Outputs: local workflow database rows, result tables, collection Markdown export to stdout, assignment working sets, and project-scoped search results.
+- Settings: `profiles`, `assignment.*`, `projects.*`, plus normal search settings.
+- Edge cases: metadata references files by `file_id`; pruning/deleting a file cascades workflow rows through SQLite foreign keys. `reset-index` deletes the KGFS database and therefore removes workflow metadata too.
+- Safety: KGFS never writes tags, notes, collections, or project metadata into source files and never creates sidecars beside indexed files.
+- Sources: `kgfs/workflows/*.py`, `kgfs/cli/commands/profiles.py`, `kgfs/cli/commands/saved_searches.py`, `kgfs/cli/commands/collections.py`, `kgfs/cli/commands/tags.py`, `kgfs/cli/commands/notes.py`, `kgfs/cli/commands/assignment.py`, `kgfs/cli/commands/projects.py`.
+- Tests: `tests/test_phase7_workflows.py`, `tests/test_cli.py`, `tests/test_config.py`.
+
 ### Result Explanations
 
 - What it does: explains why a saved latest search result matched a query, including score breakdown and snippet.
@@ -469,7 +481,7 @@ This page inventories features implemented in the repository state at this commi
 
 ### Packaged Smoke Test
 
-- What it does: finds the packaged executable and runs help, doctor, init, config, add-folder, index, and search against a temporary project-local corpus.
+- What it does: finds the packaged executable and runs help, workflow-command help, doctor, init, config, add-folder, index, and search against a temporary project-local corpus.
 - Use it with: `python scripts/smoke_test_packaged.py --package dist-packages/KGFS`.
 - Inputs: package path.
 - Outputs: pass/fail smoke result.

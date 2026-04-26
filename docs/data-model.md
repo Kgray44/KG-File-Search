@@ -125,6 +125,31 @@ source files.
 
 Sources: `kgfs/ocr/cache.py`, `kgfs/db/schema.py`, `tests/test_ocr_cache.py`.
 
+### Workflow Metadata Tables
+
+Phase 7 adds local personal workflow metadata. These tables live only in the
+KGFS SQLite database and reference indexed files by `file_id`; KGFS does not
+write tags, notes, collections, or project metadata into source files.
+
+| Table | Purpose |
+|---|---|
+| `profiles` | User-created search profile presets with JSON folders/extensions/boost terms. |
+| `saved_searches` | Named searches with query, mode, and JSON filters. |
+| `collections` | Named manual groups of files. |
+| `collection_items` | Files in collections, with optional latest result ID/note. |
+| `tags` | Unique normalized tag names. |
+| `file_tags` | Many-to-many file/tag rows. |
+| `file_notes` | Local notes attached to file IDs. |
+| `projects` | Named manual project groups. |
+| `project_items` | Files in projects, with optional role. |
+| `assignment_runs` | Lightweight local assignment working-set history. |
+
+Workflow reference tables use `REFERENCES files(id) ON DELETE CASCADE` where
+they point at indexed files. Pruning stale files or deleting file rows removes
+dependent workflow rows through SQLite foreign keys.
+
+Sources: `kgfs/db/schema.py`, `kgfs/workflows/*.py`, `tests/test_phase7_workflows.py`.
+
 ### `schema_version`
 
 Created by migrations.
@@ -135,7 +160,7 @@ Created by migrations.
 | `version` | `INTEGER NOT NULL` | Current schema version. |
 | `applied_at` | `TEXT NOT NULL` | UTC ISO timestamp. |
 
-Current version: `2`.
+Current version: `3`.
 
 Sources: `kgfs/db/migrations.py`, `tests/test_migrations.py`.
 
@@ -166,6 +191,7 @@ Additional dataclasses and runtime models:
 | `SearchExplanation` | mode, summary, score breakdown, result ID, file name, path, final score, snippet, notes | Explanation object used by `kgfs why` and default `SearchEngine.explain()`. | `kgfs/search/result.py` |
 | `SemanticStatus` | enabled, available, message | Semantic dependency/config status for doctor and semantic-index output. | `kgfs/search/semantic.py` |
 | `AIResult` | text, context | AI answer result with returned text and context used. | `kgfs/ai.py` |
+| `Profile`, `SavedSearch`, `Collection`, `WorkflowItem`, `FileNote`, `AssignmentReport`, `Project` | local workflow metadata and report fields | Profiles, saved searches, collections, tags, notes, assignments, and projects. | `kgfs/workflows/models.py` |
 
 OCR models:
 
@@ -210,6 +236,8 @@ Defined in `kgfs/core/config.py`.
 | `OCRSettings` / `TesseractOCRSettings` | Local OCR settings and Tesseract command/language. |
 | `SemanticSettings` | Local embedding settings. |
 | `SearchSettings` | CLI search defaults. |
+| `DeepSearchSettings`, `ResearchSettings`, `SimilarSettings`, `TimelineSettings` | Advanced local search defaults. |
+| `ProfilePresetSettings`, `AssignmentSettings`, `ProjectsSettings` | Phase 7 workflow presets and limits. |
 | `VectorSettings` | Vector backend selection, shard strategy placeholder, and optional sqlite-vec/HNSW/FAISS settings. |
 | `HybridSettings` | Hybrid score weights and candidate pool multiplier. |
 | `AISettings` | AI Assist privacy, provider, and size settings. |
@@ -247,7 +275,8 @@ Sources: `kgfs/search/keyword.py`, `kgfs/db/latest_results.py`.
 4. Raises if database version is newer than code.
 5. Ensures `files.extraction_source`.
 6. Ensures `ocr_cache`.
-7. Sets version to `2` for fresh/older DBs.
+7. Ensures workflow metadata tables.
+8. Sets version to `3` for fresh/older DBs.
 
 Sources: `kgfs/db/migrations.py`, `tests/test_migrations.py`.
 

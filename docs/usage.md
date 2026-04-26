@@ -203,6 +203,38 @@ stay local and do not call AI.
 
 Sources: `kgfs/cli/commands/search.py`, `kgfs/cli/commands/deep.py`, `kgfs/cli/commands/similar.py`, `kgfs/cli/commands/compare.py`, `kgfs/cli/commands/timeline.py`, `kgfs/cli/commands/research.py`, `kgfs/search/filters.py`, `kgfs/search/registry.py`, `tests/test_search_filters.py`, `tests/test_search_kernel.py`, `tests/test_phase6_advanced_search.py`.
 
+## Personal Workflow Mode
+
+Workflow commands help you curate local KGFS metadata without touching source
+files. They use the KGFS database and latest result IDs.
+
+```bash
+kgfs search "motor torque"
+kgfs save-search "motor lab" "motor torque"
+kgfs run-search "motor lab"
+kgfs collection create "Motor Project"
+kgfs collection add "Motor Project" 1 2
+kgfs tag 1 robotics torque
+kgfs note 1 "Torque derivation is here."
+kgfs assignment "robotics motor lab"
+kgfs project create "Robotics"
+kgfs project add "Robotics" 1
+kgfs project search "Robotics" "torque"
+```
+
+Profiles are reusable search presets:
+
+```bash
+kgfs profile create school --ext .pdf --ext .docx --ext .md
+kgfs profile search school "op amp gain"
+```
+
+`collection export` writes Markdown to stdout unless you redirect it yourself.
+`reset-index` deletes the KGFS database/index files, so workflow metadata in
+that database is not preserved in this phase.
+
+Sources: `kgfs/workflows/*.py`, `kgfs/cli/commands/*`, `tests/test_phase7_workflows.py`.
+
 ## Semantic Search
 
 Install semantic dependencies:

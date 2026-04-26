@@ -41,6 +41,22 @@ def test_cli_exposes_required_mvp_commands() -> None:
         "compare",
         "timeline",
         "research",
+        "profile",
+        "save-search",
+        "run-search",
+        "list-searches",
+        "delete-search",
+        "collection",
+        "tag",
+        "untag",
+        "tags",
+        "tagged",
+        "tag-list",
+        "note",
+        "notes",
+        "note-delete",
+        "assignment",
+        "project",
     }.issubset(command.commands.keys())
 
 

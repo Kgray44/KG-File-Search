@@ -53,6 +53,9 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | `research` | object | See below | No | `ResearchSettings` fields | `kgfs research` | Defaults applied. | Non-positive numeric values fall back to safe defaults. |
 | `similar` | object | See below | No | `SimilarSettings` fields | `kgfs similar`, `kgfs similar-file` | Defaults applied. | Limit is clamped positive; minimum score is clamped non-negative. |
 | `timeline` | object | See below | No | `TimelineSettings` fields | `kgfs timeline` | Defaults applied. | Non-positive limit falls back to the default. |
+| `profiles` | object | `{}` | No | named `ProfilePresetSettings` fields | Config presets and documentation; user-created profiles live in DB | Empty mapping by default. | Null becomes `{}`; profile extension values are normalized. |
+| `assignment` | object | See below | No | `AssignmentSettings` fields | `kgfs assignment` | Defaults applied. | Limit is clamped positive; extensions are normalized. |
+| `projects` | object | See below | No | `ProjectsSettings` fields | `kgfs project search` | Defaults applied. | Non-positive limit falls back to the default. |
 | `vectors` | object | See below | No | `VectorSettings` fields | Semantic/hybrid search and vector commands | Defaults applied. | Unknown backend names make semantic/hybrid unavailable and vector rebuild/clear fail with known-backend guidance. |
 | `hybrid` | object | See below | No | `HybridSettings` fields | Hybrid ranking | Defaults applied. | Numeric weights are coerced; invalid/negative values are made safe at runtime. |
 | `ai` | object | See below | No | `AISettings` fields | CLI ask/rerank and `kgfs/ai.py` | Defaults disabled. | Unsupported provider raises `AIError` when AI is used. |
@@ -215,6 +218,34 @@ Deep search is local-only. It expands the query deterministically, runs several 
 | Key | Type | Default | Read from | Behavior |
 |---|---|---:|---|---|
 | `default_limit` | int | `50` | `kgfs/search/timeline.py` | Default maximum timeline items. |
+
+### `profiles`
+
+Config profiles are optional presets. User-created profiles from `kgfs profile
+create` are stored in SQLite so they travel with the project-local/app-data DB.
+
+Each profile can define:
+
+| Key | Type | Default | Behavior |
+|---|---|---:|---|
+| `folders` | list of paths | `[]` | Folder/path substring constraints for profile search. |
+| `extensions` | list of extensions | `[]` | Extension constraints for profile search. |
+| `default_mode` | str | `hybrid` | Default search mode for the preset. |
+| `boost_terms` | list of strings | `[]` | Terms appended to profile search queries. |
+
+### `assignment`
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `default_limit` | int | `20` | `kgfs/workflows/assignments.py` | Default number of assignment working-set results. |
+| `include_extensions` | list | `.pdf`, `.docx`, `.md`, `.txt`, `.csv`, `.py` | `kgfs/workflows/assignments.py` | File types preferred for assignment mode. |
+
+### `projects`
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `default_limit` | int | `20` | `kgfs/workflows/projects.py` | Default project search result limit. |
+| `infer_from_folders` | bool | `false` | config only at this commit | Reserved for future project inference; Phase 7 uses manual projects only. |
 
 ### `vectors`
 
@@ -396,6 +427,22 @@ similar:
 
 timeline:
   default_limit: 50
+
+profiles: {}
+
+assignment:
+  default_limit: 20
+  include_extensions:
+    - ".pdf"
+    - ".docx"
+    - ".md"
+    - ".txt"
+    - ".csv"
+    - ".py"
+
+projects:
+  default_limit: 20
+  infer_from_folders: false
 
 vectors:
   backend: "sqlite_scan"

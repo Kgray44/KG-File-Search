@@ -252,6 +252,76 @@ class TimelineSettings(BaseModel):
         return number if number > 0 else 50
 
 
+class ProfilePresetSettings(BaseModel):
+    folders: list[Path] = Field(default_factory=list)
+    extensions: list[str] = Field(default_factory=list)
+    default_mode: str = "hybrid"
+    boost_terms: list[str] = Field(default_factory=list)
+
+    @field_validator("folders", mode="before")
+    @classmethod
+    def _expand_folders(cls, value: Any) -> list[Path]:
+        if value is None:
+            return []
+        return [_expand_path(item) for item in value]
+
+    @field_validator("extensions", mode="before")
+    @classmethod
+    def _normalize_extensions(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        extensions: list[str] = []
+        for item in value:
+            text = str(item).strip().lower()
+            if text and not text.startswith("."):
+                text = f".{text}"
+            if text:
+                extensions.append(text)
+        return extensions
+
+
+class AssignmentSettings(BaseModel):
+    default_limit: int = 20
+    include_extensions: list[str] = Field(default_factory=lambda: [".pdf", ".docx", ".md", ".txt", ".csv", ".py"])
+
+    @field_validator("default_limit", mode="before")
+    @classmethod
+    def _positive_limit(cls, value: Any) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return 20
+        return number if number > 0 else 20
+
+    @field_validator("include_extensions", mode="before")
+    @classmethod
+    def _normalize_extensions(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        extensions: list[str] = []
+        for item in value:
+            text = str(item).strip().lower()
+            if text and not text.startswith("."):
+                text = f".{text}"
+            if text:
+                extensions.append(text)
+        return extensions
+
+
+class ProjectsSettings(BaseModel):
+    default_limit: int = 20
+    infer_from_folders: bool = False
+
+    @field_validator("default_limit", mode="before")
+    @classmethod
+    def _positive_limit(cls, value: Any) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return 20
+        return number if number > 0 else 20
+
+
 class SqliteVecSettings(BaseModel):
     enabled: bool = False
     experimental: bool = True
@@ -371,6 +441,9 @@ class KGFSConfig(BaseModel):
     research: ResearchSettings = Field(default_factory=ResearchSettings)
     similar: SimilarSettings = Field(default_factory=SimilarSettings)
     timeline: TimelineSettings = Field(default_factory=TimelineSettings)
+    profiles: dict[str, ProfilePresetSettings] = Field(default_factory=dict)
+    assignment: AssignmentSettings = Field(default_factory=AssignmentSettings)
+    projects: ProjectsSettings = Field(default_factory=ProjectsSettings)
     vectors: VectorSettings = Field(default_factory=VectorSettings)
     hybrid: HybridSettings = Field(default_factory=HybridSettings)
     ai: AISettings = Field(default_factory=AISettings)
@@ -402,6 +475,11 @@ class KGFSConfig(BaseModel):
             if text:
                 extensions.append(text)
         return extensions
+
+    @field_validator("profiles", mode="before")
+    @classmethod
+    def _empty_profiles_default(cls, value: Any) -> dict[str, Any]:
+        return {} if value is None else value
 
     @property
     def max_file_size_bytes(self) -> int:
@@ -570,6 +648,41 @@ similar:
 
 timeline:
   default_limit: 50
+
+profiles:
+  # Optional named search presets. User-created workflow profiles are stored
+  # in the KGFS database; config profiles are lightweight presets.
+  # school:
+  #   folders: []
+  #   extensions:
+  #     - ".pdf"
+  #     - ".docx"
+  #     - ".md"
+  #   default_mode: "hybrid"
+  #   boost_terms: []
+  # audio:
+  #   folders: []
+  #   extensions: []
+  #   default_mode: "hybrid"
+  #   boost_terms:
+  #     - "filter"
+  #     - "crossover"
+  #     - "op amp"
+  #     - "frequency response"
+
+assignment:
+  default_limit: 20
+  include_extensions:
+    - ".pdf"
+    - ".docx"
+    - ".md"
+    - ".txt"
+    - ".csv"
+    - ".py"
+
+projects:
+  default_limit: 20
+  infer_from_folders: false
 
 vectors:
   backend: "sqlite_scan"

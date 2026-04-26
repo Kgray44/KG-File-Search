@@ -156,6 +156,41 @@ similar:
 timeline:
   default_limit: 50
 
+profiles:
+  # Optional named search presets. User-created workflow profiles are stored
+  # in the KGFS database; config profiles are lightweight presets.
+  # school:
+  #   folders: []
+  #   extensions:
+  #     - ".pdf"
+  #     - ".docx"
+  #     - ".md"
+  #   default_mode: "hybrid"
+  #   boost_terms: []
+  # audio:
+  #   folders: []
+  #   extensions: []
+  #   default_mode: "hybrid"
+  #   boost_terms:
+  #     - "filter"
+  #     - "crossover"
+  #     - "op amp"
+  #     - "frequency response"
+
+assignment:
+  default_limit: 20
+  include_extensions:
+    - ".pdf"
+    - ".docx"
+    - ".md"
+    - ".txt"
+    - ".csv"
+    - ".py"
+
+projects:
+  default_limit: 20
+  infer_from_folders: false
+
 vectors:
   backend: "sqlite_scan"
   shard_strategy: "none"

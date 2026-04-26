@@ -127,6 +127,18 @@ silently index arbitrary files.
 
 Sources: `kgfs/search/deep.py`, `kgfs/search/similar.py`, `kgfs/search/compare.py`, `kgfs/search/timeline.py`, `kgfs/search/research.py`, `tests/test_phase6_advanced_search.py`.
 
+## Workflow Metadata Privacy
+
+Profiles, saved searches, collections, tags, notes, assignment runs, and
+projects are KGFS metadata. They are stored in the KGFS SQLite database and/or
+KGFS config/app-data/project-local paths.
+
+KGFS does not write this metadata into indexed source files and does not create
+sidecar files beside source files. If you run `reset-index`, the KGFS database
+is removed, so workflow metadata in that database is removed too.
+
+Sources: `kgfs/workflows/*.py`, `kgfs/db/schema.py`, `tests/test_phase7_workflows.py`.
+
 ## Secrets
 
 Do not put API keys in `config.yaml`.

@@ -97,6 +97,10 @@ def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
     assert loaded.research.max_chunks == 20
     assert loaded.similar.default_limit == 10
     assert loaded.timeline.default_limit == 50
+    assert loaded.assignment.default_limit == 20
+    assert ".pdf" in loaded.assignment.include_extensions
+    assert loaded.projects.default_limit == 20
+    assert loaded.projects.infer_from_folders is False
     assert loaded.ai.enabled is False
     assert loaded.ai.api_key_env == "OPENAI_API_KEY"
     assert loaded.ai.send_file_paths is False
@@ -135,3 +139,5 @@ def test_existing_config_without_hybrid_section_uses_defaults(tmp_path: Path) ->
     assert config.research.max_files == 12
     assert config.similar.default_limit == 10
     assert config.timeline.default_limit == 50
+    assert config.assignment.default_limit == 20
+    assert config.projects.default_limit == 20

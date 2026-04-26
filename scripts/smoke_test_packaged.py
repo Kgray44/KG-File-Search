@@ -50,6 +50,16 @@ def smoke_test(executable: Path) -> None:
         note.write_text("Tiny test note about quantum folder vibrations.", encoding="utf-8")
 
         run_command(executable, ["--help"], cwd=workspace)
+        for args in (
+            ["profile", "--help"],
+            ["save-search", "--help"],
+            ["collection", "--help"],
+            ["tag", "--help"],
+            ["note", "--help"],
+            ["assignment", "--help"],
+            ["project", "--help"],
+        ):
+            run_command(executable, args, cwd=workspace)
         run_command(executable, ["doctor", "--project-local"], cwd=workspace)
         run_command(executable, ["init", "--project-local"], cwd=workspace)
         run_command(executable, ["config", "--project-local"], cwd=workspace)

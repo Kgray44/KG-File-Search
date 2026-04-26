@@ -97,7 +97,47 @@ modify source files, create sidecars, or call AI by default.
 
 Sources: `kgfs/cli/commands/deep.py`, `kgfs/cli/commands/similar.py`, `kgfs/cli/commands/compare.py`, `kgfs/cli/commands/timeline.py`, `kgfs/cli/commands/research.py`.
 
-## Example 6: Reindex When Metadata Is Not Enough
+## Example 6: Personal Workflow Metadata
+
+Save and rerun a search:
+
+```bash
+kgfs save-search "circuits labs" "op amp OR Thevenin"
+kgfs run-search "circuits labs"
+```
+
+Collect, tag, and annotate files from latest result IDs:
+
+```bash
+kgfs collection create "Motor Project"
+kgfs collection add "Motor Project" 1 3 5
+kgfs tag 1 circuits lab-report important
+kgfs note 1 "Torque derivation is here."
+kgfs collection export "Motor Project"
+```
+
+Use a profile and a manual project:
+
+```bash
+kgfs profile create school --ext .pdf --ext .docx --ext .md
+kgfs profile search school "op amp gain"
+kgfs project create "Audio Crossover"
+kgfs project add "Audio Crossover" 1 3 5
+kgfs project search "Audio Crossover" "frequency response"
+```
+
+Build a school-style working set:
+
+```bash
+kgfs assignment "robotics motor lab"
+```
+
+Workflow metadata is stored in KGFS DB/config only. Source files are not
+modified.
+
+Sources: `kgfs/workflows/*.py`, `tests/test_phase7_workflows.py`.
+
+## Example 7: Reindex When Metadata Is Not Enough
 
 If a file changed but size and modified time look unchanged:
 
@@ -113,7 +153,7 @@ kgfs index --force
 
 Sources: `kgfs/indexing/indexer.py`, `tests/test_indexing.py`.
 
-## Example 7: Prune Deleted Files
+## Example 8: Prune Deleted Files
 
 Show stale database records without changing the DB:
 
@@ -129,7 +169,7 @@ kgfs prune
 
 Source: `kgfs/indexing/prune.py`.
 
-## Example 8: Semantic Search
+## Example 9: Semantic Search
 
 Install semantic support:
 
@@ -178,7 +218,7 @@ hybrid:
 
 Sources: `kgfs/cli/commands/semantic.py`, `kgfs/search/semantic.py`.
 
-## Example 9: Vector Backend Lab
+## Example 10: Vector Backend Lab
 
 After enabling semantic search and indexing files:
 
@@ -206,7 +246,7 @@ index rows.
 
 Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`.
 
-## Example 10: Local OCR for Images
+## Example 11: Local OCR for Images
 
 Install optional light OCR Python dependencies if you want future preprocessing support, then install Tesseract separately for your OS:
 
@@ -244,7 +284,7 @@ KGFS stores OCR text in its local database/cache and never writes back to the im
 
 Sources: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`, `tests/test_ocr_*.py`.
 
-## Example 11: AI Preview Without API Call
+## Example 12: AI Preview Without API Call
 
 Enable AI in config for preview:
 
@@ -271,7 +311,7 @@ No API call is made when `--preview-ai-context` is used.
 
 Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/search.py`, `tests/test_cli.py`.
 
-## Example 12: OpenAI Answer Synthesis
+## Example 13: OpenAI Answer Synthesis
 
 Install OpenAI dependency:
 
@@ -304,7 +344,7 @@ kgfs ask "What do my notes say about motor torque?"
 
 Source: `kgfs/ai.py`.
 
-## Example 13: Start Web Dashboard
+## Example 14: Start Web Dashboard
 
 ```bash
 kgfs web
@@ -320,7 +360,7 @@ Use `/search?q=pid&ext=.pdf` for a filtered search URL.
 
 Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`.
 
-## Example 14: Reset and Rebuild
+## Example 15: Reset and Rebuild
 
 Dry-run reset:
 
@@ -342,7 +382,7 @@ kgfs rebuild --yes
 
 Sources: `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py`.
 
-## Example 15: Build a Package
+## Example 16: Build a Package
 
 ```bash
 python -m pip install -e ".[package]"

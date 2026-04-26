@@ -133,7 +133,11 @@ Sources: `kgfs/extractors/__init__.py`.
 5. Add migration tests in `tests/test_migrations.py`.
 6. Update [Data Model](data-model.md).
 
-Current schema version is `CURRENT_SCHEMA_VERSION = 2`.
+Workflow metadata lives in the same KGFS database. When adding or changing
+profiles, saved searches, collections, tags, notes, assignments, or projects,
+keep source files untouched and put reusable DB helpers under `kgfs/workflows/`.
+
+Current schema version is `CURRENT_SCHEMA_VERSION = 3`.
 
 ## Add a New Search Mode
 

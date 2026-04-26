@@ -114,6 +114,18 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `build_default_search_registry()` | Register keyword, semantic, and hybrid engines. | `kgfs/search/registry.py` |
 | `explain_result(result, query, ...)` | Build a lightweight local explanation with score breakdown and snippet. | `kgfs/search/explain.py` |
 
+### Workflow Helpers
+
+| API | Purpose | Source |
+|---|---|---|
+| `create_profile()`, `profile_search()` | Store and run local search profiles. | `kgfs/workflows/profiles.py` |
+| `save_search()`, `run_saved_search()` | Store and run named saved searches. | `kgfs/workflows/saved_searches.py` |
+| `create_collection()`, `add_results_to_collection()`, `export_collection_markdown()` | Manage local file collections. | `kgfs/workflows/collections.py` |
+| `tag_result()`, `list_tagged_files()` | Attach tags to files resolved from latest result IDs. | `kgfs/workflows/tags.py` |
+| `add_note()`, `list_notes()` | Store local notes for indexed files. | `kgfs/workflows/notes.py` |
+| `assignment_working_set()` | Build a local assignment working set. | `kgfs/workflows/assignments.py` |
+| `create_project()`, `add_results_to_project()`, `project_search()` | Manage manual local projects and project-scoped search. | `kgfs/workflows/projects.py` |
+
 ### Semantic Helpers
 
 | API | Purpose | Source |

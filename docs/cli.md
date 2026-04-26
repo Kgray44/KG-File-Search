@@ -23,6 +23,17 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs compare` | Compare two latest result IDs. | `kgfs/cli/commands/compare.py` |
 | `kgfs timeline` | Show matching files chronologically. | `kgfs/cli/commands/timeline.py` |
 | `kgfs research` | Build a local citation-backed research brief. | `kgfs/cli/commands/research.py` |
+| `kgfs profile` | Manage search profiles and profile-scoped search. | `kgfs/cli/commands/profiles.py` |
+| `kgfs save-search` | Save a named search. | `kgfs/cli/commands/saved_searches.py` |
+| `kgfs run-search` | Run a saved search. | `kgfs/cli/commands/saved_searches.py` |
+| `kgfs list-searches` | List saved searches. | `kgfs/cli/commands/saved_searches.py` |
+| `kgfs delete-search` | Delete a saved search. | `kgfs/cli/commands/saved_searches.py` |
+| `kgfs collection` | Manage local file collections. | `kgfs/cli/commands/collections.py` |
+| `kgfs tag` / `kgfs untag` / `kgfs tags` | Attach, remove, and list tags for latest result IDs. | `kgfs/cli/commands/tags.py` |
+| `kgfs tagged` / `kgfs tag-list` | Show tagged files or all tag names. | `kgfs/cli/commands/tags.py` |
+| `kgfs note` / `kgfs notes` / `kgfs note-delete` | Add, list, and delete local notes. | `kgfs/cli/commands/notes.py` |
+| `kgfs assignment` | Build a local assignment working set. | `kgfs/cli/commands/assignment.py` |
+| `kgfs project` | Manage manual local projects. | `kgfs/cli/commands/projects.py` |
 | `kgfs semantic` | Semantic-only search. | `kgfs/cli/commands/semantic.py` |
 | `kgfs semantic-index` | Show semantic status or rebuild semantic chunks. | `kgfs/cli/commands/semantic.py` |
 | `kgfs vector status` | Show semantic vector backend/chunk readiness. | `kgfs/cli/commands/vector.py` |
@@ -201,6 +212,53 @@ kgfs research QUERY [--limit N] [--mode MODE]
 `research` runs local deep search, prints best files/snippets, related terms, suggested follow-ups, and KGFS local citations like `[1] notes.md`.
 
 Sources: `kgfs/search/deep.py`, `kgfs/search/similar.py`, `kgfs/search/compare.py`, `kgfs/search/timeline.py`, `kgfs/search/research.py`, `kgfs/search/citations.py`.
+
+## Personal Workflows
+
+Workflow metadata is local KGFS metadata. Tags, notes, collections, projects,
+and saved searches are stored in the KGFS SQLite database; source files are not
+modified and sidecars are not written beside indexed files.
+
+```bash
+kgfs profile list
+kgfs profile create school --ext .pdf --ext .docx --ext .md
+kgfs profile show school
+kgfs profile search school "op amp gain"
+kgfs profile delete school
+
+kgfs save-search "circuits labs" "op amp OR Thevenin"
+kgfs run-search "circuits labs"
+kgfs list-searches
+kgfs delete-search "circuits labs"
+
+kgfs collection create "Motor Project"
+kgfs collection add "Motor Project" 1 3 5
+kgfs collection show "Motor Project"
+kgfs collection export "Motor Project"
+
+kgfs tag 1 circuits lab-report important
+kgfs untag 1 important
+kgfs tags 1
+kgfs tagged circuits
+kgfs tag-list
+
+kgfs note 1 "Torque derivation is here."
+kgfs notes 1
+kgfs note-delete 4
+
+kgfs assignment "robotics motor lab"
+
+kgfs project create "Audio Crossover"
+kgfs project add "Audio Crossover" 1 3 5
+kgfs project show "Audio Crossover"
+kgfs project search "Audio Crossover" "op amp filter"
+```
+
+Collections and projects add files by latest search result ID. Notes and tags
+also attach to file IDs resolved through latest search result IDs. `reset-index`
+removes the KGFS database, so workflow metadata in that database is removed too.
+
+Sources: `kgfs/workflows/*.py`, `kgfs/cli/commands/profiles.py`, `kgfs/cli/commands/saved_searches.py`, `kgfs/cli/commands/collections.py`, `kgfs/cli/commands/tags.py`, `kgfs/cli/commands/notes.py`, `kgfs/cli/commands/assignment.py`, `kgfs/cli/commands/projects.py`.
 
 ## `why`
 

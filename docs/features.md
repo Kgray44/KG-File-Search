@@ -389,12 +389,12 @@ This page inventories features implemented in the repository state at this commi
 ### Open and Reveal Commands
 
 - What it does: opens or reveals a file from latest search results using platform-specific behavior.
-- Use it with: `kgfs open 1`, `kgfs reveal 1`, web `/open/{result_id}`, web `/reveal/{result_id}`.
+- Use it with: `kgfs open 1`, `kgfs reveal 1`, web `/open/{result_id}`, web `/reveal/{result_id}`, and gated API `POST /open/{result_id}` or `POST /reveal/{result_id}` when API file actions are enabled.
 - Inputs: latest result ID.
 - Outputs: OS open/reveal side effect.
 - Settings: `search.save_latest_results`.
-- Edge cases: fails if no latest result has that ID; missing files reveal/open parent folder where possible.
-- Sources: `kgfs/cli/commands/open_reveal.py`, `kgfs/core/platform_utils.py`, `kgfs/web/app.py`.
+- Edge cases: fails if no latest result has that ID; missing files reveal/open parent folder where possible. API file actions return 403 unless `api.allow_file_actions` is true.
+- Sources: `kgfs/cli/commands/open_reveal.py`, `kgfs/core/platform_utils.py`, `kgfs/web/app.py`, `kgfs/api/routes.py`.
 - Tests: `tests/test_platform_utils.py`, `tests/test_web.py`.
 
 ### Web Dashboard

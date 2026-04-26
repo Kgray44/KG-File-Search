@@ -28,7 +28,7 @@ That difference is the product boundary. OS search should be judged by speed, co
 | AI assistance | Optional OpenAI-only AI Assist, disabled by default, downstream of local snippets, with preview, confirmation, home-path redaction, and snippet limits. | Windows may include web, cloud, account, and Microsoft 365 results depending on settings and account context. It is not KGFS-style bounded context preview. | Semantic indexing is described by Microsoft as stored locally on supported PCs; it is not KGFS-style OpenAI snippet workflow. | Spotlight can show suggestions, actions, calculations, conversions, and app results; it is not KGFS-style OpenAI snippet workflow. |
 | Privacy defaults | No folders indexed and no AI calls by default. Index, OCR, media, semantic, workflow, and intelligence data stay in KGFS local/app/project data unless the user opts into AI Assist. | Designed for OS convenience; indexing can cover common or broad locations and may include PC, OneDrive, web, account, or app-integrated results depending on settings. | Microsoft says semantic indexing data is stored locally on the PC, with settings to disable locations or file types. | OS-managed local search with configurable result categories and privacy exclusions. |
 | Source-file modification policy | Indexing, OCR, media metadata, prune, reset, rebuild, vector clear, workflows, and intelligence features do not delete, move, rename, overwrite, tag, or write sidecars beside source files. | Search itself finds and opens files; File Explorer can modify files when users take file actions. | Same Windows file-management boundary. | Search itself finds and opens files; Finder can modify files when users take file actions. |
-| Advanced workflows / roadmap | Implemented: deep, similar, compare, timeline, research, profiles, saved searches, collections, tags, notes, assignment mode, projects, duplicates, versions, graph, health, metadata backups, OCR, media EXIF metadata, API/TUI/integration scaffolds. Planned/scaffolded: richer web/TUI editing, full scanned-PDF rasterization, captions, audio transcription, visual search, richer graph/research UX. | Best at OS convenience, launch, settings, and broad file lookup. | Best at OS-integrated natural-language search over supported indexed documents/images/photos on supported hardware. | Best at Mac-wide convenience, app launching, Finder organization, metadata criteria, quick actions, and OS shortcuts. |
+| Advanced workflows / roadmap | Implemented: deep, similar, compare, timeline, research, profiles, saved searches, collections, tags, notes, assignment mode, projects, duplicates, versions, graph, health, metadata backups, OCR, media EXIF metadata, optional local model backends, API/TUI/integration scaffolds, and release-readiness commands. Planned/scaffolded: richer web/TUI editing, full scanned-PDF rasterization, richer graph/research UX, and more polished media workflows. | Best at OS convenience, launch, settings, and broad file lookup. | Best at OS-integrated natural-language search over supported indexed documents/images/photos on supported hardware. | Best at Mac-wide convenience, app launching, Finder organization, metadata criteria, quick actions, and OS shortcuts. |
 | Best audience | Users who want controlled project/corpus indexing, reproducible search, inspectable local data, optional semantic/hybrid search, workflow metadata, and privacy-bounded AI assistance. | Everyday Windows users who want fast broad desktop search. | Copilot+ PC users who want natural-language Windows search without managing a separate corpus. | Mac users who want fast built-in search, app launch, previews, Finder criteria, metadata search, actions, and OS workflows. |
 
 ## What KGFS Is Good At
@@ -68,8 +68,9 @@ KGFS is a good place to experiment with local search and ranking because the bas
 - Optional accelerated `sqlite_vec`, `hnsw`, and `faiss` backends when installed, enabled, and rebuilt.
 - Optional local Tesseract OCR.
 - Optional local photo/EXIF metadata extraction.
+- Optional local model readiness checks for EasyOCR, PaddleOCR, metadata/Transformers captions, faster-whisper transcription, bytehash visual plumbing, and CLIP-style visual embeddings.
 
-Source anchors: `kgfs/search/keyword.py`, `kgfs/search/semantic.py`, `kgfs/search/modes/*.py`, `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`, `kgfs/ocr/*.py`, `kgfs/media/*.py`, `docs/integrations.md`.
+Source anchors: `kgfs/search/keyword.py`, `kgfs/search/semantic.py`, `kgfs/search/modes/*.py`, `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`, `kgfs/ocr/*.py`, `kgfs/media/*.py`, `kgfs/models/*.py`, `docs/integrations.md`, `docs/local-models.md`.
 
 ### CLI and Reproducible Workflows
 
@@ -125,10 +126,12 @@ KGFS can index more than normal document text, but the boundary is important:
 - Implemented now: scanned-PDF candidate detection and safe "not implemented yet" rasterization behavior.
 - Implemented now: optional local photo/EXIF metadata indexing into `media_metadata` and `media_text`.
 - Implemented now: media-derived text can participate in keyword search and semantic chunking when enabled.
-- Scaffolded/planned: EasyOCR, PaddleOCR, image captions, audio transcription, visual embeddings/search, and cloud OCR fallback.
-- Not implemented: fake captioning, fake transcription, fake visual understanding, automatic cloud uploads, or source-file media edits.
+- Implemented now: lazy optional EasyOCR and PaddleOCR adapters with download guards and local model validation.
+- Implemented now: local caption/audio/visual backend contracts, including metadata captions, optional Transformers captions, optional faster-whisper transcription, deterministic bytehash visual embeddings, and optional CLIP-style visual embeddings.
+- Still intentionally limited: scanned-PDF page rasterization and cloud OCR uploads remain no-upload/not-implemented paths in this phase.
+- Not implemented: fake captioning, fake transcription, automatic cloud uploads, silent model downloads, source-file media edits, or pretending bytehash embeddings are real visual understanding.
 
-Source anchors: `kgfs/extractors/image_ocr.py`, `kgfs/extractors/pdf.py`, `kgfs/ocr/*.py`, `kgfs/media/*.py`, `kgfs/cli/commands/ocr.py`, `kgfs/cli/commands/media.py`, `tests/test_phase10_media.py`.
+Source anchors: `kgfs/extractors/image_ocr.py`, `kgfs/extractors/pdf.py`, `kgfs/ocr/*.py`, `kgfs/media/*.py`, `kgfs/models/*.py`, `kgfs/cli/commands/ocr.py`, `kgfs/cli/commands/media.py`, `kgfs/cli/commands/models.py`, `tests/test_phase10_media.py`, `tests/test_phase10_1_local_models.py`, `tests/test_phase10_2_local_model_setup.py`.
 
 ### Knowledge Workflow Tools
 
@@ -152,8 +155,9 @@ KGFS is becoming a local knowledge workbench, not an OS launcher clone. Current 
 - Token-gated local JSON API.
 - Optional minimal Textual TUI launcher.
 - Manual Raycast, Alfred, PowerToys, Finder, Explorer, and tray scaffold writers.
+- Release-readiness helpers such as `kgfs version`, `kgfs quickstart`, `kgfs capabilities`, `kgfs db check`, docs consistency, checksum generation, and release checks.
 
-Planned or scaffolded workflow expansion includes richer web/TUI workflow editing, deeper graph/research UX, full scanned-PDF OCR rasterization, real local caption/audio/visual backends, collections/tags/notes polish, and possible OS integrations as entry points into selected KGFS corpora.
+Planned workflow expansion includes richer web/TUI workflow editing, deeper graph/research UX, full scanned-PDF OCR rasterization, production-grade media UX, collections/tags/notes polish, and possible OS integrations as entry points into selected KGFS corpora.
 
 Roadmap anchors: `docs/roadmap.md`, `KGFS_Advanced_Roadmap_Canvas.md`.
 
@@ -228,13 +232,13 @@ This comparison suggests a clear product direction:
 | Hybrid search | Hybrid mode with configurable weights and score breakdowns. | Requires semantic/vector readiness. | Better ranking quality and richer controls. | Opaque ranking without explanation. |
 | Explainability | `kgfs why` explains latest saved results with snippets, mode data, and score breakdown. | Explanation is CLI-only. | Broader explanations for deep/research/graph workflows. | Hiding why results ranked. |
 | Vector backends | Default `sqlite_scan`, backend registry, `vector status`, `rebuild`, `clear`, `benchmark`, and `recommend`. | Optional `sqlite_vec`, `hnsw`, and `faiss` require extras, config enablement, and rebuild/artifacts. | More backend tuning and persistence polish. | Base install requiring heavy vector dependencies. |
-| OCR | Optional local Tesseract image OCR, OCR cache, status/test/index commands, scanned-PDF candidate detection. | Scanned-PDF rasterization is safely scaffolded and reports that it is not implemented. EasyOCR/PaddleOCR are optional/lazy advanced backend scaffolds. | Full scanned-PDF rasterization and richer OCR backend support. | Modifying source images/PDFs or writing OCR sidecars. |
-| Media | Optional local photo/EXIF metadata indexing, `media_metadata`, `media_text`, media status/exif/index/clear commands, GPS storage disabled by default. | Caption, audio, and visual commands/status objects exist as safe scaffolds with `none` backends. | Real local captioning, audio transcription, visual embeddings/search, and richer media UX. | Fake visual/audio understanding or automatic cloud uploads. |
+| OCR | Optional local Tesseract image OCR, OCR cache, status/test/index commands, scanned-PDF candidate detection, EasyOCR/PaddleOCR adapters, backend listing, backend selection for test/index, and local model validation. | Scanned-PDF rasterization is safely scaffolded and reports that it is not implemented. EasyOCR/PaddleOCR require optional extras and local model setup unless downloads are explicitly enabled. | Full scanned-PDF rasterization and richer OCR backend polish. | Modifying source images/PDFs, writing OCR sidecars, or silently downloading OCR models. |
+| Media | Optional local photo/EXIF metadata indexing, `media_metadata`, `media_text`, media status/exif/index/clear commands, metadata captions, Transformers caption adapter, faster-whisper transcription adapter, bytehash/CLIP-style visual embeddings, and local model commands. | All caption/audio/visual features are disabled by default and require explicit backend config. `bytehash` is deterministic plumbing, not visual understanding. | Richer media UX, stronger model packaging guidance, and production-quality visual/audio workflows. | Fake visual/audio understanding, automatic cloud uploads, or source-file media edits. |
 | Web UI | Local FastAPI dashboard for home, search modes, workflow pages, graph, health, stats, config, failures, open, and reveal. | No dashboard authentication; keep bound to localhost. Workflow pages are not full editing workspaces. | Richer local dashboard UX. | Public hosted search service. |
 | Local API and integrations | Token-gated localhost JSON API plus launcher scaffold exports. | API file actions are disabled by default. Scaffolds are manual-install only. TUI is minimal. | Optional launcher workflows, richer TUI, possible OS entry points. | Remote sync or public API service by default. |
 | AI Assist | Optional OpenAI answer synthesis and reranking, disabled by default, bounded by local snippets, preview/confirmation/redaction defaults. | OpenAI-only. `ai.allow_query_expansion` exists but no AI query expansion path was found. AI Assist is CLI-only. | Privacy-protected advanced ask/research workflows. | Always-on cloud assistant behavior. |
 | Knowledge workflows | Deep, similar, compare, timeline, research, profiles, collections, tags, notes, assignments, projects, duplicates, versions, graph, health, and metadata backup/import/export. | Most workflows are CLI-first; web/API support is partial by workflow. | Richer web/TUI workflow surfaces and graph/research visualization. | Replacing the operating system shell. |
-| Deployment | PyInstaller package scripts and GitHub Actions CI/package workflow. | Packaging excludes optional heavy dependencies from base builds. | Release publishing polish. | Docker/Kubernetes/cloud deployment in the current tree. |
+| Deployment | PyInstaller package scripts, checksum generation, release-check script, GitHub Actions CI/package workflow, and draft `v*` GitHub Release workflow support. | Packaging excludes optional heavy dependencies and model caches from base builds. Signing/notarization is not configured. | Release publishing polish and signing/notarization if the project chooses it later. | Docker/Kubernetes/cloud deployment in the current tree. |
 
 ## Source Notes
 
@@ -251,6 +255,9 @@ KGFS behavior in this document is based on the repository docs and source files 
 - [Data model](data-model.md)
 - [API](api.md)
 - [CLI](cli.md)
+- [Local models](local-models.md)
+- [Optional dependencies](optional-dependencies.md)
+- [Known limitations](known-limitations.md)
 - [Roadmap](roadmap.md)
 - [Advanced Roadmap Canvas](../KGFS_Advanced_Roadmap_Canvas.md)
 
@@ -261,10 +268,11 @@ Key implementation anchors:
 - Indexing/extraction: `kgfs/indexing/*.py`, `kgfs/extractors/*.py`
 - Search: `kgfs/search/*.py`, `kgfs/search/modes/*.py`, `kgfs/search/backends/*.py`
 - Vectors: `kgfs/vectors/*.py`
-- OCR/media: `kgfs/ocr/*.py`, `kgfs/media/*.py`
+- OCR/media/models: `kgfs/ocr/*.py`, `kgfs/media/*.py`, `kgfs/models/*.py`
 - Web/API/TUI/integrations: `kgfs/web/app.py`, `kgfs/api/*.py`, `kgfs/tui/*.py`, `kgfs/integrations/*.py`
 - Workflow/intelligence: `kgfs/workflows/*.py`, `kgfs/intelligence/*.py`
-- Tests: `tests/test_search_kernel.py`, `tests/test_web.py`, `tests/test_phase6_advanced_search.py`, `tests/test_phase7_workflows.py`, `tests/test_phase8_file_intelligence.py`, `tests/test_phase9_ux_integrations.py`, `tests/test_phase10_media.py`
+- Release readiness: `kgfs/version.py`, `kgfs/capabilities.py`, `kgfs/db/checks.py`, `scripts/check_docs_consistency.py`, `scripts/release_check.py`, `scripts/generate_checksums.py`
+- Tests: `tests/test_search_kernel.py`, `tests/test_web.py`, `tests/test_phase6_advanced_search.py`, `tests/test_phase7_workflows.py`, `tests/test_phase8_file_intelligence.py`, `tests/test_phase9_ux_integrations.py`, `tests/test_phase10_media.py`, `tests/test_phase10_1_local_models.py`, `tests/test_phase10_2_local_model_setup.py`, `tests/test_release_candidate_prep.py`
 
 External OS-search references:
 

@@ -89,7 +89,6 @@ This page inventories features implemented in the repository state at this commi
 - Edge cases: quickstart is read-only and does not create config, index files, or source sidecars.
 - Sources: `kgfs/version.py`, `kgfs/quickstart.py`, `kgfs/cli/commands/version.py`, `kgfs/cli/commands/quickstart.py`.
 - Tests: `tests/test_release_readiness.py`, `tests/test_cli.py`.
-- Tests: `tests/test_cli.py`, `tests/test_resources.py`.
 
 ## Indexing and Extraction
 

@@ -226,7 +226,23 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `store_photo_metadata(conn, config, file_id=..., metadata=...)` | Store sanitized photo metadata plus searchable `media_text`. | `kgfs/media/exif.py` |
 | `index_existing_photo_metadata(conn, config)` | Populate photo metadata for already indexed photo rows. | `kgfs/media/metadata.py` |
 | `clear_media_data(conn)` | Delete KGFS media metadata/text/embedding rows only. | `kgfs/media/cache.py` |
-| `get_caption_status()`, `get_audio_status()`, `get_visual_status()` | Report scaffold backend status for optional multimodal features. | `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py` |
+| `get_caption_status()`, `get_audio_status()`, `get_visual_status()` | Report optional local backend status for captions, audio transcription, and visual embeddings. | `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py` |
+| `caption_image()`, `index_existing_captions()` | Run one configured caption backend or store caption text for indexed image rows. | `kgfs/media/captions.py` |
+| `transcribe_audio()`, `index_existing_transcripts()` | Run one configured audio transcription backend or store transcript text for indexed audio rows. | `kgfs/media/audio.py` |
+| `visual_embedding_for_file()`, `index_existing_visual_embeddings()`, `find_visual_similar()` | Generate/store local visual embeddings and compare indexed image embeddings. | `kgfs/media/visual.py` |
+
+### Local Model Helpers
+
+| API | Purpose | Source |
+|---|---|---|
+| `list_model_backends()` | List known optional OCR/media backend descriptors without importing heavy packages. | `kgfs/models/registry.py` |
+| `collect_model_statuses(config)` / `get_model_status(config)` | Collect backend status/readiness for `kgfs models status`. | `kgfs/models/registry.py`, `kgfs/models/status.py` |
+| `validate_backend(name, config)` / `validate_all_backends(config)` | Validate dependency, local model path, local-only/download guard, and indexed-folder path state. | `kgfs/models/validation.py` |
+| `known_backend_aliases()` | Return accepted model validation names such as `easyocr`, `metadata-caption`, and `clip-visual`. | `kgfs/models/validation.py` |
+| `default_model_cache_dir(...)`, `collect_model_paths(...)`, `model_path_for_backend(...)` | Resolve and inspect local model paths without creating directories. | `kgfs/models/paths.py` |
+| `config_snippet(backend)` | Return YAML snippets for optional backend setup without editing config. | `kgfs/models/snippets.py` |
+| `test_backend(backend, path, config)` | Run one bounded local backend operation against one file without indexing or modifying it. | `kgfs/models/testing.py` |
+| `benchmark_models(config)` / `recommend_models(config)` | Run bounded model readiness benchmarking and conservative backend recommendations. | `kgfs/models/benchmark.py`, `kgfs/models/recommend.py` |
 
 ### Search
 

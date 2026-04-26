@@ -13,7 +13,8 @@ kgfs/
   indexing/            Discovery, filters, hashing, indexing, pruning
   extractors/          Text extraction by file type
   ocr/                 Optional local OCR backend, cache, status, and PDF fallback helpers
-  media/               Optional local media metadata, EXIF, caption/audio/visual scaffolds
+  media/               Optional local media metadata, EXIF, captions, transcripts, visual embeddings
+  models/              Optional local model backend registry, validation, paths, snippets, testing
   search/              Query parsing, filters, ranking, snippets, citations, keyword/semantic/hybrid search, and advanced local investigation helpers
   search/backends/     Vector backend interfaces, registry, sqlite_scan, and optional accelerated backends
   search/modes/        Registry engine wrappers for keyword, semantic, hybrid, and auto fallback
@@ -26,7 +27,7 @@ kgfs/
   integrations/        Raycast/Alfred/PowerToys/Finder/Explorer/tray scaffolds
 ```
 
-Compatibility modules such as `kgfs/config.py`, `kgfs/database.py`, `kgfs/file_discovery.py`, `kgfs/file_filters.py`, `kgfs/hashing.py`, `kgfs/migrations.py`, `kgfs/models.py`, `kgfs/path_utils.py`, `kgfs/platform_utils.py`, `kgfs/prune.py`, `kgfs/resources.py`, `kgfs/safety.py`, `kgfs/semantic.py`, and `kgfs/snippets.py` alias the newer package locations with `sys.modules`.
+Compatibility modules such as `kgfs/config.py`, `kgfs/database.py`, `kgfs/file_discovery.py`, `kgfs/file_filters.py`, `kgfs/hashing.py`, `kgfs/migrations.py`, `kgfs/path_utils.py`, `kgfs/platform_utils.py`, `kgfs/prune.py`, `kgfs/resources.py`, `kgfs/safety.py`, `kgfs/semantic.py`, and `kgfs/snippets.py` alias the newer package locations with `sys.modules`.
 
 Sources: `kgfs/core/*.py`, `kgfs/db/*.py`, `kgfs/indexing/*.py`, `kgfs/search/*.py`, `tests/test_project_structure.py`.
 
@@ -131,14 +132,49 @@ flowchart TD
 ```
 
 `kgfs/media/` owns photo metadata, media status/counting, safe clear behavior,
-and caption/audio/visual scaffolds. Captioning, transcription, and visual
-embeddings use `none` backends by default; they report unavailable status
-instead of faking media understanding. Advanced OCR backends and cloud OCR
-fallback are registered lazily under `kgfs/ocr/`.
+and optional caption/audio/visual backend contracts. Captioning,
+transcription, and visual embeddings use `none` backends by default. When
+enabled, generated text and embeddings are stored in KGFS `media_text` and
+`media_embeddings` tables, never beside source files.
+
+Implemented local media/model backends include metadata-derived captions,
+optional Transformers image captions, optional faster-whisper transcription,
+deterministic bytehash visual embeddings for plumbing/tests, and optional
+CLIP-style visual embeddings. These backends stay lazy and optional; they do
+not download models by default and do not fake media understanding when
+dependencies or local model files are missing.
+
+Advanced OCR backends and cloud OCR fallback are registered lazily under
+`kgfs/ocr/`. EasyOCR and PaddleOCR are real optional local adapters when their
+extras and local model setup are present.
 
 Cloud OCR fallback is a no-upload scaffold in this phase: it requires disabled
 by default config to be changed, an explicit allow-cloud flag, preview, and
 confirmation, and still returns "not implemented" rather than uploading.
+
+## Local Model Architecture
+
+The `kgfs/models/` package centralizes optional local backend readiness without
+making heavy model stacks part of the base install:
+
+```mermaid
+flowchart TD
+    ModelsCmd["kgfs models\nstatus / doctor / validate / test"] --> Registry["Model registry\nkgfs/models/registry.py"]
+    Registry --> Validation["Backend validation\nkgfs/models/validation.py"]
+    Validation --> Paths["Model paths\nkgfs/models/paths.py"]
+    Registry --> OCR["OCR backends\nTesseract / EasyOCR / PaddleOCR"]
+    Registry --> Media["Media backends\nmetadata / Transformers / faster-whisper / bytehash / CLIP"]
+    ModelsCmd --> Snippets["Config snippets\nkgfs/models/snippets.py"]
+    ModelsCmd --> Tests["Single-file model test\nkgfs/models/testing.py"]
+```
+
+The model layer reports readiness states such as `disabled`, `ready`,
+`missing_dependency`, `missing_model`, `configuration_needed`, `scaffold`, and
+`error`. It also warns when configured model paths sit inside indexed source
+folders, because model caches should not become searchable corpus content by
+accident.
+
+Sources: `kgfs/models/*.py`, `kgfs/cli/commands/models.py`, `docs/local-models.md`, `tests/test_phase10_1_local_models.py`, `tests/test_phase10_2_local_model_setup.py`.
 
 ## Search Lifecycle
 
@@ -437,6 +473,7 @@ Sources: `kgfs/ai.py`, `kgfs/cli/commands/search.py`, `kgfs/cli/shared.py`, `tes
 | Optional vector backend unavailable or stale | Backend reports missing dependency, disabled config, missing artifact, stale metadata, or dimension mismatch instead of pretending search succeeded. | `kgfs/search/backends/*.py`, `kgfs/vectors/metadata.py` |
 | OCR disabled or missing Tesseract | Images remain ignored unless OCR is enabled; OCR status/extraction reports missing local command with install guidance. | `kgfs/indexing/filters.py`, `kgfs/ocr/tesseract.py` |
 | Media disabled or missing optional dependencies | Media files remain ignored unless media/photos are enabled; media status and EXIF commands report missing optional dependencies with guidance. | `kgfs/indexing/filters.py`, `kgfs/media/status.py`, `kgfs/media/exif.py` |
+| Optional model backend disabled or unavailable | Model commands report readiness, missing dependencies, missing local model paths, download guards, and indexed-folder path warnings instead of importing heavy stacks at startup or faking success. | `kgfs/models/*.py`, `kgfs/cli/commands/models.py` |
 | Cloud OCR fallback | Disabled by default and scaffolded to refuse upload even after confirmation until a real provider path exists. | `kgfs/ocr/cloud.py` |
 | API token missing or invalid | Missing configured token env returns HTTP 503; wrong/missing bearer token returns HTTP 401. | `kgfs/api/auth.py` |
 | API non-local bind | `kgfs serve` raises a bad-parameter error unless `--allow-network` is supplied. | `kgfs/api/auth.py`, `kgfs/cli/commands/serve.py` |
@@ -461,7 +498,7 @@ Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/doctor.py`, `kgfs/core/app_dir
 - Local JSON API requires a bearer token by default and refuses network binds unless explicitly allowed.
 - Integration scaffolds write local template files only and do not install OS integrations.
 - AI Assist is opt-in and context-bounded.
-- OCR and media features are opt-in, local-first, and write only KGFS database/cache data.
+- OCR, media, and optional local model features are opt-in, local-first, and write only KGFS database/cache data.
 
 Sources: `AGENTS.md`, `kgfs/core/safety.py`, `kgfs/core/platform_utils.py`, `tests/test_platform_boundary.py`, [Security](security.md).
 
@@ -474,6 +511,7 @@ Sources: `AGENTS.md`, `kgfs/core/safety.py`, `kgfs/core/platform_utils.py`, `tes
 | New extractor | Add extractor module under `kgfs/extractors/`, update dispatch in `kgfs/extractors/__init__.py`, update default extensions if enabled by default. | `tests/test_extractors.py` and indexing/search tests. |
 | New OCR backend | Add backend under `kgfs/ocr/`, register it lazily, keep source files untouched, and update status/docs. | OCR backend/status/cache/indexing tests. |
 | New media backend | Add backend or helper under `kgfs/media/`, keep dependencies lazy, store generated data in KGFS DB/cache only, and update status/docs. | Media config/status/search/safety tests. |
+| New local model backend | Add validation/status/snippet/test support under `kgfs/models/`, connect it to the OCR or media backend registry, keep downloads disabled by default, and update local-model docs. | `tests/test_phase10_1_local_models.py`, `tests/test_phase10_2_local_model_setup.py`, plus backend-specific tests. |
 | New DB schema | Update `kgfs/db/schema.py`, migration logic in `kgfs/db/migrations.py`, and data-model docs. | `tests/test_migrations.py` and repository tests. |
 | New intelligence workflow | Add logic under `kgfs/intelligence/`, expose CLI under `kgfs/cli/commands/`, and keep source files untouched. | Focused Phase 8-style tests using temporary databases and source-hash checks. |
 | New search mode | Add engine under `kgfs/search/modes/`, register in `build_default_search_registry()`, extend `SearchMode` enum if user-facing. | `tests/test_search_kernel.py`, CLI tests if exposed. |

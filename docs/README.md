@@ -1,6 +1,6 @@
 # KGFS Documentation
 
-KG File Search (KGFS) is a private, local-first Python file search tool. It indexes only folders explicitly listed by the user, stores metadata and extracted text in a local SQLite database, searches with SQLite FTS5 keyword ranking, and can optionally add local OCR, local semantic/vector search, local workflow/intelligence metadata, a token-gated local JSON API, a Textual TUI launcher, integration scaffolds, or opt-in OpenAI AI Assist.
+KG File Search (KGFS) is a private, local-first Python file search tool. It indexes only folders explicitly listed by the user, stores metadata and extracted text in a local SQLite database, searches with SQLite FTS5 keyword ranking, and can optionally add local OCR, local media/model metadata, local semantic/vector search, local workflow/intelligence metadata, a token-gated local JSON API, a Textual TUI launcher, integration scaffolds, or opt-in OpenAI AI Assist.
 
 This documentation is based on the repository state at this commit. Source references point to the files that implement or test each claim.
 
@@ -9,11 +9,11 @@ This documentation is based on the repository state at this commit. Source refer
 - Creates a no-scan default YAML config with `indexed_folders: []`.
 - Indexes configured folders without deleting, moving, renaming, or overwriting source files.
 - Skips noisy, system, dependency, cache, application, game, binary, media, archive, and over-size files by default.
-- Extracts text from text-like files, Markdown, code, CSV, DOCX, PDF, and optionally OCR-supported image files through local Tesseract.
-- Stores file records, FTS rows, latest result IDs, semantic chunks, OCR cache rows, workflow metadata, file-intelligence metadata, and schema metadata in SQLite.
+- Extracts text from text-like files, Markdown, code, CSV, DOCX, PDF, and optionally OCR-supported image files through local Tesseract or optional local OCR adapters.
+- Stores file records, FTS rows, latest result IDs, semantic chunks, OCR cache rows, media metadata/text/embedding rows, workflow metadata, file-intelligence metadata, and schema metadata in SQLite.
 - Searches with keyword, semantic, hybrid, and auto modes, plus score explanations for latest results.
 - Provides local investigation and workflow commands for deep search, similar files, compare, timeline, research, profiles, saved searches, collections, tags, notes, assignments, projects, duplicates, versions, graphs, health, and metadata backups.
-- Provides CLI commands for init, doctor, config, folder management, indexing, search, why, AI-assisted ask/rerank, semantic indexing/search, OCR, vectors, stats, open/reveal, prune, reset, rebuild, a local web dashboard, a local JSON API, a TUI launcher, and integration scaffolds.
+- Provides CLI commands for init, doctor, version, quickstart, capabilities, config, folder management, indexing, search, why, AI-assisted ask/rerank, semantic indexing/search, OCR, media/model checks, vectors, stats, database checks, open/reveal, prune, reset, rebuild, a local web dashboard, a local JSON API, a TUI launcher, and integration scaffolds.
 - Packages with PyInstaller for Windows and macOS builds.
 
 Primary source files:
@@ -23,6 +23,7 @@ Primary source files:
 - App paths: `kgfs/core/app_dirs.py`
 - Indexing: `kgfs/indexing/*.py`
 - Extraction: `kgfs/extractors/*.py`
+- Optional local model/media backends: `kgfs/models/*.py`, `kgfs/media/*.py`, `kgfs/ocr/*.py`
 - Database: `kgfs/db/*.py`
 - Search: `kgfs/search/*.py`, `kgfs/search/modes/*.py`
 - Vector backends and management: `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`
@@ -32,7 +33,7 @@ Primary source files:
 - Result explanations: `kgfs/search/explain.py`, `kgfs/cli/commands/why.py`
 - AI Assist: `kgfs/ai.py`
 - Web dashboard: `kgfs/web/app.py`, `kgfs/web/templates/*.html`
-- Packaging: `scripts/build_package.py`, `packaging/pyinstaller/kgfs.spec`, `.github/workflows/package.yml`
+- Release and packaging: `kgfs/version.py`, `kgfs/capabilities.py`, `kgfs/db/checks.py`, `scripts/*.py`, `packaging/pyinstaller/kgfs.spec`, `.github/workflows/package.yml`
 
 ## Quickstart
 

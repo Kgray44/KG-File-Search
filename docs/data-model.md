@@ -150,6 +150,19 @@ dependent workflow rows through SQLite foreign keys.
 
 Sources: `kgfs/db/schema.py`, `kgfs/workflows/*.py`, `tests/test_phase7_workflows.py`.
 
+### Intelligence Metadata Tables
+
+Phase 8 adds local file-intelligence metadata tables. These tables contain
+derived KGFS metadata only; they do not store source file contents.
+
+| Table | Purpose |
+|---|---|
+| `graph_edges` | Optional cached file-to-file graph edges with type, weight, and evidence JSON. |
+| `project_candidates` | Inferred project candidate names, scores, evidence JSON, and accepted project link. |
+| `metadata_backups` | Paths and notes for KGFS metadata backup files created by backup/reset workflows. |
+
+Sources: `kgfs/db/schema.py`, `kgfs/intelligence/*.py`, `tests/test_phase8_file_intelligence.py`.
+
 ### `schema_version`
 
 Created by migrations.
@@ -160,7 +173,7 @@ Created by migrations.
 | `version` | `INTEGER NOT NULL` | Current schema version. |
 | `applied_at` | `TEXT NOT NULL` | UTC ISO timestamp. |
 
-Current version: `3`.
+Current version: `4`.
 
 Sources: `kgfs/db/migrations.py`, `tests/test_migrations.py`.
 
@@ -192,6 +205,7 @@ Additional dataclasses and runtime models:
 | `SemanticStatus` | enabled, available, message | Semantic dependency/config status for doctor and semantic-index output. | `kgfs/search/semantic.py` |
 | `AIResult` | text, context | AI answer result with returned text and context used. | `kgfs/ai.py` |
 | `Profile`, `SavedSearch`, `Collection`, `WorkflowItem`, `FileNote`, `AssignmentReport`, `Project` | local workflow metadata and report fields | Profiles, saved searches, collections, tags, notes, assignments, and projects. | `kgfs/workflows/models.py` |
+| `DuplicateGroup`, `VersionCandidate`, `ProjectCandidate`, `GraphResult`, `HealthReport`, `MetadataExportSummary` | local intelligence and metadata backup result fields | Duplicates, versions, project candidates, graphs, health, and metadata import/export. | `kgfs/intelligence/models.py` |
 
 OCR models:
 
@@ -238,6 +252,7 @@ Defined in `kgfs/core/config.py`.
 | `SearchSettings` | CLI search defaults. |
 | `DeepSearchSettings`, `ResearchSettings`, `SimilarSettings`, `TimelineSettings` | Advanced local search defaults. |
 | `ProfilePresetSettings`, `AssignmentSettings`, `ProjectsSettings` | Phase 7 workflow presets and limits. |
+| `IntelligenceSettings`, `MetadataSettings` | Phase 8 file intelligence thresholds/limits and metadata backup behavior. |
 | `VectorSettings` | Vector backend selection, shard strategy placeholder, and optional sqlite-vec/HNSW/FAISS settings. |
 | `HybridSettings` | Hybrid score weights and candidate pool multiplier. |
 | `AISettings` | AI Assist privacy, provider, and size settings. |
@@ -276,7 +291,8 @@ Sources: `kgfs/search/keyword.py`, `kgfs/db/latest_results.py`.
 5. Ensures `files.extraction_source`.
 6. Ensures `ocr_cache`.
 7. Ensures workflow metadata tables.
-8. Sets version to `3` for fresh/older DBs.
+8. Ensures intelligence metadata tables.
+9. Sets version to `4` for fresh/older DBs.
 
 Sources: `kgfs/db/migrations.py`, `tests/test_migrations.py`.
 

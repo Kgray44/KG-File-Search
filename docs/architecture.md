@@ -18,6 +18,7 @@ kgfs/
   search/modes/        Registry engine wrappers for keyword, semantic, hybrid, and auto fallback
   vectors/             Vector status, chunk lifecycle, and rebuild helpers
   workflows/           Local profiles, saved searches, collections, tags, notes, assignments, and projects
+  intelligence/         Local duplicates, versions, project candidates, graph, health, metadata backup
   web/                 FastAPI dashboard, Jinja templates, static CSS
 ```
 
@@ -190,6 +191,30 @@ removed.
 
 Sources: `kgfs/workflows/*.py`, `kgfs/cli/commands/profiles.py`, `kgfs/cli/commands/saved_searches.py`, `kgfs/cli/commands/collections.py`, `kgfs/cli/commands/tags.py`, `kgfs/cli/commands/notes.py`, `kgfs/cli/commands/assignment.py`, `kgfs/cli/commands/projects.py`, `tests/test_phase7_workflows.py`.
 
+## File Intelligence Lifecycle
+
+Phase 8 intelligence features analyze KGFS metadata without writing to source
+files:
+
+```mermaid
+flowchart TD
+    Files["files + hashes + extracted_text"] --> Duplicates["duplicates\nexact hash + semantic vectors"]
+    Files --> Versions["versions\nfilename/path/text/date heuristics"]
+    Files --> Candidates["project candidates\nfolder/type clusters"]
+    Workflows["tags/notes/collections/projects"] --> Graph["graph builder"]
+    Files --> Graph
+    Graph --> Health["health report"]
+    Workflows --> Metadata["metadata export/import"]
+    Metadata --> Backup["KGFS app-data/project-local backup JSON"]
+```
+
+`metadata export` stores stable file identities, workflow rows, and project
+metadata. It excludes source file contents, extracted text, OCR cache text,
+vector blobs, API keys, and model caches. Imports match metadata back to the
+current index by content hash, normalized path, and filename/size fallback.
+
+Sources: `kgfs/intelligence/*.py`, `kgfs/cli/commands/duplicates.py`, `kgfs/cli/commands/versions.py`, `kgfs/cli/commands/graph.py`, `kgfs/cli/commands/health.py`, `kgfs/cli/commands/metadata.py`, `tests/test_phase8_file_intelligence.py`.
+
 ## Result Explanation Lifecycle
 
 ```mermaid
@@ -291,8 +316,9 @@ Tables:
 - `schema_version`: migration version marker.
 - `ocr_cache`: local OCR result cache keyed by source identity/backend/language.
 - Workflow tables: `profiles`, `saved_searches`, `collections`, `collection_items`, `tags`, `file_tags`, `file_notes`, `projects`, `project_items`, and `assignment_runs`.
+- Intelligence tables: `graph_edges`, `project_candidates`, and `metadata_backups`.
 
-`initialize_database()` creates core tables, calls `migrate_database()`, and commits. Current schema version is `2`.
+`initialize_database()` creates core tables, calls `migrate_database()`, and commits. Current schema version is `4`.
 
 Sources: `kgfs/db/schema.py`, `kgfs/db/migrations.py`, `kgfs/db/repositories.py`, `kgfs/db/latest_results.py`, [Data Model](data-model.md).
 
@@ -378,6 +404,7 @@ Sources: `AGENTS.md`, `kgfs/core/safety.py`, `kgfs/core/platform_utils.py`, `tes
 | New extractor | Add extractor module under `kgfs/extractors/`, update dispatch in `kgfs/extractors/__init__.py`, update default extensions if enabled by default. | `tests/test_extractors.py` and indexing/search tests. |
 | New OCR backend | Add backend under `kgfs/ocr/`, register it lazily, keep source files untouched, and update status/docs. | OCR backend/status/cache/indexing tests. |
 | New DB schema | Update `kgfs/db/schema.py`, migration logic in `kgfs/db/migrations.py`, and data-model docs. | `tests/test_migrations.py` and repository tests. |
+| New intelligence workflow | Add logic under `kgfs/intelligence/`, expose CLI under `kgfs/cli/commands/`, and keep source files untouched. | Focused Phase 8-style tests using temporary databases and source-hash checks. |
 | New search mode | Add engine under `kgfs/search/modes/`, register in `build_default_search_registry()`, extend `SearchMode` enum if user-facing. | `tests/test_search_kernel.py`, CLI tests if exposed. |
 | New web route | Add route in `kgfs/web/app.py` and template/static assets as needed. | `tests/test_web.py`. |
 | New packaging asset | Update `packaging/pyinstaller/kgfs.spec` and `scripts/build_package.py` archive contents. | `tests/test_packaging_scripts.py`, packaged smoke test. |

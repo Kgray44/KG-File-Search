@@ -339,6 +339,18 @@ This page inventories features implemented in the repository state at this commi
 - Sources: `kgfs/workflows/*.py`, `kgfs/cli/commands/profiles.py`, `kgfs/cli/commands/saved_searches.py`, `kgfs/cli/commands/collections.py`, `kgfs/cli/commands/tags.py`, `kgfs/cli/commands/notes.py`, `kgfs/cli/commands/assignment.py`, `kgfs/cli/commands/projects.py`.
 - Tests: `tests/test_phase7_workflows.py`, `tests/test_cli.py`, `tests/test_config.py`.
 
+### File Intelligence and Knowledge Graph
+
+- What it does: analyzes indexed file relationships locally: exact duplicates by hash, semantic near-duplicates from existing vectors, likely versions, inferred project candidates, bounded file/topic graphs, health reports, and metadata backup/import.
+- Use it with: `kgfs duplicates`, `kgfs versions`, `kgfs project infer`, `kgfs graph`, `kgfs health`, and `kgfs metadata`.
+- Inputs: existing KGFS file records, hashes, extracted text, semantic chunks when present, latest result IDs, and workflow metadata.
+- Outputs: duplicate groups, version candidates, project candidate rows, graph tables/Markdown, health JSON/tables, and metadata JSON backups.
+- Settings: `intelligence.*`, `metadata.*`.
+- Edge cases: semantic duplicates gracefully warn when local vectors are missing; metadata imports report unmatched files instead of touching source files.
+- Safety: no command deletes, moves, renames, annotates, or writes sidecars beside indexed source files.
+- Sources: `kgfs/intelligence/*.py`, `kgfs/cli/commands/duplicates.py`, `kgfs/cli/commands/versions.py`, `kgfs/cli/commands/graph.py`, `kgfs/cli/commands/health.py`, `kgfs/cli/commands/metadata.py`.
+- Tests: `tests/test_phase8_file_intelligence.py`.
+
 ### Result Explanations
 
 - What it does: explains why a saved latest search result matched a query, including score breakdown and snippet.
@@ -426,7 +438,7 @@ This page inventories features implemented in the repository state at this commi
 - Use it with: automatic CLI/web DB connection.
 - Inputs: SQLite connection.
 - Outputs: tables and `schema_version` row.
-- Settings: `CURRENT_SCHEMA_VERSION = 2`.
+- Settings: `CURRENT_SCHEMA_VERSION = 4`.
 - Edge cases: newer DB schema versions raise `RuntimeError`.
 - Sources: `kgfs/db/schema.py`, `kgfs/db/migrations.py`.
 - Tests: `tests/test_migrations.py`.

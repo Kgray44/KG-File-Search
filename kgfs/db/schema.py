@@ -178,6 +178,39 @@ def initialize_database(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
         CREATE INDEX IF NOT EXISTS idx_project_items_project ON project_items(project_id);
         CREATE INDEX IF NOT EXISTS idx_project_items_file ON project_items(file_id);
+
+        CREATE TABLE IF NOT EXISTS graph_edges (
+            id INTEGER PRIMARY KEY,
+            source_file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+            target_file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+            edge_type TEXT NOT NULL,
+            weight REAL NOT NULL,
+            evidence_json TEXT,
+            created_at TEXT NOT NULL,
+            UNIQUE(source_file_id, target_file_id, edge_type)
+        );
+
+        CREATE TABLE IF NOT EXISTS project_candidates (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            score REAL NOT NULL,
+            evidence_json TEXT,
+            created_at TEXT NOT NULL,
+            accepted_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS metadata_backups (
+            id INTEGER PRIMARY KEY,
+            path TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            note TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_graph_edges_source ON graph_edges(source_file_id);
+        CREATE INDEX IF NOT EXISTS idx_graph_edges_target ON graph_edges(target_file_id);
+        CREATE INDEX IF NOT EXISTS idx_graph_edges_type ON graph_edges(edge_type);
+        CREATE INDEX IF NOT EXISTS idx_project_candidates_name ON project_candidates(name);
+        CREATE INDEX IF NOT EXISTS idx_metadata_backups_created ON metadata_backups(created_at);
         """
     )
     migrate_database(conn)

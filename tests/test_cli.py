@@ -57,6 +57,13 @@ def test_cli_exposes_required_mvp_commands() -> None:
         "note-delete",
         "assignment",
         "project",
+        "duplicates",
+        "versions",
+        "versions-file",
+        "graph",
+        "graph-export",
+        "health",
+        "metadata",
     }.issubset(command.commands.keys())
 
 

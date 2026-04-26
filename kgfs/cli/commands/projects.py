@@ -8,6 +8,7 @@ import typer
 from rich.table import Table
 
 from kgfs.cli.shared import connect_runtime, console, format_timestamp, print_results
+from kgfs.intelligence.projects import accept_project_candidate, infer_project_candidates, list_project_candidates
 from kgfs.workflows.notes import notes_for_file
 from kgfs.workflows.projects import (
     add_results_to_project,
@@ -151,3 +152,71 @@ def project_search_cmd(
         print_results(f"Project {name}: {query}", report.results)
     finally:
         conn.close()
+
+
+@project_app.command("infer")
+def project_infer_cmd(
+    config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
+    database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
+    project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
+) -> None:
+    _, _, _, config, conn = connect_runtime(config_path, database_path, project_local)
+    try:
+        candidates = infer_project_candidates(conn, config, persist=True)
+        _print_candidates(candidates, title="Inferred Project Candidates")
+    finally:
+        conn.close()
+
+
+@project_app.command("candidates")
+def project_candidates_cmd(
+    config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
+    database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
+    project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
+) -> None:
+    _, _, _, _, conn = connect_runtime(config_path, database_path, project_local)
+    try:
+        _print_candidates(list_project_candidates(conn), title="Project Candidates")
+    finally:
+        conn.close()
+
+
+@project_app.command("accept-candidate")
+def project_accept_candidate_cmd(
+    candidate_id: int,
+    config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
+    database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
+    project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
+    name: str | None = typer.Option(None, "--name", help="Project name to create."),
+) -> None:
+    _, _, _, _, conn = connect_runtime(config_path, database_path, project_local)
+    try:
+        try:
+            summary = accept_project_candidate(conn, candidate_id, name=name)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+        console.print(f"Accepted candidate; added {summary.added}, skipped {summary.skipped}.")
+    finally:
+        conn.close()
+
+
+def _print_candidates(candidates, *, title: str) -> None:
+    table = Table(title=title)
+    table.add_column("ID")
+    table.add_column("Name")
+    table.add_column("Score", justify="right")
+    table.add_column("Files", justify="right")
+    table.add_column("Evidence")
+    table.add_column("Accepted Project")
+    for candidate in candidates:
+        table.add_row(
+            str(candidate.id),
+            candidate.name,
+            f"{candidate.score:.3f}",
+            str(len(candidate.file_ids)),
+            "; ".join(candidate.evidence),
+            str(candidate.accepted_project_id or ""),
+        )
+    console.print(table)
+    if not candidates:
+        console.print("No project candidates found.")

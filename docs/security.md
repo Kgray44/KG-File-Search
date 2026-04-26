@@ -139,6 +139,20 @@ is removed, so workflow metadata in that database is removed too.
 
 Sources: `kgfs/workflows/*.py`, `kgfs/db/schema.py`, `tests/test_phase7_workflows.py`.
 
+## File Intelligence Privacy
+
+Duplicate detection, version detection, project inference, graph building,
+health reports, and metadata backup/import all operate on local KGFS database
+rows and existing local vector chunks when available.
+
+KGFS does not delete duplicates, rename versions, move project files, write
+tags/notes into source files, or create sidecar metadata beside source files.
+Metadata backups contain workflow metadata and stable file identities, but not
+source file contents, extracted text, OCR cache text, vector blobs, model
+caches, or API keys.
+
+Sources: `kgfs/intelligence/*.py`, `kgfs/cli/commands/metadata.py`, `tests/test_phase8_file_intelligence.py`.
+
 ## Secrets
 
 Do not put API keys in `config.yaml`.

@@ -10,8 +10,9 @@ This documentation is based on the repository state at this commit. Source refer
 - Indexes configured folders without deleting, moving, renaming, or overwriting source files.
 - Skips noisy, system, dependency, cache, application, game, binary, media, archive, and over-size files by default.
 - Extracts text from text-like files, Markdown, code, CSV, DOCX, and PDF.
-- Stores file records, FTS rows, latest result IDs, semantic chunks, and schema metadata in SQLite.
+- Stores file records, FTS rows, latest result IDs, semantic chunks, workflow metadata, file-intelligence metadata, and schema metadata in SQLite.
 - Searches with keyword, semantic, hybrid, and auto modes, plus score explanations for latest results.
+- Provides local investigation and workflow commands for deep search, similar files, compare, timeline, research, profiles, saved searches, collections, tags, notes, assignments, projects, duplicates, versions, graphs, health, and metadata backups.
 - Provides CLI commands for init, doctor, config, folder management, indexing, search, why, AI-assisted ask/rerank, semantic indexing/search, stats, open/reveal, prune, reset, rebuild, and a local web dashboard.
 - Packages with PyInstaller for Windows and macOS builds.
 
@@ -25,6 +26,7 @@ Primary source files:
 - Database: `kgfs/db/*.py`
 - Search: `kgfs/search/*.py`, `kgfs/search/modes/*.py`
 - Vector backends and management: `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`
+- Workflows and intelligence: `kgfs/workflows/*.py`, `kgfs/intelligence/*.py`
 - Result explanations: `kgfs/search/explain.py`, `kgfs/cli/commands/why.py`
 - AI Assist: `kgfs/ai.py`
 - Web dashboard: `kgfs/web/app.py`, `kgfs/web/templates/*.html`
@@ -107,6 +109,7 @@ flowchart LR
 - `kgfs index` refuses risky roots unless `--allow-risky-root` is passed.
 - Prune and reset operations remove only KGFS database/index data, never source files.
 - Vector clear removes only KGFS chunk/vector data for the configured model.
+- Workflow and intelligence metadata is stored in KGFS database/app-data/project-local paths, never in source files or sidecars.
 - Semantic search is local and optional.
 - OpenAI AI Assist is opt-in, downstream of local search, and uses snippets by default.
 - The web dashboard has no authentication at this commit and binds to `127.0.0.1` by default.

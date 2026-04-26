@@ -126,6 +126,17 @@ Compatibility aliases allow older flat imports such as `kgfs.config`, `kgfs.data
 | `assignment_working_set()` | Build a local assignment working set. | `kgfs/workflows/assignments.py` |
 | `create_project()`, `add_results_to_project()`, `project_search()` | Manage manual local projects and project-scoped search. | `kgfs/workflows/projects.py` |
 
+### Intelligence Helpers
+
+| API | Purpose | Source |
+|---|---|---|
+| `find_exact_duplicates()`, `find_semantic_duplicates()` | Return duplicate groups from hashes or existing local vectors. | `kgfs/intelligence/duplicates.py` |
+| `find_versions_for_result()`, `find_versions_for_path()` | Return likely version candidates. | `kgfs/intelligence/versions.py` |
+| `infer_project_candidates()`, `list_project_candidates()`, `accept_project_candidate()` | Infer and accept local project candidates. | `kgfs/intelligence/projects.py` |
+| `build_topic_graph()`, `build_file_graph()`, `build_project_graph()` | Build bounded local graph results. | `kgfs/intelligence/graph.py` |
+| `build_health_report()` | Return read-only index/workflow health data. | `kgfs/intelligence/health.py` |
+| `export_metadata()`, `import_metadata()`, `create_metadata_backup()` | Export/import KGFS workflow metadata without source contents. | `kgfs/intelligence/export.py` |
+
 ### Semantic Helpers
 
 | API | Purpose | Source |

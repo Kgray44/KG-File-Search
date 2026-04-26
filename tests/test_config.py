@@ -101,6 +101,12 @@ def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
     assert ".pdf" in loaded.assignment.include_extensions
     assert loaded.projects.default_limit == 20
     assert loaded.projects.infer_from_folders is False
+    assert loaded.intelligence.duplicate_min_semantic_score == 0.92
+    assert loaded.intelligence.version_min_similarity == 0.72
+    assert loaded.intelligence.project_min_score == 0.55
+    assert loaded.intelligence.graph_max_nodes == 40
+    assert loaded.metadata.auto_backup_before_reset is True
+    assert loaded.metadata.export_format == "json"
     assert loaded.ai.enabled is False
     assert loaded.ai.api_key_env == "OPENAI_API_KEY"
     assert loaded.ai.send_file_paths is False
@@ -141,3 +147,5 @@ def test_existing_config_without_hybrid_section_uses_defaults(tmp_path: Path) ->
     assert config.timeline.default_limit == 50
     assert config.assignment.default_limit == 20
     assert config.projects.default_limit == 20
+    assert config.intelligence.graph_max_edges == 120
+    assert config.metadata.auto_backup_before_reset is True

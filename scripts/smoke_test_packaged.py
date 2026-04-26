@@ -58,6 +58,12 @@ def smoke_test(executable: Path) -> None:
             ["note", "--help"],
             ["assignment", "--help"],
             ["project", "--help"],
+            ["duplicates", "--help"],
+            ["versions", "--help"],
+            ["graph", "--help"],
+            ["graph-export", "--help"],
+            ["health", "--help"],
+            ["metadata", "--help"],
         ):
             run_command(executable, args, cwd=workspace)
         run_command(executable, ["doctor", "--project-local"], cwd=workspace)

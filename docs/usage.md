@@ -235,6 +235,71 @@ that database is not preserved in this phase.
 
 Sources: `kgfs/workflows/*.py`, `kgfs/cli/commands/*`, `tests/test_phase7_workflows.py`.
 
+## File Intelligence Workflows
+
+Phase 8 intelligence commands inspect the local KGFS index and workflow
+metadata. They do not modify source files and do not create sidecars.
+
+Find exact duplicates by stored content hash:
+
+```bash
+kgfs duplicates
+kgfs duplicates --exact
+```
+
+Find semantic near-duplicates when local vectors already exist:
+
+```bash
+kgfs duplicates --semantic --min-score 0.92
+```
+
+Find likely versions from the latest result table or an indexed path:
+
+```bash
+kgfs search "motor torque final"
+kgfs versions 1
+kgfs versions-file ./notes/motor-torque-final.md
+```
+
+Infer and accept manual project candidates:
+
+```bash
+kgfs project infer
+kgfs project candidates
+kgfs project accept-candidate 1 --name "Audio Crossover"
+```
+
+Build a bounded local graph:
+
+```bash
+kgfs graph "speaker crossover"
+kgfs graph --file 1
+kgfs graph --project "Audio Crossover"
+kgfs graph-export "speaker crossover" --format markdown
+```
+
+Check index health and suggested maintenance commands:
+
+```bash
+kgfs health
+kgfs health --json
+kgfs health --fix-suggestions
+```
+
+Protect workflow metadata before destructive KGFS database resets:
+
+```bash
+kgfs metadata export --output kgfs-metadata-backup.json
+kgfs metadata import kgfs-metadata-backup.json --yes
+kgfs metadata backup
+kgfs metadata restore .kgfs/metadata-backups/kgfs-metadata-....json --yes
+```
+
+`metadata.auto_backup_before_reset: true` makes `kgfs reset-index --yes` create
+a metadata backup before deleting KGFS database/index files.
+
+Sources: `kgfs/intelligence/*.py`, `kgfs/cli/commands/duplicates.py`, `kgfs/cli/commands/versions.py`, `kgfs/cli/commands/graph.py`, `kgfs/cli/commands/health.py`, `kgfs/cli/commands/metadata.py`, `tests/test_phase8_file_intelligence.py`.
+
 ## Semantic Search
 
 Install semantic dependencies:

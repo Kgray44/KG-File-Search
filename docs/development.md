@@ -137,7 +137,7 @@ Workflow metadata lives in the same KGFS database. When adding or changing
 profiles, saved searches, collections, tags, notes, assignments, or projects,
 keep source files untouched and put reusable DB helpers under `kgfs/workflows/`.
 
-Current schema version is `CURRENT_SCHEMA_VERSION = 3`.
+Current schema version is `CURRENT_SCHEMA_VERSION = 4`.
 
 ## Add a New Search Mode
 
@@ -177,6 +177,20 @@ Current vector backend support:
 - `faiss` optional accelerated backend
 
 Sources: `kgfs/search/backends/*.py`, `kgfs/vectors/*.py`.
+
+## Add a New Intelligence Feature
+
+1. Add read-only analysis logic under `kgfs/intelligence/`.
+2. Store derived metadata only in KGFS database/app-data/project-local paths.
+3. Never write sidecars beside indexed source files.
+4. Add a CLI module under `kgfs/cli/commands/` when user-facing.
+5. Register it in `kgfs/cli/app.py`.
+6. Add tests using temporary folders/databases and source hash checks.
+7. Update [CLI](cli.md), [Features](features.md), [Usage](usage.md), [Settings](settings.md), [Security](security.md), and [Data Model](data-model.md) if schema changes.
+
+Current examples: duplicates, versions, project inference, graph, health, and metadata backup/import.
+
+Sources: `kgfs/intelligence/*.py`, `tests/test_phase8_file_intelligence.py`.
 
 ## Add a Provider or Integration
 

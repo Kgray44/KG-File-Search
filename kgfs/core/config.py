@@ -322,6 +322,58 @@ class ProjectsSettings(BaseModel):
         return number if number > 0 else 20
 
 
+class IntelligenceSettings(BaseModel):
+    duplicate_min_semantic_score: float = 0.92
+    version_min_similarity: float = 0.72
+    project_min_score: float = 0.55
+    graph_max_nodes: int = 40
+    graph_max_edges: int = 120
+    health_check_limit: int = 100
+
+    @field_validator("duplicate_min_semantic_score", "version_min_similarity", "project_min_score", mode="before")
+    @classmethod
+    def _score(cls, value: Any, info) -> float:
+        defaults = {
+            "duplicate_min_semantic_score": 0.92,
+            "version_min_similarity": 0.72,
+            "project_min_score": 0.55,
+        }
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return defaults[info.field_name]
+        return max(0.0, min(1.0, number))
+
+    @field_validator("graph_max_nodes", "graph_max_edges", "health_check_limit", mode="before")
+    @classmethod
+    def _positive_int(cls, value: Any, info) -> int:
+        defaults = {"graph_max_nodes": 40, "graph_max_edges": 120, "health_check_limit": 100}
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return defaults[info.field_name]
+        return number if number > 0 else defaults[info.field_name]
+
+
+class MetadataSettings(BaseModel):
+    backup_dir: Path | None = None
+    auto_backup_before_reset: bool = True
+    export_format: str = "json"
+
+    @field_validator("backup_dir", mode="before")
+    @classmethod
+    def _expand_backup_dir(cls, value: Any) -> Path | None:
+        if value in (None, ""):
+            return None
+        return _expand_path(value)
+
+    @field_validator("export_format", mode="before")
+    @classmethod
+    def _format(cls, value: Any) -> str:
+        text = str(value or "json").strip().lower()
+        return text if text in {"json"} else "json"
+
+
 class SqliteVecSettings(BaseModel):
     enabled: bool = False
     experimental: bool = True
@@ -444,6 +496,8 @@ class KGFSConfig(BaseModel):
     profiles: dict[str, ProfilePresetSettings] = Field(default_factory=dict)
     assignment: AssignmentSettings = Field(default_factory=AssignmentSettings)
     projects: ProjectsSettings = Field(default_factory=ProjectsSettings)
+    intelligence: IntelligenceSettings = Field(default_factory=IntelligenceSettings)
+    metadata: MetadataSettings = Field(default_factory=MetadataSettings)
     vectors: VectorSettings = Field(default_factory=VectorSettings)
     hybrid: HybridSettings = Field(default_factory=HybridSettings)
     ai: AISettings = Field(default_factory=AISettings)
@@ -683,6 +737,19 @@ assignment:
 projects:
   default_limit: 20
   infer_from_folders: false
+
+intelligence:
+  duplicate_min_semantic_score: 0.92
+  version_min_similarity: 0.72
+  project_min_score: 0.55
+  graph_max_nodes: 40
+  graph_max_edges: 120
+  health_check_limit: 100
+
+metadata:
+  backup_dir: null
+  auto_backup_before_reset: true
+  export_format: "json"
 
 vectors:
   backend: "sqlite_scan"

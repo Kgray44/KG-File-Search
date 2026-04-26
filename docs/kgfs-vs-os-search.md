@@ -28,7 +28,7 @@ That difference matters. KGFS should be judged by whether it is controlled, insp
 | AI assistance | Optional OpenAI-only AI Assist, disabled by default, downstream of local snippets, with preview/confirmation/redaction settings. | May include web/cloud/account results depending on Windows settings; not KGFS-style bounded context preview. | Semantic indexing is on-device per Microsoft; not KGFS-style OpenAI snippet workflow. | Spotlight can show suggestions/actions; not KGFS-style bounded context preview. |
 | Privacy defaults | No folders indexed and no AI calls by default; selected local folders only. | Indexing is enabled for OS convenience and can include local, cloud, web, and account results depending on settings. | Microsoft says semantic index data is stored locally on the PC, with supported Copilot+ behavior and settings. | OS-managed local search with configurable result categories and privacy exclusions. |
 | Source-file modification policy | Indexing, prune, reset, rebuild, and vector clear do not delete, move, rename, or overwrite indexed source files. | Search itself is for finding/opening; File Explorer can modify files when users perform file actions. | Same Windows file-management boundary. | Search itself is for finding/opening; Finder can modify files when users perform file actions. |
-| Advanced workflows / roadmap | Planned knowledge workflows include deep search, similar, compare, timeline, research, profiles, collections, tags, notes, duplicates, versions, and project graphs. Optional local image OCR is implemented first. | Best at OS convenience, launch, settings, and broad file lookup. | Best at OS-integrated semantic file/photo/settings search on supported hardware. | Best at Mac-wide convenience, app launch, Finder organization, and OS actions. |
+| Advanced workflows / roadmap | CLI workflows include deep search, similar, compare, timeline, research, profiles, collections, tags, notes, duplicates, versions, project candidates, graphs, and metadata backups. Optional local image OCR is implemented first. | Best at OS convenience, launch, settings, and broad file lookup. | Best at OS-integrated semantic file/photo/settings search on supported hardware. | Best at Mac-wide convenience, app launch, Finder organization, and OS actions. |
 | Best audience | Users who want controlled project/corpus indexing, reproducible search, inspectable data, and privacy-bounded AI assistance. | Everyday Windows users who want fast broad desktop search. | Copilot+ PC users who want natural-language Windows search without managing a separate corpus. | Mac users who want fast built-in search, app launching, previews, actions, and Finder workflows. |
 
 ## What KGFS Is Good At
@@ -105,9 +105,9 @@ KGFS AI Assist is not an always-on assistant. It is disabled by default, support
 
 Implemented sources: `kgfs/ai.py`, `kgfs/cli/shared.py`, `kgfs/cli/commands/search.py`, `docs/security.md`, `docs/settings.md`.
 
-### Future Knowledge Tools
+### Knowledge Workflow Tools
 
-The advanced roadmap points KGFS toward a local knowledge workbench rather than an OS launcher clone. Planned work includes:
+The advanced roadmap points KGFS toward a local knowledge workbench rather than an OS launcher clone. Current CLI workflows include:
 
 - Deep search.
 - Similar-file search.
@@ -119,9 +119,9 @@ The advanced roadmap points KGFS toward a local knowledge workbench rather than 
 - Tags and notes.
 - Assignment mode.
 - Project mode.
-- OCR beyond the initial local Tesseract image layer, including full scanned-PDF rasterization.
 - Duplicate and version finding.
 - File/topic/project graph features.
+- OCR beyond the initial local Tesseract image layer, including full scanned-PDF rasterization.
 
 Roadmap sources: `docs/roadmap.md`, `KGFS_Advanced_Roadmap_Canvas.md`.
 
@@ -190,7 +190,7 @@ This comparison suggests a clear product direction:
 | Area | Implemented now | Partially implemented / CLI-only | Planned | Not a KGFS goal |
 |---|---|---|---|---|
 | Scope and safety | Explicit-folder indexing, empty default config, risky-root refusal, source-file-safe maintenance. | Broad scans require `--allow-risky-root`. | Better profiles and corpus management. | Whole-drive indexing by default. |
-| Project workflows | `--project-local` stores config/data under `.kgfs/`. | Project workflow is CLI-driven. | Project mode, saved searches, collections, tags, and notes. | Replacing OS project/file managers. |
+| Project workflows | `--project-local` stores config/data under `.kgfs/`; profiles, saved searches, collections, tags, notes, assignment mode, and manual projects are implemented. | Project workflow is CLI-driven. | Richer web UX and workflow export polish. | Replacing OS project/file managers. |
 | Keyword search | SQLite FTS5 keyword search, snippets, filters, latest result IDs. | Web dashboard search is keyword-only. | Better dashboard search UX. | Replacing OS global instant search. |
 | Semantic search | Optional local embeddings and chunk storage when enabled. | CLI/search kernel only; requires readiness checks and local dependencies. | More advanced vector backends and quality work. | Cloud semantic indexing by default. |
 | Hybrid search | CLI/search kernel hybrid mode with configurable ranking weights. | Not exposed in the current web dashboard. | Better hybrid quality and dashboard controls. | Opaque ranking without explanation. |
@@ -199,7 +199,7 @@ This comparison suggests a clear product direction:
 | Web UI | Local FastAPI dashboard for home, keyword search, stats, config, failures, open, and reveal. | No authentication; semantic/hybrid search not exposed in web search. | Better dashboard, local API, TUI, launcher integrations. | Becoming a public hosted search service. |
 | AI Assist | Optional OpenAI answer synthesis and reranking, disabled by default, bounded by local snippets. | OpenAI-only; no implemented query expansion despite config key. | Privacy-protected advanced ask/research workflows. | Always-on cloud assistant behavior. |
 | OCR and media | Optional local Tesseract image OCR is implemented and disabled by default. Scanned-PDF rasterization is scaffolded with safe error reporting. | Full scanned-PDF rasterization, photos/image metadata, audio transcription, and visual search are planned. | OCR, photos/image metadata, audio transcription, visual search. | Modifying source images, PDFs, or media files. |
-| Knowledge workflows | Basic search, open/reveal, stats, doctor, prune/reset/rebuild. | Reproducible corpus workflows exist mostly through CLI. | Deep, similar, compare, timeline, research, profiles, collections, tags, notes, duplicates, versions, graphs. | Replacing the operating system shell. |
+| Knowledge workflows | Basic search, open/reveal, stats, doctor, prune/reset/rebuild; deep, similar, compare, timeline, research, profiles, collections, tags, notes, duplicates, versions, graphs, health, and metadata backups. | Reproducible corpus workflows exist mostly through CLI. | More web/dashboard workflow surfaces and richer graph visualization. | Replacing the operating system shell. |
 
 ## Source Notes
 

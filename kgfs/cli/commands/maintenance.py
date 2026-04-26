@@ -7,6 +7,8 @@ from pathlib import Path
 import typer
 
 from kgfs.cli.shared import connect_runtime, console, optional_config_runtime, runtime
+from kgfs.db import connect_database, initialize_database
+from kgfs.intelligence.export import create_metadata_backup
 from kgfs.indexing.prune import prune_stale_files
 from kgfs.reset import rebuild_index, reset_index
 
@@ -49,12 +51,20 @@ def reset_index_cmd(
 ) -> None:
     """Reset only KGFS database/index files, never source files."""
 
-    _, _, resolved_database_path, _ = optional_config_runtime(config_path, database_path, project_local)
+    app_paths, _, resolved_database_path, config = optional_config_runtime(config_path, database_path, project_local)
     if not dry_run and not yes:
         if not typer.confirm("Delete KGFS database/index files only?", default=False):
             console.print("Reset cancelled.")
             return
         yes = True
+    if not dry_run and yes and config.metadata.auto_backup_before_reset and resolved_database_path.exists():
+        conn = connect_database(resolved_database_path)
+        try:
+            initialize_database(conn)
+            backup = create_metadata_backup(conn, app_paths, config, note="automatic backup before reset-index")
+            console.print(f"Backed up KGFS metadata to {backup.path}.")
+        finally:
+            conn.close()
     summary = reset_index(resolved_database_path, dry_run=dry_run, yes=yes)
     if dry_run:
         console.print(f"Would remove KGFS database files for: {resolved_database_path}")

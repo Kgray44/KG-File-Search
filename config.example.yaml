@@ -191,6 +191,19 @@ projects:
   default_limit: 20
   infer_from_folders: false
 
+intelligence:
+  duplicate_min_semantic_score: 0.92
+  version_min_similarity: 0.72
+  project_min_score: 0.55
+  graph_max_nodes: 40
+  graph_max_edges: 120
+  health_check_limit: 100
+
+metadata:
+  backup_dir: null
+  auto_backup_before_reset: true
+  export_format: "json"
+
 vectors:
   backend: "sqlite_scan"
   shard_strategy: "none"

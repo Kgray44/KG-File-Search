@@ -34,6 +34,11 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs note` / `kgfs notes` / `kgfs note-delete` | Add, list, and delete local notes. | `kgfs/cli/commands/notes.py` |
 | `kgfs assignment` | Build a local assignment working set. | `kgfs/cli/commands/assignment.py` |
 | `kgfs project` | Manage manual local projects. | `kgfs/cli/commands/projects.py` |
+| `kgfs duplicates` | Find exact or semantic duplicate files. | `kgfs/cli/commands/duplicates.py` |
+| `kgfs versions` / `kgfs versions-file` | Find likely file versions. | `kgfs/cli/commands/versions.py` |
+| `kgfs graph` / `kgfs graph-export` | Build or export a bounded local file/topic graph. | `kgfs/cli/commands/graph.py` |
+| `kgfs health` | Show a read-only local index health report. | `kgfs/cli/commands/health.py` |
+| `kgfs metadata` | Export/import/backup/restore KGFS metadata. | `kgfs/cli/commands/metadata.py` |
 | `kgfs semantic` | Semantic-only search. | `kgfs/cli/commands/semantic.py` |
 | `kgfs semantic-index` | Show semantic status or rebuild semantic chunks. | `kgfs/cli/commands/semantic.py` |
 | `kgfs vector status` | Show semantic vector backend/chunk readiness. | `kgfs/cli/commands/vector.py` |
@@ -252,6 +257,9 @@ kgfs project create "Audio Crossover"
 kgfs project add "Audio Crossover" 1 3 5
 kgfs project show "Audio Crossover"
 kgfs project search "Audio Crossover" "op amp filter"
+kgfs project infer
+kgfs project candidates
+kgfs project accept-candidate 1 --name "Audio Crossover"
 ```
 
 Collections and projects add files by latest search result ID. Notes and tags
@@ -259,6 +267,43 @@ also attach to file IDs resolved through latest search result IDs. `reset-index`
 removes the KGFS database, so workflow metadata in that database is removed too.
 
 Sources: `kgfs/workflows/*.py`, `kgfs/cli/commands/profiles.py`, `kgfs/cli/commands/saved_searches.py`, `kgfs/cli/commands/collections.py`, `kgfs/cli/commands/tags.py`, `kgfs/cli/commands/notes.py`, `kgfs/cli/commands/assignment.py`, `kgfs/cli/commands/projects.py`.
+
+## File Intelligence
+
+These commands analyze local KGFS database metadata. They do not delete,
+rename, move, tag, annotate, or write sidecar files beside indexed source
+files.
+
+```bash
+kgfs duplicates [--exact] [--semantic] [--min-score 0.92]
+kgfs versions RESULT_ID
+kgfs versions-file PATH
+kgfs graph "speaker crossover"
+kgfs graph --file 3
+kgfs graph --project "Audio Crossover"
+kgfs graph-export "speaker crossover" --format markdown
+kgfs health [--json] [--fix-suggestions]
+kgfs metadata export --output kgfs-metadata-backup.json
+kgfs metadata import kgfs-metadata-backup.json --yes
+kgfs metadata backup
+kgfs metadata restore PATH --yes
+```
+
+`duplicates` uses content hashes for exact groups. `--semantic` uses existing
+local semantic chunk vectors and reports a helpful warning when vectors are not
+built. `versions` combines filename markers, same-folder evidence, size,
+modified time, extracted-text overlap, and semantic similarity when available.
+
+`graph` builds a bounded local graph from a topic, latest result ID, or project.
+The export command is named `graph-export` so query arguments and path flags work
+reliably across Typer/Click parsing.
+
+`metadata export` intentionally excludes source file contents, extracted text,
+OCR cache text, vector blobs, API keys, and model caches. Imports match metadata
+back to currently indexed files using content hash, normalized path, and
+filename/size fallback.
+
+Sources: `kgfs/intelligence/*.py`, `kgfs/cli/commands/duplicates.py`, `kgfs/cli/commands/versions.py`, `kgfs/cli/commands/graph.py`, `kgfs/cli/commands/health.py`, `kgfs/cli/commands/metadata.py`.
 
 ## `why`
 

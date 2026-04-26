@@ -56,6 +56,8 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | `profiles` | object | `{}` | No | named `ProfilePresetSettings` fields | Config presets and documentation; user-created profiles live in DB | Empty mapping by default. | Null becomes `{}`; profile extension values are normalized. |
 | `assignment` | object | See below | No | `AssignmentSettings` fields | `kgfs assignment` | Defaults applied. | Limit is clamped positive; extensions are normalized. |
 | `projects` | object | See below | No | `ProjectsSettings` fields | `kgfs project search` | Defaults applied. | Non-positive limit falls back to the default. |
+| `intelligence` | object | See below | No | `IntelligenceSettings` fields | duplicates, versions, graph, health, project inference | Defaults applied. | Scores are clamped to 0..1 and limits are clamped positive. |
+| `metadata` | object | See below | No | `MetadataSettings` fields | metadata backup/export and reset-index auto-backup | Defaults applied. | Only JSON export format is supported in this phase. |
 | `vectors` | object | See below | No | `VectorSettings` fields | Semantic/hybrid search and vector commands | Defaults applied. | Unknown backend names make semantic/hybrid unavailable and vector rebuild/clear fail with known-backend guidance. |
 | `hybrid` | object | See below | No | `HybridSettings` fields | Hybrid ranking | Defaults applied. | Numeric weights are coerced; invalid/negative values are made safe at runtime. |
 | `ai` | object | See below | No | `AISettings` fields | CLI ask/rerank and `kgfs/ai.py` | Defaults disabled. | Unsupported provider raises `AIError` when AI is used. |
@@ -246,6 +248,33 @@ Each profile can define:
 |---|---|---:|---|---|
 | `default_limit` | int | `20` | `kgfs/workflows/projects.py` | Default project search result limit. |
 | `infer_from_folders` | bool | `false` | config only at this commit | Reserved for future project inference; Phase 7 uses manual projects only. |
+
+### `intelligence`
+
+Phase 8 file intelligence is local and read-only against source files. It uses
+indexed metadata, hashes, extracted text, workflow metadata, and existing local
+semantic chunks when available.
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `duplicate_min_semantic_score` | float | `0.92` | `kgfs duplicates --semantic` | Minimum semantic similarity for near-duplicate grouping. |
+| `version_min_similarity` | float | `0.72` | `kgfs versions`, `kgfs versions-file` | Minimum score for likely version candidates. |
+| `project_min_score` | float | `0.55` | `kgfs project infer` | Minimum score for inferred project candidates. |
+| `graph_max_nodes` | int | `40` | `kgfs graph` | Maximum graph nodes returned. |
+| `graph_max_edges` | int | `120` | `kgfs graph` | Maximum graph edges returned. |
+| `health_check_limit` | int | `100` | reserved | Limit placeholder for future heavier health checks. |
+
+### `metadata`
+
+Metadata backup/export protects local KGFS workflow metadata. It does not copy
+source file contents, extracted text, vector blobs, OCR cache text, API keys, or
+model caches.
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `backup_dir` | path or null | `null` | `kgfs metadata backup`, `reset-index` auto-backup | Null writes backups under the KGFS app/project-local data directory. |
+| `auto_backup_before_reset` | bool | `true` | `kgfs reset-index` | Creates a KGFS metadata backup before deleting database/index files. |
+| `export_format` | str | `json` | config validation | Only `json` is supported in this phase. |
 
 ### `vectors`
 
@@ -443,6 +472,19 @@ assignment:
 projects:
   default_limit: 20
   infer_from_folders: false
+
+intelligence:
+  duplicate_min_semantic_score: 0.92
+  version_min_similarity: 0.72
+  project_min_score: 0.55
+  graph_max_nodes: 40
+  graph_max_edges: 120
+  health_check_limit: 100
+
+metadata:
+  backup_dir: null
+  auto_backup_before_reset: true
+  export_format: "json"
 
 vectors:
   backend: "sqlite_scan"

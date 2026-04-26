@@ -34,6 +34,7 @@ kgfs search "sample query" --project-local
 - Result explanations with `kgfs why`.
 - Local investigation commands: `kgfs deep`, `kgfs similar`, `kgfs similar-file`, `kgfs compare`, `kgfs timeline`, and `kgfs research`.
 - Local personal workflow metadata: profiles, saved searches, collections, tags, notes, assignment mode, and manual projects.
+- Local file intelligence: exact/semantic duplicates, versions, project candidates, file/topic graphs, health reports, and metadata backups.
 - Optional OpenAI AI Assist for answer synthesis and reranking after local search.
 - Typer CLI and a local FastAPI dashboard.
 - PyInstaller packaging scripts and GitHub Actions workflows.
@@ -48,6 +49,7 @@ kgfs search "sample query" --project-local
 - Prune/reset/vector-clear operations remove only KGFS index data, not source files.
 - OCR is off by default, never writes back to images/PDFs, and stores OCR cache data only in KGFS database/cache locations.
 - Workflow metadata is stored in KGFS config/database only; KGFS never writes tags, notes, or collections into source files.
+- File intelligence metadata and backups stay in KGFS database/app-data/project-local paths; KGFS never writes analysis sidecars beside source files.
 - AI Assist is off by default and sends bounded snippets only after opt-in.
 
 ## Documentation
@@ -151,6 +153,23 @@ kgfs assignment "robotics motor lab"
 kgfs project create "Audio Crossover"
 kgfs project search "Audio Crossover" "frequency response"
 ```
+
+Local file intelligence commands analyze the existing KGFS index without editing source files:
+
+```bash
+kgfs duplicates
+kgfs duplicates --semantic
+kgfs versions 4
+kgfs project infer
+kgfs project candidates
+kgfs project accept-candidate 1 --name "Audio Crossover"
+kgfs graph "speaker crossover"
+kgfs health --fix-suggestions
+kgfs metadata export --output kgfs-metadata-backup.json
+kgfs metadata import kgfs-metadata-backup.json --yes
+```
+
+`reset-index` can automatically create a KGFS metadata backup when `metadata.auto_backup_before_reset: true`, but it still deletes the active KGFS database/index files after the backup.
 
 Build a packaged executable:
 

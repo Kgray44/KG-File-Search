@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, timezone
 
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 
 
 def migrate_database(conn: sqlite3.Connection) -> None:
@@ -14,6 +14,7 @@ def migrate_database(conn: sqlite3.Connection) -> None:
     Version 1 is the initial KGFS schema plus precise modified-time metadata.
     Version 2 adds OCR extraction source metadata and the local OCR cache table.
     Version 3 adds local personal workflow metadata tables.
+    Version 4 adds local file intelligence metadata tables.
     The function is intentionally safe to run after every initialization.
     """
 
@@ -27,8 +28,9 @@ def migrate_database(conn: sqlite3.Connection) -> None:
         )
     _ensure_ocr_cache_table(conn)
     _ensure_workflow_tables(conn)
-    if current < 3:
-        _set_schema_version(conn, 3)
+    _ensure_intelligence_tables(conn)
+    if current < 4:
+        _set_schema_version(conn, 4)
     conn.commit()
 
 
@@ -190,6 +192,45 @@ def _ensure_workflow_tables(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
         CREATE INDEX IF NOT EXISTS idx_project_items_project ON project_items(project_id);
         CREATE INDEX IF NOT EXISTS idx_project_items_file ON project_items(file_id);
+        """
+    )
+
+
+def _ensure_intelligence_tables(conn: sqlite3.Connection) -> None:
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS graph_edges (
+            id INTEGER PRIMARY KEY,
+            source_file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+            target_file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+            edge_type TEXT NOT NULL,
+            weight REAL NOT NULL,
+            evidence_json TEXT,
+            created_at TEXT NOT NULL,
+            UNIQUE(source_file_id, target_file_id, edge_type)
+        );
+
+        CREATE TABLE IF NOT EXISTS project_candidates (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            score REAL NOT NULL,
+            evidence_json TEXT,
+            created_at TEXT NOT NULL,
+            accepted_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS metadata_backups (
+            id INTEGER PRIMARY KEY,
+            path TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            note TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_graph_edges_source ON graph_edges(source_file_id);
+        CREATE INDEX IF NOT EXISTS idx_graph_edges_target ON graph_edges(target_file_id);
+        CREATE INDEX IF NOT EXISTS idx_graph_edges_type ON graph_edges(edge_type);
+        CREATE INDEX IF NOT EXISTS idx_project_candidates_name ON project_candidates(name);
+        CREATE INDEX IF NOT EXISTS idx_metadata_backups_created ON metadata_backups(created_at);
         """
     )
 

@@ -240,6 +240,7 @@ Default API behavior:
 - Reads the token from the environment variable named by `api.token_env`, default `KGFS_API_TOKEN`.
 - Refuses non-localhost binds unless `--allow-network` is supplied.
 - Keeps open/reveal actions disabled unless `api.allow_file_actions: true`.
+- Includes FastAPI's generated `/docs`, `/redoc`, and `/openapi.json` schema endpoints, which expose route metadata but not indexed file contents.
 
 The API does not expose arbitrary path open/reveal endpoints. File actions use latest result IDs from KGFS search results.
 

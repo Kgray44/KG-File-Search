@@ -83,6 +83,17 @@ curl -H "Authorization: Bearer $KGFS_API_TOKEN" \
 
 Tests: `tests/test_phase9_ux_integrations.py`.
 
+Framework-provided FastAPI endpoints are also present on the JSON API app
+because `FastAPI(title="KGFS Local API")` is created without disabling default
+docs/schema URLs. These expose API schema/docs, not KGFS index contents, and are
+not customized by KGFS:
+
+| Method | Path | Response | Notes | Source |
+|---|---|---|---|---|
+| `GET` | `/openapi.json` | JSON | FastAPI-generated OpenAPI schema for the local API app. | `kgfs/api/app.py` |
+| `GET` | `/docs` | HTML | FastAPI Swagger UI. Not customized by KGFS. | `kgfs/api/app.py` |
+| `GET` | `/redoc` | HTML | FastAPI ReDoc UI. Not customized by KGFS. | `kgfs/api/app.py` |
+
 ## FastAPI Dashboard
 
 App factory source: `kgfs/web/app.py`.

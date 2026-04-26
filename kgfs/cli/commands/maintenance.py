@@ -91,6 +91,5 @@ def rebuild_cmd(
         return
     summary = rebuild_index(config, resolved_database_path, allow_risky_root=allow_risky_root)
     console.print(
-        f"Rebuild complete: discovered {summary.discovered}, indexed {summary.indexed}, "
-        f"failures {summary.failed}."
+        f"Rebuild complete: discovered {summary.discovered}, indexed {summary.indexed}, failures {summary.failed}."
     )

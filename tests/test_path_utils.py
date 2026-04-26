@@ -17,4 +17,3 @@ def test_expand_user_path_handles_windows_tilde_separator_on_any_host(tmp_path: 
     expanded = expand_user_path("~\\Documents\\Résumé (final).md", home=home)
 
     assert expanded == home / "Documents" / "Résumé (final).md"
-

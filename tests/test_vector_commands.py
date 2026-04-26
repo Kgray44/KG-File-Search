@@ -128,7 +128,10 @@ def test_vector_rebuild_missing_optional_backend_is_helpful(tmp_path: Path) -> N
 def test_vector_clear_backend_artifacts_does_not_delete_chunks_or_files(tmp_path: Path, mocker) -> None:
     config_path, db_path, source = _indexed_db(tmp_path)
     mocker.patch("kgfs.vectors.index_manager.get_embedder", return_value=FakeEmbedder())
-    assert runner.invoke(app, ["vector", "rebuild", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
+    assert (
+        runner.invoke(app, ["vector", "rebuild", "--config", str(config_path), "--database", str(db_path)]).exit_code
+        == 0
+    )
     conn = connect_database(db_path)
     before_chunks = conn.execute("SELECT COUNT(*) AS count FROM chunks").fetchone()["count"]
     conn.close()
@@ -149,9 +152,15 @@ def test_vector_clear_backend_artifacts_does_not_delete_chunks_or_files(tmp_path
 def test_vector_benchmark_and_recommend_commands(tmp_path: Path, mocker) -> None:
     config_path, db_path, _ = _indexed_db(tmp_path)
     mocker.patch("kgfs.vectors.index_manager.get_embedder", return_value=FakeEmbedder())
-    assert runner.invoke(app, ["vector", "rebuild", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
+    assert (
+        runner.invoke(app, ["vector", "rebuild", "--config", str(config_path), "--database", str(db_path)]).exit_code
+        == 0
+    )
 
-    benchmark = runner.invoke(app, ["vector", "benchmark", "--backend", "sqlite_scan", "--config", str(config_path), "--database", str(db_path)])
+    benchmark = runner.invoke(
+        app,
+        ["vector", "benchmark", "--backend", "sqlite_scan", "--config", str(config_path), "--database", str(db_path)],
+    )
     recommend = runner.invoke(app, ["vector", "recommend", "--config", str(config_path), "--database", str(db_path)])
 
     assert benchmark.exit_code == 0

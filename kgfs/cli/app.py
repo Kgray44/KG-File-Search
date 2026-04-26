@@ -6,9 +6,11 @@ import typer
 
 from kgfs.cli.commands import (
     assignment,
+    capabilities,
     collections,
     compare,
     config,
+    db,
     deep,
     doctor,
     duplicates,
@@ -26,6 +28,7 @@ from kgfs.cli.commands import (
     ocr,
     profiles,
     projects,
+    quickstart,
     search,
     semantic,
     similar,
@@ -38,17 +41,42 @@ from kgfs.cli.commands import (
     tui,
     vector,
     versions,
+    version,
     web,
     why,
 )
+from kgfs.version import __version__
 
-app = typer.Typer(help="KG File Search: private local-first file search.")
+app = typer.Typer(help="KG File Search: private local-first file search.", no_args_is_help=True)
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"KGFS {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version_requested: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show KGFS version and exit.",
+    ),
+) -> None:
+    """KG File Search: private local-first file search."""
 
 
 def _register_commands() -> None:
     for module in (
         init,
         doctor,
+        version,
+        quickstart,
+        capabilities,
+        db,
         config,
         index,
         search,

@@ -91,7 +91,9 @@ def test_ocr_failure_is_stored_as_extraction_error(tmp_path: Path, mocker) -> No
     )
 
     summary = index_configured_folders(config, conn)
-    row = conn.execute("SELECT extraction_status, extraction_error, extraction_source FROM files WHERE file_name = 'scan.png'").fetchone()
+    row = conn.execute(
+        "SELECT extraction_status, extraction_error, extraction_source FROM files WHERE file_name = 'scan.png'"
+    ).fetchone()
 
     assert summary.failed == 1
     assert row["extraction_status"] == "error"

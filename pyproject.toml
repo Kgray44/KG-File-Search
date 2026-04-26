@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kg-file-search"
-version = "0.1.0"
+dynamic = ["version"]
 description = "KG File Search: local-first semantic and keyword file search."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -26,6 +26,9 @@ dependencies = [
 dev = [
   "pytest>=8.0",
   "pytest-mock>=3.12",
+  "pytest-cov>=5.0",
+  "ruff>=0.8.0",
+  "mypy>=1.13",
 ]
 semantic = [
   "sentence-transformers>=2.7",
@@ -87,9 +90,56 @@ kgfs = "kgfs.cli:app"
 [tool.setuptools.packages.find]
 include = ["kgfs*"]
 
+[tool.setuptools.dynamic]
+version = { attr = "kgfs.version.__version__" }
+
 [tool.setuptools.package-data]
 "kgfs.web" = ["templates/*.html", "static/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = [
+  ".kgfs",
+  ".pytest-tmp",
+  ".pytest_cache",
+  "build",
+  "dist",
+  "dist-packages",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.format]
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+files = [
+  "kgfs/version.py",
+  "kgfs/quickstart.py",
+  "kgfs/capabilities.py",
+  "kgfs/db/checks.py",
+  "scripts/check_docs_consistency.py",
+]
+ignore_missing_imports = true
+follow_imports = "skip"
+warn_unused_configs = true
+show_error_codes = true
+pretty = true
+
+[tool.coverage.run]
+branch = true
+source = ["kgfs"]
+omit = [
+  "kgfs/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

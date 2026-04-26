@@ -32,8 +32,12 @@ def test_keyword_search_filters_by_extension_folder_and_dates(tmp_path: Path) ->
     index_configured_folders(KGFSConfig(indexed_folders=[root], include_extensions=[".pdf", ".md"]), conn)
 
     assert [item.file_name for item in search(conn, "pid", filters=SearchFilters(extensions=[".pdf"]))] == ["pid.PDF"]
-    assert [item.file_name for item in search(conn, "pid", filters=SearchFilters(folder="circuits class"))] == ["pid notes.md"]
-    assert [item.file_name for item in search(conn, "pid", filters=SearchFilters(after="2025-01-01"))] == ["pid notes.md"]
+    assert [item.file_name for item in search(conn, "pid", filters=SearchFilters(folder="circuits class"))] == [
+        "pid notes.md"
+    ]
+    assert [item.file_name for item in search(conn, "pid", filters=SearchFilters(after="2025-01-01"))] == [
+        "pid notes.md"
+    ]
     assert [item.file_name for item in search(conn, "pid", filters=SearchFilters(before="2025-01-01"))] == ["pid.PDF"]
 
 
@@ -51,4 +55,3 @@ def test_failed_only_filter_returns_extraction_failures(tmp_path: Path) -> None:
     results = search(conn, "failed", filters=SearchFilters(failed_only=True))
 
     assert [item.file_name for item in results] == ["bad.md"]
-

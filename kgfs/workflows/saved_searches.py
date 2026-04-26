@@ -88,7 +88,9 @@ def run_saved_search(
     )
     if config.search.save_latest_results:
         save_latest_results(conn, saved.query, execution.results)
-    return WorkflowSearchReport(name=saved.name, query=saved.query, results=execution.results, warnings=execution.warnings)
+    return WorkflowSearchReport(
+        name=saved.name, query=saved.query, results=execution.results, warnings=execution.warnings
+    )
 
 
 def _filters_from_dict(data: dict[str, Any]) -> SearchFilters:

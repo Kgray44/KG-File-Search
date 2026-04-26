@@ -54,7 +54,9 @@ class HnswVectorBackend(OptionalArtifactVectorBackend):
         index.add_items(matrix, labels)
         index.set_ef(settings.ef_search)
         index.save_index(str(index_path))
-        metadata = current_backend_metadata(context.conn, context.config, self.name, model, artifact_files=["index.bin"])
+        metadata = current_backend_metadata(
+            context.conn, context.config, self.name, model, artifact_files=["index.bin"]
+        )
         metadata_path = write_backend_metadata(context.config, metadata)
         return VectorBackendRebuild(
             backend_name=self.name,
@@ -85,7 +87,10 @@ class HnswVectorBackend(OptionalArtifactVectorBackend):
             return []
         settings = context.config.vectors.hnsw
         index = hnswlib.Index(space=settings.space, dim=dim)
-        index.load_index(str(backend_artifact_path(context.config, self.name, "index.bin", model_name=options.model_name)), max_elements=chunk_count)
+        index.load_index(
+            str(backend_artifact_path(context.config, self.name, "index.bin", model_name=options.model_name)),
+            max_elements=chunk_count,
+        )
         index.set_ef(settings.ef_search)
         k = chunk_count if options.filters else min(chunk_count, max(options.limit * 5, options.limit, 1))
         labels, distances = index.knn_query(np.asarray([query_vector], dtype=np.float32), k=k)

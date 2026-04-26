@@ -40,21 +40,27 @@ Install for local development:
 
 ```bash
 python -m pip install -e ".[dev]"
+kgfs version
+kgfs quickstart
 kgfs init
-kgfs add-folder "~/Documents/Your Notes"
+kgfs doctor
+kgfs add-folder "./examples/sample-corpus"
 kgfs index
 kgfs search "motor torque"
-kgfs open 1
 ```
 
 Project-local mode keeps config and data under `.kgfs/` in the current working directory:
 
 ```bash
 kgfs init --project-local
-kgfs add-folder "./sample-files" --project-local
+kgfs add-folder "./examples/sample-corpus" --project-local
 kgfs index --project-local
-kgfs search "sample query" --project-local
+kgfs search "op amp gain" --project-local
 ```
+
+The sample corpus is artificial and contains no personal data. Generated config
+starts with `indexed_folders: []`, and KGFS never indexes the whole drive by
+default.
 
 Optional semantic dependencies:
 
@@ -84,6 +90,7 @@ python -m pip install -e ".[openai]"
 - [Troubleshooting](troubleshooting.md): common failures, causes, and debug commands.
 - [Examples](examples.md): end-to-end workflows.
 - [Roadmap](roadmap.md): implemented vs planned behavior.
+- [Changelog](../CHANGELOG.md): release notes, versioning guidance, and release checklist.
 
 ## High-Level Architecture
 

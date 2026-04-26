@@ -81,7 +81,14 @@ def import_metadata(conn: sqlite3.Connection, payload: dict[str, Any], *, yes: b
                 filters_json = excluded.filters_json,
                 updated_at = excluded.updated_at
             """,
-            (row["name"], row["query"], row.get("mode"), row.get("filters_json"), row.get("created_at", utc_now()), utc_now()),
+            (
+                row["name"],
+                row["query"],
+                row.get("mode"),
+                row.get("filters_json"),
+                row.get("created_at", utc_now()),
+                utc_now(),
+            ),
         )
         restored += 1
 
@@ -94,13 +101,17 @@ def import_metadata(conn: sqlite3.Connection, payload: dict[str, Any], *, yes: b
             """,
             (collection["name"], collection.get("description"), collection.get("created_at", utc_now()), utc_now()),
         )
-        collection_id = conn.execute("SELECT id FROM collections WHERE name = ?", (collection["name"],)).fetchone()["id"]
+        collection_id = conn.execute("SELECT id FROM collections WHERE name = ?", (collection["name"],)).fetchone()[
+            "id"
+        ]
         restored += 1
         for item in collection.get("items", []):
             file_id = _match_file(conn, item.get("file"))
             if file_id is None:
                 unmatched += 1
-                warnings.append(f"Unmatched collection item in {collection['name']}: {item.get('file', {}).get('file_name', '?')}")
+                warnings.append(
+                    f"Unmatched collection item in {collection['name']}: {item.get('file', {}).get('file_name', '?')}"
+                )
                 continue
             conn.execute(
                 """
@@ -158,7 +169,9 @@ def import_metadata(conn: sqlite3.Connection, payload: dict[str, Any], *, yes: b
             file_id = _match_file(conn, item.get("file"))
             if file_id is None:
                 unmatched += 1
-                warnings.append(f"Unmatched project item in {project['name']}: {item.get('file', {}).get('file_name', '?')}")
+                warnings.append(
+                    f"Unmatched project item in {project['name']}: {item.get('file', {}).get('file_name', '?')}"
+                )
                 continue
             conn.execute(
                 "INSERT OR IGNORE INTO project_items(project_id, file_id, role, added_at) VALUES (?, ?, ?, ?)",
@@ -252,7 +265,9 @@ def _table_rows(conn: sqlite3.Connection, table: str) -> list[dict[str, Any]]:
 def _collections(conn: sqlite3.Connection, files: dict[int, dict[str, Any]]) -> list[dict[str, Any]]:
     collections = _table_rows(conn, "collections")
     for collection in collections:
-        rows = conn.execute("SELECT * FROM collection_items WHERE collection_id = ? ORDER BY id", (collection["id"],)).fetchall()
+        rows = conn.execute(
+            "SELECT * FROM collection_items WHERE collection_id = ? ORDER BY id", (collection["id"],)
+        ).fetchall()
         collection["items"] = [
             {
                 "file": files.get(int(row["file_id"])),
@@ -331,7 +346,9 @@ def _match_file(conn: sqlite3.Connection, identity: dict[str, Any] | None) -> in
         ).fetchone()
         if row:
             return int(row["id"])
-        row = conn.execute("SELECT id FROM files WHERE content_hash = ? ORDER BY id LIMIT 1", (content_hash,)).fetchone()
+        row = conn.execute(
+            "SELECT id FROM files WHERE content_hash = ? ORDER BY id LIMIT 1", (content_hash,)
+        ).fetchone()
         if row:
             return int(row["id"])
     row = conn.execute(

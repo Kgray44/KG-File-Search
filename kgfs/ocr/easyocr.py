@@ -13,15 +13,27 @@ class EasyOCRBackend:
 
     def available(self, config: KGFSConfig) -> OCRAvailability:
         if not config.ocr.easyocr.enabled:
-            return OCRAvailability(False, "EasyOCR backend is disabled.", 'Install with python -m pip install -e ".[ocr-easyocr]" and enable ocr.easyocr.enabled.')
+            return OCRAvailability(
+                False,
+                "EasyOCR backend is disabled.",
+                'Install with python -m pip install -e ".[ocr-easyocr]" and enable ocr.easyocr.enabled.',
+            )
         if find_spec("easyocr") is None:
-            return OCRAvailability(False, "EasyOCR is not installed.", 'Install with python -m pip install -e ".[ocr-easyocr]".')
+            return OCRAvailability(
+                False, "EasyOCR is not installed.", 'Install with python -m pip install -e ".[ocr-easyocr]".'
+            )
         return OCRAvailability(True, "EasyOCR is available.")
 
     def extract_image(self, request: OCRRequest) -> OCRResult:
         availability = self.available(request.config)
         if not availability.available:
-            return OCRResult("", "error", availability.message, backend=self.name, language=",".join(request.config.ocr.easyocr.languages))
+            return OCRResult(
+                "",
+                "error",
+                availability.message,
+                backend=self.name,
+                language=",".join(request.config.ocr.easyocr.languages),
+            )
         try:
             import easyocr
         except ImportError:

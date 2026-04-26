@@ -43,7 +43,9 @@ def _make_index(tmp_path: Path, *, semantic_enabled: bool = False, build_chunks:
             chunk_overlap_chars=8,
         ),
     )
-    indexing_config = config if build_chunks else config.model_copy(update={"semantic": SemanticSettings(enabled=False)})
+    indexing_config = (
+        config if build_chunks else config.model_copy(update={"semantic": SemanticSettings(enabled=False)})
+    )
     index_configured_folders(indexing_config, conn, semantic_embedder=FakeEmbedder() if build_chunks else None)
     return conn, config
 

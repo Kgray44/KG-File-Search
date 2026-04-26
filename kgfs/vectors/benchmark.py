@@ -61,7 +61,9 @@ def _benchmark_one(
     try:
         backend = get_vector_backend(name)
     except UnknownVectorBackend as exc:
-        return VectorBenchmarkResult(name, False, chunk_count, file_count, 0, artifact_status="unknown", notes=[str(exc)])
+        return VectorBenchmarkResult(
+            name, False, chunk_count, file_count, 0, artifact_status="unknown", notes=[str(exc)]
+        )
 
     context = SearchContext(conn=conn, config=config)
     status = backend.status(context)
@@ -77,7 +79,9 @@ def _benchmark_one(
             chunk_count,
             file_count,
             0,
-            artifact_status="unavailable" if availability.install_hint else str(status.metadata.get("artifact_status", "unavailable")),
+            artifact_status="unavailable"
+            if availability.install_hint
+            else str(status.metadata.get("artifact_status", "unavailable")),
             notes=notes,
         )
     if not query_vectors:

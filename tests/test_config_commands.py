@@ -37,4 +37,3 @@ def test_remove_and_list_folders(tmp_path: Path) -> None:
 
     assert result.removed is True
     assert list_indexed_folders(config_path) == []
-

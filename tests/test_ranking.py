@@ -27,7 +27,9 @@ def test_exact_phrase_beats_weak_token_match(tmp_path: Path) -> None:
     root = tmp_path / "docs"
     root.mkdir()
     (root / "exact.md").write_text("speaker crossover design details", encoding="utf-8")
-    (root / "weak.md").write_text("speaker notes and unrelated crossover notes and unrelated design notes", encoding="utf-8")
+    (root / "weak.md").write_text(
+        "speaker notes and unrelated crossover notes and unrelated design notes", encoding="utf-8"
+    )
     conn = connect_database(tmp_path / "kgfs.sqlite3")
     initialize_database(conn)
     index_configured_folders(KGFSConfig(indexed_folders=[root]), conn)

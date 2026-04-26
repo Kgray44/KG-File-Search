@@ -2,43 +2,70 @@
 
 KGFS is a private, local-first file search tool. It indexes only folders you choose, extracts text from common document and code formats, stores the index in local SQLite, and searches with SQLite FTS5 keyword ranking plus optional local semantic search, OCR, workflow metadata, and file-intelligence tools.
 
-## Quickstart
+## What KGFS Is / Is Not
+
+KGFS is:
+
+- A local search index for folders you explicitly add.
+- A SQLite-backed CLI, web dashboard, and local API for private file discovery.
+- A place for local workflow metadata such as tags, notes, collections, projects, and saved searches.
+- A release-candidate project with stable core search and many optional/lazy advanced surfaces.
+
+KGFS is not:
+
+- A cloud sync service.
+- A drive-wide crawler by default.
+- A tool that edits, tags, annotates, moves, deletes, or rewrites your source files.
+- A replacement for backups or filesystem permissions.
+- A promise that every optional experimental backend is installed or enabled in the base package.
+
+## 5-Minute Quickstart
 
 ```bash
 python -m pip install -e ".[dev]"
+kgfs version
 kgfs init
-kgfs add-folder "~/Documents/Your Notes"
+kgfs doctor
+kgfs add-folder "./examples/sample-corpus"
 kgfs index
 kgfs search "motor torque"
 kgfs why 1 "motor torque"
-kgfs open 1
 ```
+
+Generated config starts with `indexed_folders: []`, and KGFS never indexes the
+whole drive by default. Add only the folders you want KGFS to search.
 
 Project-local development keeps config and index files under `.kgfs/` in the current directory:
 
 ```bash
 kgfs init --project-local
-kgfs add-folder "./sample-files" --project-local
+kgfs add-folder "./examples/sample-corpus" --project-local
 kgfs index --project-local
-kgfs search "sample query" --project-local
+kgfs search "op amp gain" --project-local
+kgfs quickstart
 ```
 
-## What Is Implemented
+## Stable Core
 
 - Safe, explicit-folder indexing with risky-root protection.
 - Text extraction for text-like files, Markdown, code, CSV, PDF, and DOCX.
 - SQLite `files`, FTS5, latest-results, semantic `chunks`, and schema-version tables.
 - Keyword, semantic, hybrid, and auto search modes.
+- Result explanations with `kgfs why`.
+- Typer CLI, local FastAPI dashboard, token-gated local JSON API, and PyInstaller packaging scripts.
+- Release-readiness commands: `kgfs version`, `kgfs quickstart`, `kgfs capabilities`, and `kgfs db check`.
+
+## Optional / Experimental Surfaces
+
 - Local vector backend registry with the default `sqlite_scan` backend, optional accelerated backends, and vector benchmark/recommend commands.
 - Optional local Tesseract OCR for image files and scanned-PDF detection, disabled by default.
 - Optional local media metadata expansion: photo/EXIF indexing, media-derived search text, advanced OCR backend scaffolds, caption/audio/visual scaffolds, and no-upload cloud OCR planning.
-- Result explanations with `kgfs why`.
 - Local investigation commands: `kgfs deep`, `kgfs similar`, `kgfs similar-file`, `kgfs compare`, `kgfs timeline`, and `kgfs research`.
 - Local personal workflow metadata: profiles, saved searches, collections, tags, notes, assignment mode, and manual projects.
 - Local file intelligence: exact/semantic duplicates, versions, project candidates, file/topic graphs, health reports, and metadata backups.
 - Optional OpenAI AI Assist for answer synthesis and reranking after local search.
-- Typer CLI, local FastAPI dashboard, token-gated local JSON API, optional Textual TUI launcher, and local integration scaffolds.
-- PyInstaller packaging scripts and GitHub Actions workflows.
+- Optional Textual TUI launcher and local integration scaffolds.
+- Optional accelerated vector/OCR/media dependencies stay out of the base install unless requested.
 
 ## Safety Defaults
 
@@ -81,6 +108,11 @@ Implemented vs planned: this README and the docs describe source-backed behavior
 ```bash
 python -m pip install -e ".[dev]"
 python -m pytest
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy
+python -m pytest --cov=kgfs --cov-report=term-missing
+python scripts/check_docs_consistency.py
 ```
 
 Optional extras:
@@ -217,3 +249,18 @@ Build a packaged executable:
 python scripts/build_package.py --clean
 python scripts/smoke_test_packaged.py --package dist-packages/KGFS
 ```
+
+The package build writes `KGFS-<os>-<arch>.zip` plus `SHA256SUMS.txt` under
+`dist-packages/`. Verify a release artifact by comparing its SHA256 digest with
+the matching line in `SHA256SUMS.txt`.
+
+Release-readiness checks:
+
+```bash
+kgfs version
+kgfs capabilities
+kgfs db check
+python scripts/check_docs_consistency.py
+```
+
+See [CHANGELOG.md](CHANGELOG.md) and [packaging/README-packaging.md](packaging/README-packaging.md) for versioning and packaging guidance.

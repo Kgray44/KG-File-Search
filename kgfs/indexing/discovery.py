@@ -24,11 +24,7 @@ def discover_files(config: KGFSConfig) -> Iterator[Path]:
 
         for current_dir, dir_names, file_names in os.walk(root, followlinks=config.follow_symlinks):
             current_path = Path(current_dir)
-            dir_names[:] = sorted(
-                dirname
-                for dirname in dir_names
-                if _should_descend(current_path / dirname, config)
-            )
+            dir_names[:] = sorted(dirname for dirname in dir_names if _should_descend(current_path / dirname, config))
             for filename in sorted(file_names):
                 file_path = current_path / filename
                 if should_index_file(file_path, config):

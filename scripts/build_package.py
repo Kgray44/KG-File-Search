@@ -3,16 +3,40 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import platform
 import shutil
 import subprocess
-import sys
 import zipfile
 from pathlib import Path
 
+from kgfs.quickstart import build_quickstart_text
+from kgfs.version import __version__
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SPEC = PROJECT_ROOT / "packaging" / "pyinstaller" / "kgfs.spec"
+EXCLUDED_RELEASE_NAMES = {
+    ".env",
+    ".kgfs",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".pytest-tmp",
+    ".ruff_cache",
+    "__pycache__",
+    "cache",
+    "logs",
+}
+EXCLUDED_RELEASE_SUFFIXES = {
+    ".db",
+    ".faiss",
+    ".hnsw",
+    ".log",
+    ".npy",
+    ".npz",
+    ".sqlite",
+    ".sqlite3",
+}
 
 
 def archive_name(os_tag: str, arch_tag: str) -> str:
@@ -58,28 +82,11 @@ def build_pyinstaller_command(
     return command
 
 
-def write_quickstart(output_dir: Path, *, executable_name: str) -> Path:
+def write_quickstart(output_dir: Path, *, executable_name: str, version: str = __version__) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     quickstart = output_dir / "QUICKSTART-KGFS.txt"
     quickstart.write_text(
-        f"""KG File Search packaged build quickstart
-
-Run commands from a terminal in this folder.
-
-Basic checks:
-  {executable_name} --help
-  {executable_name} doctor
-  {executable_name} init
-
-Typical workflow:
-  {executable_name} add-folder "~/Documents/Your Notes"
-  {executable_name} index
-  {executable_name} search "motor torque"
-
-KGFS stays local-first. Packaged builds still store user config/data/cache in
-the normal platformdirs locations for your OS. This package does not include
-your config, database, cache, logs, or indexed files.
-""",
+        build_quickstart_text(executable_name=executable_name, packaged=True, version=version),
         encoding="utf-8",
     )
     return quickstart
@@ -109,16 +116,45 @@ def create_release_archive(
     _copy_if_exists(PROJECT_ROOT / "README.md", docs_dir / "README.md")
     _copy_if_exists(PROJECT_ROOT / "LICENSE", docs_dir / "LICENSE")
     _copy_if_exists(PROJECT_ROOT / "config.example.yaml", docs_dir / "config.example.yaml")
+    sample_corpus = PROJECT_ROOT / "examples" / "sample-corpus"
+    if sample_corpus.exists():
+        shutil.copytree(sample_corpus, docs_dir / "examples" / "sample-corpus")
 
     archive_path = dist_dir / archive_name(os_tag, arch_tag)
     if archive_path.exists():
         archive_path.unlink()
     with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(staging.rglob("*")):
-            if path.is_file():
+            if path.is_file() and should_include_release_file(path.relative_to(staging)):
                 archive.write(path, path.relative_to(staging))
     _safe_rmtree(staging)
     return archive_path
+
+
+def should_include_release_file(relative_path: Path) -> bool:
+    """Return whether a staged file is safe to include in release archives."""
+
+    parts = {part.lower() for part in relative_path.parts}
+    if parts & EXCLUDED_RELEASE_NAMES:
+        return False
+    name = relative_path.name.lower()
+    if name.endswith(".sqlite-wal") or name.endswith(".sqlite-shm") or name.endswith(".sqlite3-wal"):
+        return False
+    return relative_path.suffix.lower() not in EXCLUDED_RELEASE_SUFFIXES
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def write_sha256sums(artifacts: list[Path], output_path: Path) -> Path:
+    lines = [f"{sha256_file(path)}  {path.name}" for path in sorted(artifacts)]
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return output_path
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -127,7 +163,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mode", choices=["onedir", "onefile"], default="onedir", help="PyInstaller output mode.")
     parser.add_argument("--name", default="KGFS", help="Packaged folder name for onedir builds.")
     parser.add_argument("--dist-dir", type=Path, default=PROJECT_ROOT / "dist-packages", help="Package output folder.")
-    parser.add_argument("--work-dir", type=Path, default=PROJECT_ROOT / "build" / "pyinstaller", help="PyInstaller work folder.")
+    parser.add_argument(
+        "--work-dir", type=Path, default=PROJECT_ROOT / "build" / "pyinstaller", help="PyInstaller work folder."
+    )
     parser.add_argument("--spec", type=Path, default=DEFAULT_SPEC, help="PyInstaller spec path.")
     args = parser.parse_args(argv)
 
@@ -156,7 +194,9 @@ def main(argv: list[str] | None = None) -> int:
         arch_tag=current_arch_tag(),
         executable_name=executable_name,
     )
+    checksum_path = write_sha256sums([archive_path], dist_dir / "SHA256SUMS.txt")
     print(f"Packaged artifact: {archive_path}")
+    print(f"SHA256 checksums: {checksum_path}")
     return 0
 
 

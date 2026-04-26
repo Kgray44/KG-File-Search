@@ -1,0 +1,29 @@
+name: Packaging or install issue
+description: Report install, packaged build, or smoke-test trouble.
+title: "[Packaging]: "
+labels: ["packaging"]
+body:
+  - type: input
+    id: os
+    attributes:
+      label: OS and architecture
+      placeholder: Windows x64, macOS arm64, etc.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: KGFS version or artifact name
+      placeholder: v0.1.0 / KGFS-windows-x64.zip
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and output
+      description: Include the exact command, error text, and whether this was pip or packaged KGFS.
+    validations:
+      required: true
+  - type: textarea
+    id: checksums
+    attributes:
+      label: Artifact verification
+      description: If relevant, include whether SHA256 verification matched `SHA256SUMS.txt`.

@@ -35,6 +35,10 @@ hiddenimports = [
     "uvicorn.protocols.http.auto",
     "uvicorn.protocols.websockets.auto",
     "uvicorn.lifespan.on",
+    "kgfs.search.backends.sqlite_scan",
+    "kgfs.search.backends.sqlite_vec",
+    "kgfs.search.backends.hnsw",
+    "kgfs.search.backends.faiss",
 ]
 hiddenimports += collect_submodules("pypdf")
 

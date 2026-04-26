@@ -34,7 +34,9 @@ def get_ocr_status(config: KGFSConfig, conn: sqlite3.Connection | None = None) -
         try:
             cache_entries = int(conn.execute("SELECT COUNT(*) AS count FROM ocr_cache").fetchone()["count"])
             indexed_file_count = int(
-                conn.execute("SELECT COUNT(*) AS count FROM files WHERE extraction_source LIKE 'ocr%'").fetchone()["count"]
+                conn.execute("SELECT COUNT(*) AS count FROM files WHERE extraction_source LIKE 'ocr%'").fetchone()[
+                    "count"
+                ]
             )
             failure_count = int(
                 conn.execute(

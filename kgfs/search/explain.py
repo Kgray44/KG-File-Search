@@ -36,11 +36,7 @@ def explain_result(
 
 
 def build_score_explanation(query: str, result: SearchResult, breakdown: dict[str, float]) -> str:
-    useful_components = {
-        key: value
-        for key, value in breakdown.items()
-        if key not in {"final", "bm25"} and value > 0
-    }
+    useful_components = {key: value for key, value in breakdown.items() if key not in {"final", "bm25"} and value > 0}
     if not useful_components:
         return f"Result matched '{query}' with a final score of {result.score:.3f}."
     strongest = max(useful_components.items(), key=lambda item: item[1])[0].replace("_", " ")

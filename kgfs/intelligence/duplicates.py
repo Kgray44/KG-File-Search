@@ -87,9 +87,7 @@ def find_semantic_duplicates(
         if len(file_set) < 2:
             continue
         group_pairs = [
-            score
-            for (left_id, right_id), score in evidence.items()
-            if left_id in file_set and right_id in file_set
+            score for (left_id, right_id), score in evidence.items() if left_id in file_set and right_id in file_set
         ]
         rows = _files_by_ids(conn, sorted(file_set))
         items = [_duplicate_item(row, query=" ".join(_shared_name_terms(rows))) for row in rows]

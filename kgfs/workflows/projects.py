@@ -8,7 +8,15 @@ from kgfs.core.config import KGFSConfig
 from kgfs.core.models import SearchResult
 from kgfs.db.latest_results import save_latest_results
 from kgfs.search import search
-from kgfs.workflows.models import AddSummary, Project, WorkflowItem, latest_file_id, load_workflow_item, normalize_name, utc_now
+from kgfs.workflows.models import (
+    AddSummary,
+    Project,
+    WorkflowItem,
+    latest_file_id,
+    load_workflow_item,
+    normalize_name,
+    utc_now,
+)
 
 
 def create_project(conn: sqlite3.Connection, name: str, description: str | None = None) -> Project:
@@ -47,12 +55,16 @@ def delete_project(conn: sqlite3.Connection, name: str) -> bool:
     return cursor.rowcount > 0
 
 
-def add_results_to_project(conn: sqlite3.Connection, name: str, result_ids: list[int], role: str | None = None) -> AddSummary:
+def add_results_to_project(
+    conn: sqlite3.Connection, name: str, result_ids: list[int], role: str | None = None
+) -> AddSummary:
     file_ids = [latest_file_id(conn, int(result_id)) for result_id in result_ids]
     return add_files_to_project(conn, name, file_ids, role=role)
 
 
-def add_files_to_project(conn: sqlite3.Connection, name: str, file_ids: list[int], role: str | None = None) -> AddSummary:
+def add_files_to_project(
+    conn: sqlite3.Connection, name: str, file_ids: list[int], role: str | None = None
+) -> AddSummary:
     project = _require_project(conn, name)
     before = _project_file_ids(conn, project.id)
     now = utc_now()
@@ -76,7 +88,9 @@ def remove_files_from_project(conn: sqlite3.Connection, name: str, file_ids: lis
     removed = 0
     for value in file_ids:
         file_id = _resolve_project_file_id(conn, int(value), known_file_ids)
-        cursor = conn.execute("DELETE FROM project_items WHERE project_id = ? AND file_id = ?", (project.id, int(file_id)))
+        cursor = conn.execute(
+            "DELETE FROM project_items WHERE project_id = ? AND file_id = ?", (project.id, int(file_id))
+        )
         removed += cursor.rowcount
     conn.commit()
     return removed
@@ -97,12 +111,19 @@ def get_project_items(conn: sqlite3.Connection, name: str) -> list[WorkflowItem]
     return [load_workflow_item(conn, row, kind="project") for row in rows]
 
 
-def project_search(conn: sqlite3.Connection, name: str, query: str, config: KGFSConfig, *, limit: int | None = None) -> ProjectSearchReport:
+def project_search(
+    conn: sqlite3.Connection, name: str, query: str, config: KGFSConfig, *, limit: int | None = None
+) -> ProjectSearchReport:
     project = _require_project(conn, name)
     file_ids = _project_file_ids(conn, project.id)
     if not file_ids:
         return ProjectSearchReport(project=project, query=query, results=[])
-    candidates = search(conn, query, limit=max((limit or config.projects.default_limit) * 10, 50), highlight=config.search.highlight_matches)
+    candidates = search(
+        conn,
+        query,
+        limit=max((limit or config.projects.default_limit) * 10, 50),
+        highlight=config.search.highlight_matches,
+    )
     scoped = [result for result in candidates if result.file_id in file_ids][: limit or config.projects.default_limit]
     results = [_renumber(result, index) for index, result in enumerate(scoped, start=1)]
     if config.search.save_latest_results:

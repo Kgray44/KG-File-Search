@@ -23,17 +23,13 @@ def get_database_stats(conn: sqlite3.Connection, database_path: Path | None = No
     types = conn.execute(
         "SELECT extension, COUNT(*) AS count FROM files GROUP BY extension ORDER BY count DESC"
     ).fetchall()
-    largest = conn.execute(
-        "SELECT file_name, path, size FROM files ORDER BY size DESC LIMIT 5"
-    ).fetchall()
-    failures = conn.execute(
-        "SELECT COUNT(*) AS count FROM files WHERE extraction_status = 'error'"
-    ).fetchone()
-    successes = conn.execute(
-        "SELECT COUNT(*) AS count FROM files WHERE extraction_status != 'error'"
-    ).fetchone()
+    largest = conn.execute("SELECT file_name, path, size FROM files ORDER BY size DESC LIMIT 5").fetchall()
+    failures = conn.execute("SELECT COUNT(*) AS count FROM files WHERE extraction_status = 'error'").fetchone()
+    successes = conn.execute("SELECT COUNT(*) AS count FROM files WHERE extraction_status != 'error'").fetchone()
     last_indexed = conn.execute("SELECT MAX(indexed_at) AS last_indexed FROM files").fetchone()
-    chunks = conn.execute("SELECT COUNT(*) AS count, COALESCE(SUM(LENGTH(embedding)), 0) AS bytes FROM chunks").fetchone()
+    chunks = conn.execute(
+        "SELECT COUNT(*) AS count, COALESCE(SUM(LENGTH(embedding)), 0) AS bytes FROM chunks"
+    ).fetchone()
     ocr_files = conn.execute("SELECT COUNT(*) AS count FROM files WHERE extraction_source LIKE 'ocr%'").fetchone()
     ocr_failures = conn.execute(
         "SELECT COUNT(*) AS count FROM files WHERE extraction_source LIKE 'ocr%' AND extraction_status = 'error'"
@@ -80,7 +76,9 @@ def get_database_stats(conn: sqlite3.Connection, database_path: Path | None = No
 
 def _count_and_bytes(conn: sqlite3.Connection, table: str, column: str) -> dict[str, int]:
     try:
-        row = conn.execute(f"SELECT COUNT(*) AS count, COALESCE(SUM(LENGTH({column})), 0) AS bytes FROM {table}").fetchone()
+        row = conn.execute(
+            f"SELECT COUNT(*) AS count, COALESCE(SUM(LENGTH({column})), 0) AS bytes FROM {table}"
+        ).fetchone()
         return {"count": int(row["count"]), "bytes": int(row["bytes"])}
     except sqlite3.Error:
         return {"count": 0, "bytes": 0}

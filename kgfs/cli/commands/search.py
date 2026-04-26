@@ -45,7 +45,9 @@ def search_cmd(
     before: str | None = typer.Option(None, "--before", help="Only files modified on/before YYYY-MM-DD."),
     failed_only: bool = typer.Option(False, "--failed-only", help="Show only extraction failures."),
     mode: str | None = typer.Option(None, "--mode", help="Search mode: keyword, semantic, hybrid, or auto."),
-    hybrid: bool = typer.Option(False, "--hybrid", help="Combine keyword, semantic, filename/path, and recency ranking."),
+    hybrid: bool = typer.Option(
+        False, "--hybrid", help="Combine keyword, semantic, filename/path, and recency ranking."
+    ),
     ai_rerank: bool = typer.Option(False, "--ai-rerank", help="Use opt-in OpenAI AI Assist to rerank local results."),
     preview_ai_context: bool = typer.Option(False, "--preview-ai-context", help="Print AI context and do not send it."),
 ) -> None:

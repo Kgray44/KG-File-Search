@@ -61,7 +61,10 @@ def list_tagged_files(conn: sqlite3.Connection, tag: str, *, save_latest: bool =
         """,
         (normalized,),
     ).fetchall()
-    results = [load_file_result(conn, int(row["file_id"]), result_id=index, query=normalized) for index, row in enumerate(rows, start=1)]
+    results = [
+        load_file_result(conn, int(row["file_id"]), result_id=index, query=normalized)
+        for index, row in enumerate(rows, start=1)
+    ]
     if save_latest:
         save_latest_results(conn, f"tag:{normalized}", results)
     return results

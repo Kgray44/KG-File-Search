@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sqlite3
-import struct
 
 from kgfs.search.backends._optional import OptionalArtifactVectorBackend
 from kgfs.search.backends.base import BackendAvailability, VectorBackendRebuild, VectorSearchHit, VectorSearchOptions
@@ -95,7 +94,9 @@ class SqliteVecVectorBackend(OptionalArtifactVectorBackend):
                 (serialize(query_vector), candidate_limit),
             ).fetchall()
         except sqlite3.Error as exc:
-            raise RuntimeError(f"sqlite_vec search failed. Rebuild with kgfs vector rebuild --backend sqlite_vec. {exc}") from exc
+            raise RuntimeError(
+                f"sqlite_vec search failed. Rebuild with kgfs vector rebuild --backend sqlite_vec. {exc}"
+            ) from exc
         scores = [(int(row["chunk_id"]), max(0.0, 1.0 - float(row["distance"]))) for row in rows]
         return vector_hits_from_chunk_scores(context.conn, scores, options)
 
@@ -112,7 +113,9 @@ def _load_sqlite_vec(conn: sqlite3.Connection):
     try:
         import sqlite_vec
     except ImportError as exc:
-        raise RuntimeError('sqlite_vec requires sqlite-vec. Install with: python -m pip install -e ".[sqlite-vec]"') from exc
+        raise RuntimeError(
+            'sqlite_vec requires sqlite-vec. Install with: python -m pip install -e ".[sqlite-vec]"'
+        ) from exc
     try:
         conn.enable_load_extension(True)
     except (AttributeError, sqlite3.Error):

@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest a local-first KGFS improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What local workflow would this improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the behavior you want.
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Local-first expectations
+      options:
+        - label: This should not require cloud services by default.
+        - label: This should not modify indexed source files.

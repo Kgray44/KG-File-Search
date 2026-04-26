@@ -1,0 +1,9 @@
+Op amp gain worksheet
+
+This artificial note describes an inverting amplifier.
+
+Input resistor: 10 kOhm
+Feedback resistor: 47 kOhm
+Estimated op amp gain: -4.7
+
+Use this file to test keyword snippets and result explanations.

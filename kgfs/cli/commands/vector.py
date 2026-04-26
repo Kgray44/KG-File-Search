@@ -8,7 +8,12 @@ import typer
 from rich.table import Table
 
 from kgfs.cli.shared import connect_runtime, console
-from kgfs.search.backends import UnknownVectorBackend, backend_availability_by_name, get_vector_backend, list_vector_backend_names
+from kgfs.search.backends import (
+    UnknownVectorBackend,
+    backend_availability_by_name,
+    get_vector_backend,
+    list_vector_backend_names,
+)
 from kgfs.search.engine import SearchContext
 from kgfs.search.semantic import SemanticUnavailableError, get_embedder
 from kgfs.vectors.benchmark import benchmark_vector_backends
@@ -79,7 +84,9 @@ def vector_rebuild_cmd(
     _, _, _, config, conn = connect_runtime(config_path, database_path, project_local)
     try:
         if not config.semantic.enabled:
-            raise typer.BadParameter("Semantic search is disabled. Set semantic.enabled: true before rebuilding vectors.")
+            raise typer.BadParameter(
+                "Semantic search is disabled. Set semantic.enabled: true before rebuilding vectors."
+            )
         selected_backend = backend_name or config.vectors.backend
         try:
             backend = get_vector_backend(selected_backend)
@@ -97,7 +104,9 @@ def vector_rebuild_cmd(
             return
         try:
             with console.status(f"Rebuilding {backend.name} vector backend artifact..."):
-                summary = backend.rebuild(SearchContext(conn=conn, config=config), model_name=config.semantic.model_name)
+                summary = backend.rebuild(
+                    SearchContext(conn=conn, config=config), model_name=config.semantic.model_name
+                )
         except RuntimeError as exc:
             raise typer.BadParameter(str(exc)) from exc
         console.print(summary.message or f"{backend.name} backend rebuild complete.")
@@ -114,8 +123,12 @@ def vector_clear_cmd(
     database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
     project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
     yes: bool = typer.Option(False, "--yes", help="Confirm clearing KGFS vector/chunk data only."),
-    backend_name: str | None = typer.Option(None, "--backend", help="Clear artifacts for one backend. Defaults to chunks."),
-    all_backends: bool = typer.Option(False, "--all-backends", help="Clear backend artifacts for all optional backends."),
+    backend_name: str | None = typer.Option(
+        None, "--backend", help="Clear artifacts for one backend. Defaults to chunks."
+    ),
+    all_backends: bool = typer.Option(
+        False, "--all-backends", help="Clear backend artifacts for all optional backends."
+    ),
 ) -> None:
     """Clear KGFS vector/chunk data only."""
 
@@ -128,7 +141,9 @@ def vector_clear_cmd(
             for name in list_vector_backend_names():
                 if name == "sqlite_scan":
                     continue
-                removed += get_vector_backend(name).clear(SearchContext(conn=conn, config=config), model_name=config.semantic.model_name)
+                removed += get_vector_backend(name).clear(
+                    SearchContext(conn=conn, config=config), model_name=config.semantic.model_name
+                )
             console.print(f"Removed {removed} backend artifact entries for optional vector backends.")
             console.print("Source files, file records, chunks, and keyword FTS rows were left unchanged.")
             return
@@ -156,7 +171,9 @@ def vector_benchmark_cmd(
     database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
     project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
     backend_names: list[str] | None = typer.Option(None, "--backend", help="Benchmark one backend. Can be repeated."),
-    queries: list[str] | None = typer.Option(None, "--query", "--queries", help="Query text to embed for benchmarking."),
+    queries: list[str] | None = typer.Option(
+        None, "--query", "--queries", help="Query text to embed for benchmarking."
+    ),
     limit: int = typer.Option(10, "--limit", help="Vector hit limit per benchmark query."),
 ) -> None:
     """Benchmark available vector backends against local vector data."""

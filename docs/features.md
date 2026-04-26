@@ -71,13 +71,24 @@ This page inventories features implemented in the repository state at this commi
 
 ### Doctor Diagnostics
 
-- What it does: reports platform, Python version, packaged status, app paths, DB state, schema version, FTS5, semantic status, OCR status, optional dependencies, and folder warnings.
+- What it does: reports KGFS version, platform, Python version, packaged status, app paths, DB state, schema version, FTS5, semantic status, OCR status, optional dependencies, and folder warnings.
 - Use it with: `kgfs doctor`.
 - Inputs: optional config/database/project-local flags.
 - Outputs: Rich diagnostic tables.
 - Settings: app path env vars, `semantic.*`, `ocr.*`, vector/optional dependency state.
 - Edge cases: if config is missing, doctor uses default `KGFSConfig()` for diagnostics.
 - Sources: `kgfs/cli/commands/doctor.py`, `kgfs/core/platform_utils.py`, `kgfs/core/resources.py`.
+
+### Version and Quickstart
+
+- What it does: reports the KGFS version and prints a safe first-run guide.
+- Use it with: `kgfs version`, `kgfs --version`, `kgfs quickstart`.
+- Inputs: none.
+- Outputs: version text or quickstart commands.
+- Settings: none.
+- Edge cases: quickstart is read-only and does not create config, index files, or source sidecars.
+- Sources: `kgfs/version.py`, `kgfs/quickstart.py`, `kgfs/cli/commands/version.py`, `kgfs/cli/commands/quickstart.py`.
+- Tests: `tests/test_release_readiness.py`, `tests/test_cli.py`.
 - Tests: `tests/test_cli.py`, `tests/test_resources.py`.
 
 ## Indexing and Extraction
@@ -559,9 +570,21 @@ This page inventories features implemented in the repository state at this commi
 - Sources: `scripts/smoke_test_packaged.py`.
 - Tests: `tests/test_packaging_scripts.py`.
 
+### Release-Readiness Checks
+
+- What it does: provides dev-only lint, format, scoped typecheck, coverage, docs consistency, capability, and database integrity checks.
+- Use it with: `python -m ruff check .`, `python -m ruff format --check .`, `python -m mypy`, `python -m pytest --cov=kgfs --cov-report=term-missing`, `python scripts/check_docs_consistency.py`, `kgfs capabilities`, and `kgfs db check`.
+- Inputs: repository files, active KGFS config, and existing KGFS database for DB checks.
+- Outputs: release-readiness reports and nonzero exits for failures.
+- Settings: dev-only tooling in `pyproject.toml`; no runtime feature settings are changed.
+- Edge cases: mypy is intentionally scoped to release-readiness modules for this pass and can be expanded later.
+- Safety: checks do not modify indexed source files; `kgfs db check` is read-only and does not create missing databases.
+- Sources: `pyproject.toml`, `kgfs/capabilities.py`, `kgfs/db/checks.py`, `scripts/check_docs_consistency.py`.
+- Tests: `tests/test_release_readiness.py`.
+
 ### GitHub Actions CI
 
-- What it does: runs tests on Windows, macOS, and Ubuntu for Python 3.11 and 3.12; package workflow builds Windows and macOS artifacts.
+- What it does: runs tests, Ruff, scoped mypy, and docs consistency checks on Windows, macOS, and Ubuntu for Python 3.11 and 3.12; package workflow builds Windows and macOS artifacts.
 - Use it with: push, pull request, or manual packaging workflow.
 - Inputs: GitHub workflow events.
 - Outputs: test runs and uploaded package artifacts.

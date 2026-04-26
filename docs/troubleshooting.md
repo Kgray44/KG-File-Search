@@ -5,6 +5,8 @@ Start with:
 ```bash
 kgfs doctor
 kgfs stats
+kgfs capabilities
+kgfs db check
 ```
 
 Use explicit paths when debugging a specific config/database:
@@ -30,6 +32,9 @@ Sources: `kgfs/cli/commands/doctor.py`, `kgfs/cli/commands/stats.py`.
 | Image files are not indexed | OCR is disabled by default, or the image extension is not in `ocr.include_extensions`. | Set `ocr.enabled: true`, confirm extensions, then run `kgfs ocr status` and `kgfs ocr index`. | `kgfs/indexing/filters.py`, `kgfs/ocr/status.py` |
 | Photo files are not indexed for EXIF/media metadata | Media photo indexing is disabled by default, or the extension is not in `media.photos.include_extensions`. | Set `media.enabled: true` and `media.photos.enabled: true`, then run `kgfs media status` and `kgfs media index --photos`. | `kgfs/indexing/filters.py`, `kgfs/media/status.py` |
 | `kgfs media exif` says Pillow is missing | The optional image metadata dependency is not installed. | Run `python -m pip install -e ".[media]"` or install Pillow. | `kgfs/media/exif.py`, `pyproject.toml` |
+| `kgfs capabilities` reports disabled features | Most advanced features are opt-in by config and optional extras. | Enable only the local feature you need and install the matching optional extra; keyword search remains available in the base install. | `kgfs/capabilities.py`, `kgfs/core/config.py` |
+| `kgfs db check` says the database is missing | The selected config/database path has not been indexed yet, or the wrong path flags were used. | Run `kgfs index`, or pass the intended `--database` / `--project-local` flags. | `kgfs/db/checks.py`, `kgfs/cli/commands/db.py` |
+| `kgfs db check` reports foreign key or orphaned metadata problems | Database rows reference missing file records, usually from manual DB editing or an interrupted old workflow. | Back up metadata with `kgfs metadata backup`, then inspect/prune/rebuild the KGFS database. | `kgfs/db/checks.py`, `kgfs/intelligence/export.py` |
 | GPS data does not appear in media metadata | Exact/coarse location storage is disabled by default. | This is intentional. Set `media.photos.store_location_metadata: true` and choose `location_precision` only if you accept the privacy tradeoff. | `kgfs/media/exif.py`, `docs/security.md` |
 | Caption/audio/visual commands say unavailable | These are scaffolded local extension points with backend `none` by default. | Keep using metadata/OCR search, or add a future local backend; KGFS does not fake captions/transcripts/visual search. | `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py` |
 | Cloud OCR fallback refuses to upload | Cloud fallback is disabled and scaffolded to refuse upload by default. | This is intentional; no provider upload path is implemented in this phase. | `kgfs/ocr/cloud.py` |
@@ -71,6 +76,7 @@ Sources: `kgfs/cli/commands/doctor.py`, `kgfs/cli/commands/stats.py`.
 | `kgfs tui` says Textual is missing | The optional TUI dependency is not installed. | Run `python -m pip install -e ".[tui]"`, or continue using CLI/web. | `kgfs/tui/app.py`, `pyproject.toml` |
 | Integration scaffold command wrote files but did not install anything | Scaffolds are manual-install templates by design. | Inspect the README/scripts in the output directory and install manually if desired. | `kgfs/integrations/*.py` |
 | Packaged app cannot find templates/static files | Package was built without web asset data or from stale output. | Rebuild cleanly with `python scripts/build_package.py --clean`; smoke test. | `packaging/pyinstaller/kgfs.spec`, `scripts/build_package.py` |
+| `SHA256SUMS.txt` is missing | The package was built before checksum generation existed or from stale output. | Rebuild cleanly with `python scripts/build_package.py --clean` and verify `dist-packages/SHA256SUMS.txt`. | `scripts/build_package.py`, `packaging/README-packaging.md` |
 | Packaged semantic search missing | Base package excludes semantic dependencies/model caches. | Use Python install with `.[semantic]` or build a future semantic-specific package. | `packaging/pyinstaller/kgfs.spec`, `packaging/README-packaging.md` |
 | Build script refuses to remove a path | `scripts/build_package.py --clean` only removes build/dist paths inside the project root. | Use paths under the project or remove external paths manually if you really intend to. | `scripts/build_package.py` |
 | Packaged smoke test cannot find executable | `--package` points somewhere without `kgfs` or `kgfs.exe`. | Point `--package` at the packaged executable or onedir folder. | `scripts/smoke_test_packaged.py` |
@@ -83,12 +89,14 @@ Show effective paths and dependency status:
 
 ```bash
 kgfs doctor
+kgfs capabilities
 ```
 
 Show index contents summary:
 
 ```bash
 kgfs stats
+kgfs db check
 ```
 
 Show active config:

@@ -55,10 +55,7 @@ def test_schema_initializes_workflow_tables_and_version(tmp_path: Path) -> None:
 
     initialize_database(conn)
 
-    tables = {
-        row["name"]
-        for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
-    }
+    tables = {row["name"] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()}
     assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
     assert {
         "profiles",
@@ -158,7 +155,10 @@ def test_tags_and_notes_attach_to_files_and_prune_with_files(tmp_path: Path) -> 
     from kgfs.prune import prune_stale_files
 
     prune_stale_files(conn)
-    assert conn.execute("SELECT COUNT(*) AS count FROM file_tags WHERE file_id = ?", (source.file_id,)).fetchone()["count"] == 0
+    assert (
+        conn.execute("SELECT COUNT(*) AS count FROM file_tags WHERE file_id = ?", (source.file_id,)).fetchone()["count"]
+        == 0
+    )
 
 
 def test_assignment_and_projects_work_locally_without_modifying_sources(tmp_path: Path) -> None:
@@ -197,19 +197,83 @@ def test_phase7_cli_commands_project_local_workflow(tmp_path: Path) -> None:
         assert result.exit_code == 0
 
     assert runner.invoke(app, ["index", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["search", "motor torque", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["profile", "create", "school", "--ext", ".md", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["profile", "search", "school", "motor torque", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["save-search", "motor lab", "motor torque", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["run-search", "motor lab", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["collection", "create", "Motor Project", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["collection", "add", "Motor Project", "1", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["tag", "1", "robotics", "torque", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["note", "1", "Torque derivation is here.", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["assignment", "motor torque", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["project", "create", "Robotics", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["project", "add", "Robotics", "1", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    project_search_result = runner.invoke(app, ["project", "search", "Robotics", "torque", "--config", str(config_path), "--database", str(db_path)])
+    assert (
+        runner.invoke(
+            app, ["search", "motor torque", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app,
+            ["profile", "create", "school", "--ext", ".md", "--config", str(config_path), "--database", str(db_path)],
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app,
+            ["profile", "search", "school", "motor torque", "--config", str(config_path), "--database", str(db_path)],
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["save-search", "motor lab", "motor torque", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["run-search", "motor lab", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["collection", "create", "Motor Project", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["collection", "add", "Motor Project", "1", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["tag", "1", "robotics", "torque", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["note", "1", "Torque derivation is here.", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["assignment", "motor torque", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["project", "create", "Robotics", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["project", "add", "Robotics", "1", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    project_search_result = runner.invoke(
+        app, ["project", "search", "Robotics", "torque", "--config", str(config_path), "--database", str(db_path)]
+    )
 
     assert project_search_result.exit_code == 0
     assert "motor.md" in project_search_result.output

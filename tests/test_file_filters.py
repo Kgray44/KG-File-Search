@@ -29,4 +29,3 @@ def test_should_skip_default_noisy_directories(tmp_path: Path) -> None:
     assert should_skip_dir(tmp_path / ".git", config) is True
     assert should_skip_dir(tmp_path / "node_modules", config) is True
     assert should_skip_dir(tmp_path / "course_notes", config) is False
-

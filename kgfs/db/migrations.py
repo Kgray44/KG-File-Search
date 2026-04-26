@@ -24,8 +24,7 @@ def migrate_database(conn: sqlite3.Connection) -> None:
     current = get_schema_version(conn)
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
-            f"Database schema version {current} is newer than this KGFS version "
-            f"({CURRENT_SCHEMA_VERSION})."
+            f"Database schema version {current} is newer than this KGFS version ({CURRENT_SCHEMA_VERSION})."
         )
     _ensure_ocr_cache_table(conn)
     _ensure_workflow_tables(conn)

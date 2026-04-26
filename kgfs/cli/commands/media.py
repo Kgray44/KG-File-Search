@@ -17,7 +17,7 @@ from kgfs.media.captions import caption_image, get_caption_status
 from kgfs.media.exif import extract_exif_metadata, photo_metadata_text
 from kgfs.media.metadata import index_existing_photo_metadata
 from kgfs.media.status import get_media_status
-from kgfs.media.visual import get_visual_status, visual_embedding_for_file
+from kgfs.media.visual import get_visual_status
 
 media_app = typer.Typer(help="Inspect and manage optional local media metadata.")
 captions_app = typer.Typer(help="Image caption scaffold commands.")
@@ -151,11 +151,17 @@ def captions_status_cmd(
 ) -> None:
     _, _, _, config = optional_config_runtime(config_path, database_path, project_local)
     status = get_caption_status(config)
-    console.print(f"Captions enabled: {status.enabled}; backend={status.backend}; available={status.available}; {status.message}")
+    console.print(
+        f"Captions enabled: {status.enabled}; backend={status.backend}; available={status.available}; {status.message}"
+    )
 
 
 @captions_app.command("caption")
-def caption_cmd(path: Path, config_path: Path | None = typer.Option(None, "--config"), project_local: bool = typer.Option(False, "--project-local")) -> None:
+def caption_cmd(
+    path: Path,
+    config_path: Path | None = typer.Option(None, "--config"),
+    project_local: bool = typer.Option(False, "--project-local"),
+) -> None:
     _, _, _, config = optional_config_runtime(config_path, None, project_local)
     result = caption_image(path.expanduser(), config)
     console.print(result.text or result.error or result.status)
@@ -169,11 +175,17 @@ def audio_status_cmd(
 ) -> None:
     _, _, _, config = optional_config_runtime(config_path, database_path, project_local)
     status = get_audio_status(config)
-    console.print(f"Audio enabled: {status.enabled}; backend={status.backend}; available={status.available}; {status.message}")
+    console.print(
+        f"Audio enabled: {status.enabled}; backend={status.backend}; available={status.available}; {status.message}"
+    )
 
 
 @audio_app.command("transcribe")
-def transcribe_cmd(path: Path, config_path: Path | None = typer.Option(None, "--config"), project_local: bool = typer.Option(False, "--project-local")) -> None:
+def transcribe_cmd(
+    path: Path,
+    config_path: Path | None = typer.Option(None, "--config"),
+    project_local: bool = typer.Option(False, "--project-local"),
+) -> None:
     _, _, _, config = optional_config_runtime(config_path, None, project_local)
     result = transcribe_audio(path.expanduser(), config)
     console.print(result.text or result.error or result.status)
@@ -187,7 +199,9 @@ def visual_status_cmd(
 ) -> None:
     _, _, _, config = optional_config_runtime(config_path, database_path, project_local)
     status = get_visual_status(config)
-    console.print(f"Visual enabled: {status.enabled}; backend={status.backend}; available={status.available}; {status.message}")
+    console.print(
+        f"Visual enabled: {status.enabled}; backend={status.backend}; available={status.available}; {status.message}"
+    )
 
 
 @visual_app.command("similar")

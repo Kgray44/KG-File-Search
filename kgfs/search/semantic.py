@@ -43,7 +43,7 @@ class SentenceTransformerEmbedder:
             from sentence_transformers import SentenceTransformer
         except ImportError as exc:
             raise SemanticUnavailableError(
-                "sentence-transformers is not installed. Install with: python -m pip install -e \".[semantic]\""
+                'sentence-transformers is not installed. Install with: python -m pip install -e ".[semantic]"'
             ) from exc
 
         try:
@@ -89,7 +89,7 @@ def get_semantic_status(settings_or_enabled: SemanticSettings | bool) -> Semanti
         return SemanticStatus(
             enabled=True,
             available=False,
-            message="Install semantic dependencies with: python -m pip install -e \".[semantic]\"",
+            message='Install semantic dependencies with: python -m pip install -e ".[semantic]"',
         )
     local_only = "local files only" if settings.local_files_only else "model download allowed by sentence-transformers"
     return SemanticStatus(

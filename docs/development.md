@@ -56,16 +56,44 @@ The configured pytest settings are:
 
 Sources: `pyproject.toml`.
 
-## Lint, Typecheck, and Build
+## Lint, Typecheck, Coverage, and Build
 
-No dedicated lint or typecheck tool configuration is present at this commit. There is no `ruff`, `black`, `mypy`, `Makefile`, Dockerfile, Kubernetes config, or cloud deployment manifest found in the repo.
+Development tooling is intentionally dev-only. It is installed by `python -m pip
+install -e ".[dev]"` and is not part of the base runtime dependency set.
+
+```bash
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy
+python -m pytest --cov=kgfs --cov-report=term-missing
+python scripts/check_docs_consistency.py
+```
+
+Current type checking is deliberately scoped to release-readiness modules in
+`pyproject.toml`; broader strict typing can be expanded incrementally without
+blocking normal KGFS development.
+
+The docs consistency script checks that:
+
+- every registered CLI command appears in `docs/cli.md`
+- every top-level config key appears in `docs/settings.md`
+- every SQLite table appears in `docs/data-model.md`
+
+Useful local readiness commands:
+
+```bash
+kgfs capabilities
+kgfs db check
+```
 
 Packaging build:
 
 ```bash
 python -m pip install -e ".[package]"
+kgfs version
 python scripts/build_package.py --clean
 python scripts/smoke_test_packaged.py --package dist-packages/KGFS
+cat dist-packages/SHA256SUMS.txt
 ```
 
 Sources: `scripts/build_package.py`, `scripts/smoke_test_packaged.py`, `packaging/README-packaging.md`.
@@ -254,6 +282,10 @@ python scripts/build_package.py --clean --mode onedir --name KGFS --dist-dir dis
 python scripts/smoke_test_packaged.py --package dist-packages/KGFS
 ```
 
+The build writes `KGFS-<os>-<arch>.zip` and `SHA256SUMS.txt` under
+`dist-packages/`. The zip includes `QUICKSTART-KGFS.txt`, README, LICENSE,
+`config.example.yaml`, and the artificial `examples/sample-corpus`.
+
 The spec includes:
 
 - Web templates and CSS.
@@ -276,14 +308,14 @@ Sources: `packaging/pyinstaller/kgfs.spec`.
 
 ## CI
 
-The CI workflow runs tests on:
+The CI workflow runs tests, Ruff, scoped mypy, and docs consistency checks on:
 
 - `windows-latest`
 - `macos-latest`
 - `ubuntu-latest`
 - Python `3.11` and `3.12`
 
-The package workflow runs tests, builds onedir packages on Windows and macOS, smoke tests them, and uploads zip artifacts.
+The package workflow runs the same release-readiness checks, builds onedir packages on Windows and macOS, smoke tests them, uploads zip artifacts and checksums, and creates a draft GitHub Release for tags matching `v*`.
 
 Sources: `.github/workflows/ci.yml`, `.github/workflows/package.yml`, `tests/test_ci_workflow.py`.
 

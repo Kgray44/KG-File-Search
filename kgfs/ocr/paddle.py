@@ -13,15 +13,23 @@ class PaddleOCRBackend:
 
     def available(self, config: KGFSConfig) -> OCRAvailability:
         if not config.ocr.paddle.enabled:
-            return OCRAvailability(False, "PaddleOCR backend is disabled.", 'Install with python -m pip install -e ".[ocr-paddle]" and enable ocr.paddle.enabled.')
+            return OCRAvailability(
+                False,
+                "PaddleOCR backend is disabled.",
+                'Install with python -m pip install -e ".[ocr-paddle]" and enable ocr.paddle.enabled.',
+            )
         if find_spec("paddleocr") is None:
-            return OCRAvailability(False, "PaddleOCR is not installed.", 'Install with python -m pip install -e ".[ocr-paddle]".')
+            return OCRAvailability(
+                False, "PaddleOCR is not installed.", 'Install with python -m pip install -e ".[ocr-paddle]".'
+            )
         return OCRAvailability(True, "PaddleOCR is available.")
 
     def extract_image(self, request: OCRRequest) -> OCRResult:
         availability = self.available(request.config)
         if not availability.available:
-            return OCRResult("", "error", availability.message, backend=self.name, language=request.config.ocr.paddle.language)
+            return OCRResult(
+                "", "error", availability.message, backend=self.name, language=request.config.ocr.paddle.language
+            )
         try:
             from paddleocr import PaddleOCR
         except ImportError:

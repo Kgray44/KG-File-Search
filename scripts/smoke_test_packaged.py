@@ -50,8 +50,13 @@ def smoke_test(executable: Path) -> None:
         note.write_text("Tiny test note about quantum folder vibrations.", encoding="utf-8")
 
         run_command(executable, ["--help"], cwd=workspace)
+        run_command(executable, ["--version"], cwd=workspace)
         for args in (
+            ["version"],
+            ["quickstart"],
             ["profile", "--help"],
+            ["capabilities", "--help"],
+            ["db", "--help"],
             ["save-search", "--help"],
             ["collection", "--help"],
             ["tag", "--help"],
@@ -77,6 +82,8 @@ def smoke_test(executable: Path) -> None:
         run_command(executable, ["config", "--project-local"], cwd=workspace)
         run_command(executable, ["add-folder", str(corpus), "--project-local"], cwd=workspace)
         run_command(executable, ["index", "--project-local"], cwd=workspace)
+        run_command(executable, ["capabilities", "--project-local"], cwd=workspace)
+        run_command(executable, ["db", "check", "--project-local"], cwd=workspace)
         result = run_command(executable, ["search", "quantum folder vibrations", "--project-local"], cwd=workspace)
         if "qfv.md" not in result.stdout:
             raise RuntimeError("Packaged search did not return the temporary test file.")

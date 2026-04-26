@@ -5,7 +5,12 @@ from __future__ import annotations
 import sqlite3
 
 from kgfs.core.config import KGFSConfig
-from kgfs.search.backends import UnknownVectorBackend, get_vector_backend, list_vector_backend_names, vector_backend_install_hint
+from kgfs.search.backends import (
+    UnknownVectorBackend,
+    get_vector_backend,
+    list_vector_backend_names,
+    vector_backend_install_hint,
+)
 from kgfs.search.backends.base import VectorIndexStatus
 from kgfs.search.engine import SearchContext
 from kgfs.search.semantic import get_semantic_status

@@ -23,9 +23,7 @@ def should_index_file(path: Path, config: KGFSConfig) -> bool:
     suffix = path.suffix.lower()
     is_ocr_image = config.ocr.enabled and suffix in set(config.ocr.include_extensions)
     is_media_photo = (
-        config.media.enabled
-        and config.media.photos.enabled
-        and suffix in set(config.media.photos.include_extensions)
+        config.media.enabled and config.media.photos.enabled and suffix in set(config.media.photos.include_extensions)
     )
     if not (is_ocr_image or is_media_photo):
         if suffix in set(config.ignored_extensions):

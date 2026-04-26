@@ -27,7 +27,9 @@ def launch_tui(
         from textual.app import App, ComposeResult
         from textual.widgets import Footer, Header, Input, Static
     except ImportError as exc:
-        raise TextualUnavailableError('Textual is not installed. Install with: python -m pip install -e ".[tui]"') from exc
+        raise TextualUnavailableError(
+            'Textual is not installed. Install with: python -m pip install -e ".[tui]"'
+        ) from exc
 
     class KGFSApp(App):
         TITLE = "KGFS"

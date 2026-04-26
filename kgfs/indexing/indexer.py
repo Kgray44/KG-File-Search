@@ -126,7 +126,9 @@ def index_configured_folders(
             modified_time_ns=stat_mtime_ns,
             extraction=extraction,
         )
-        media_text = _index_media_metadata_if_needed(config, conn, file_id=file_id, file_path=file_path, size=stat.st_size)
+        media_text = _index_media_metadata_if_needed(
+            config, conn, file_id=file_id, file_path=file_path, size=stat.st_size
+        )
         semantic_text = "\n\n".join(part for part in (text, media_text) if part.strip())
         _index_semantic_chunks(
             config,
@@ -329,7 +331,9 @@ def _ocr_candidate_kind(config: KGFSConfig, file_path: Path) -> str | None:
     return None
 
 
-def _index_media_metadata_if_needed(config: KGFSConfig, conn: Connection, *, file_id: int, file_path: Path, size: int) -> str:
+def _index_media_metadata_if_needed(
+    config: KGFSConfig, conn: Connection, *, file_id: int, file_path: Path, size: int
+) -> str:
     if not (config.media.enabled and config.media.photos.enabled and config.media.photos.index_exif):
         return ""
     suffix = file_path.suffix.lower()

@@ -114,7 +114,9 @@ def project_show_cmd(
         table.add_column("Notes")
         for item in get_project_items(conn, name):
             notes = "; ".join(note.note for note in notes_for_file(conn, item.file_id))
-            table.add_row(str(item.file_id), item.file_name, item.role or "", format_timestamp(item.modified_time), notes)
+            table.add_row(
+                str(item.file_id), item.file_name, item.role or "", format_timestamp(item.modified_time), notes
+            )
         console.print(table)
     finally:
         conn.close()

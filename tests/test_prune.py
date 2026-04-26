@@ -61,4 +61,3 @@ def test_prune_removes_only_database_records_and_related_rows(tmp_path: Path) ->
     assert conn.execute("SELECT COUNT(*) AS count FROM files WHERE file_name = 'stale.md'").fetchone()["count"] == 0
     assert conn.execute("SELECT COUNT(*) AS count FROM chunks WHERE file_id = ?", (stale_id,)).fetchone()["count"] == 0
     assert conn.execute("SELECT COUNT(*) AS count FROM latest_results").fetchone()["count"] == 0
-

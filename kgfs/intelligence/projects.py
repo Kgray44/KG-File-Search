@@ -51,7 +51,9 @@ def infer_project_candidates(
     candidates.sort(key=lambda candidate: (-candidate.score, candidate.name.casefold()))
     if persist:
         return _persist_candidates(conn, candidates)
-    return [ProjectCandidate(index, c.name, c.score, c.file_ids, c.evidence) for index, c in enumerate(candidates, start=1)]
+    return [
+        ProjectCandidate(index, c.name, c.score, c.file_ids, c.evidence) for index, c in enumerate(candidates, start=1)
+    ]
 
 
 def list_project_candidates(conn: sqlite3.Connection) -> list[ProjectCandidate]:

@@ -27,7 +27,9 @@ def build_topic_graph(conn: sqlite3.Connection, query: str, config: KGFSConfig) 
                 metadata={"path": str(result.path), "score": result.score},
             )
         )
-        edges.append(GraphEdge(source=f"topic:{query}", target=node_id, type="mentioned_by_search", weight=result.score))
+        edges.append(
+            GraphEdge(source=f"topic:{query}", target=node_id, type="mentioned_by_search", weight=result.score)
+        )
         file_ids.append(result.file_id)
     _add_metadata_edges(conn, nodes, edges, file_ids)
     return _bounded(GraphResult(query=query, nodes=nodes, edges=edges), config)
@@ -72,7 +74,11 @@ def build_project_graph(conn: sqlite3.Connection, name: str, config: KGFSConfig)
     file_ids = []
     for row in rows:
         node_id = _file_node_id(int(row["id"]))
-        nodes.append(GraphNode(id=node_id, type="file", label=row["file_name"], file_id=int(row["id"]), metadata={"path": row["path"]}))
+        nodes.append(
+            GraphNode(
+                id=node_id, type="file", label=row["file_name"], file_id=int(row["id"]), metadata={"path": row["path"]}
+            )
+        )
         edges.append(GraphEdge(source=project_node_id, target=node_id, type="in_project", weight=1.0))
         file_ids.append(int(row["id"]))
     _add_metadata_edges(conn, nodes, edges, file_ids)
@@ -101,7 +107,9 @@ def _file_row(conn: sqlite3.Connection, file_id: int):
     return row
 
 
-def _add_metadata_edges(conn: sqlite3.Connection, nodes: list[GraphNode], edges: list[GraphEdge], file_ids: list[int]) -> None:
+def _add_metadata_edges(
+    conn: sqlite3.Connection, nodes: list[GraphNode], edges: list[GraphEdge], file_ids: list[int]
+) -> None:
     seen_nodes = {node.id for node in nodes}
     seen_edges = {(edge.source, edge.target, edge.type) for edge in edges}
     for file_id in file_ids:
@@ -116,7 +124,11 @@ def _add_metadata_edges(conn: sqlite3.Connection, nodes: list[GraphNode], edges:
             (file_id,),
         ).fetchall():
             _add_node(nodes, seen_nodes, GraphNode(id=f"tag:{row['id']}", type="tag", label=row["name"]))
-            _add_edge(edges, seen_edges, GraphEdge(source=file_node, target=f"tag:{row['id']}", type="tagged_with", weight=1.0))
+            _add_edge(
+                edges,
+                seen_edges,
+                GraphEdge(source=file_node, target=f"tag:{row['id']}", type="tagged_with", weight=1.0),
+            )
         for row in conn.execute(
             """
             SELECT c.id, c.name
@@ -127,7 +139,11 @@ def _add_metadata_edges(conn: sqlite3.Connection, nodes: list[GraphNode], edges:
             (file_id,),
         ).fetchall():
             _add_node(nodes, seen_nodes, GraphNode(id=f"collection:{row['id']}", type="collection", label=row["name"]))
-            _add_edge(edges, seen_edges, GraphEdge(source=file_node, target=f"collection:{row['id']}", type="in_collection", weight=1.0))
+            _add_edge(
+                edges,
+                seen_edges,
+                GraphEdge(source=file_node, target=f"collection:{row['id']}", type="in_collection", weight=1.0),
+            )
         for row in conn.execute(
             """
             SELECT p.id, p.name
@@ -138,10 +154,16 @@ def _add_metadata_edges(conn: sqlite3.Connection, nodes: list[GraphNode], edges:
             (file_id,),
         ).fetchall():
             _add_node(nodes, seen_nodes, GraphNode(id=f"project:{row['id']}", type="project", label=row["name"]))
-            _add_edge(edges, seen_edges, GraphEdge(source=file_node, target=f"project:{row['id']}", type="in_project", weight=1.0))
+            _add_edge(
+                edges,
+                seen_edges,
+                GraphEdge(source=file_node, target=f"project:{row['id']}", type="in_project", weight=1.0),
+            )
 
 
-def _add_same_folder_edges(conn: sqlite3.Connection, nodes: list[GraphNode], edges: list[GraphEdge], file_id: int) -> None:
+def _add_same_folder_edges(
+    conn: sqlite3.Connection, nodes: list[GraphNode], edges: list[GraphEdge], file_id: int
+) -> None:
     row = _file_row(conn, file_id)
     folder = str(Path(row["path"]).parent)
     seen_nodes = {node.id for node in nodes}
@@ -150,8 +172,20 @@ def _add_same_folder_edges(conn: sqlite3.Connection, nodes: list[GraphNode], edg
         if str(Path(candidate["path"]).parent) != folder:
             continue
         node_id = _file_node_id(int(candidate["id"]))
-        _add_node(nodes, seen_nodes, GraphNode(id=node_id, type="file", label=candidate["file_name"], file_id=int(candidate["id"]), metadata={"path": candidate["path"]}))
-        _add_edge(edges, seen_edges, GraphEdge(source=_file_node_id(file_id), target=node_id, type="same_folder", weight=0.6))
+        _add_node(
+            nodes,
+            seen_nodes,
+            GraphNode(
+                id=node_id,
+                type="file",
+                label=candidate["file_name"],
+                file_id=int(candidate["id"]),
+                metadata={"path": candidate["path"]},
+            ),
+        )
+        _add_edge(
+            edges, seen_edges, GraphEdge(source=_file_node_id(file_id), target=node_id, type="same_folder", weight=0.6)
+        )
 
 
 def _add_node(nodes: list[GraphNode], seen: set[str], node: GraphNode) -> None:
@@ -170,11 +204,9 @@ def _add_edge(edges: list[GraphEdge], seen: set[tuple[str, str, str]], edge: Gra
 def _bounded(graph: GraphResult, config: KGFSConfig) -> GraphResult:
     allowed_nodes = graph.nodes[: config.intelligence.graph_max_nodes]
     allowed_ids = {node.id for node in allowed_nodes}
-    allowed_edges = [
-        edge
-        for edge in graph.edges
-        if edge.source in allowed_ids and edge.target in allowed_ids
-    ][: config.intelligence.graph_max_edges]
+    allowed_edges = [edge for edge in graph.edges if edge.source in allowed_ids and edge.target in allowed_ids][
+        : config.intelligence.graph_max_edges
+    ]
     warnings = list(graph.warnings)
     if len(graph.nodes) > len(allowed_nodes) or len(graph.edges) > len(allowed_edges):
         warnings.append("Graph was limited by intelligence.graph_max_nodes/graph_max_edges.")

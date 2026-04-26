@@ -64,6 +64,7 @@ Operations:
 - Vector clear deletes KGFS chunk/vector rows or optional backend artifacts only; source files, file rows, and keyword FTS rows remain.
 - OCR reads source images/PDFs but writes OCR text only to KGFS database/cache data, never back to the source file or a sidecar beside it.
 - Media indexing reads image metadata and writes media-derived rows only to the KGFS database/cache. It never writes EXIF/XMP/JSON sidecars and never modifies images, audio, or PDFs.
+- Release-readiness diagnostics such as `kgfs capabilities` and `kgfs db check` are read-only. `kgfs db check` opens an existing SQLite database read-only and does not create a missing database or run migrations.
 
 Sources: `kgfs/indexing/indexer.py`, `kgfs/indexing/prune.py`, `kgfs/reset.py`, `tests/test_prune.py`, `tests/test_reset_rebuild.py`.
 
@@ -313,6 +314,11 @@ Packaged builds do not include:
 - Optional vector backend packages and artifacts.
 - Textual/tray optional UI dependencies in the base package.
 - OpenAI SDK in the base package.
+
+Release builds write `SHA256SUMS.txt` beside zip artifacts so users can verify
+downloaded packages before running them. The archive writer skips common
+user-data, cache, log, database, and model-cache patterns if they appear in
+staging by mistake.
 
 Sources: `packaging/README-packaging.md`, `packaging/pyinstaller/kgfs.spec`, `scripts/build_package.py`.
 

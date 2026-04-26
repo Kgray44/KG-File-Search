@@ -30,7 +30,9 @@ def build_cloud_ocr_plan(path: Path, config: KGFSConfig, *, allow_cloud: bool, c
     if not allow_cloud:
         return CloudOCRPlan(False, "Cloud OCR requires an explicit --allow-cloud flag.", settings.provider, preview)
     if settings.require_confirmation and not confirmed:
-        return CloudOCRPlan(False, "Cloud OCR requires explicit confirmation before upload.", settings.provider, preview)
+        return CloudOCRPlan(
+            False, "Cloud OCR requires explicit confirmation before upload.", settings.provider, preview
+        )
     preview["would_upload"] = True
     return CloudOCRPlan(
         False,

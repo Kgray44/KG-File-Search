@@ -179,7 +179,9 @@ def _keyword_similar(
                 extension=row["extension"],
                 modified_time=float(row["modified_time"]),
                 score=score,
-                snippet=make_snippet(row["extracted_text"], " ".join(terms[:3]), highlight=config.search.highlight_matches),
+                snippet=make_snippet(
+                    row["extracted_text"], " ".join(terms[:3]), highlight=config.search.highlight_matches
+                ),
                 normalized_path=row["normalized_path"],
                 mode="similar",
                 source="keyword",

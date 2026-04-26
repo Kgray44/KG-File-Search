@@ -44,4 +44,6 @@ def visual_embedding_for_file(path: Path, config: KGFSConfig) -> VisualEmbedding
     status = get_visual_status(config)
     if not status.available:
         return VisualEmbeddingResult([], "skipped", status.message, backend=status.backend)
-    return VisualEmbeddingResult([], "skipped", "No visual backend implementation is configured.", backend=status.backend)
+    return VisualEmbeddingResult(
+        [], "skipped", "No visual backend implementation is configured.", backend=status.backend
+    )

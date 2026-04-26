@@ -28,7 +28,9 @@ def similar_cmd(
     _, _, _, config, conn = connect_runtime(config_path, database_path, project_local)
     try:
         try:
-            report = similar_from_result(conn, result_id, config, limit=limit, include_self=include_self, save_latest=True)
+            report = similar_from_result(
+                conn, result_id, config, limit=limit, include_self=include_self, save_latest=True
+            )
         except ValueError as exc:
             raise typer.BadParameter(str(exc)) from exc
         _print_report(report)
@@ -58,7 +60,7 @@ def similar_file_cmd(
 
 
 def _print_report(report) -> None:
-    console.print(f"[bold]Similar Files[/bold]")
+    console.print("[bold]Similar Files[/bold]")
     console.print(f"Source: {report.source.file_name}")
     console.print(f"Strategy: {report.strategy}")
     for warning in report.warnings:

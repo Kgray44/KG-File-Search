@@ -34,11 +34,26 @@ kgfs add-folder "./sample-files" --project-local
 kgfs index --project-local
 kgfs search "motor torque" --project-local
 kgfs stats --project-local
+kgfs capabilities --project-local
+kgfs db check --project-local
 ```
 
 Project-local files live under `.kgfs/` in the current directory.
 
 Source: `kgfs/core/app_dirs.py`.
+
+## Example 2B: Built-In Demo Corpus
+
+```bash
+kgfs init --project-local
+kgfs add-folder "./examples/sample-corpus" --project-local
+kgfs index --project-local
+kgfs search "motor torque" --project-local
+kgfs search "op amp gain" --project-local
+kgfs why 1 "op amp gain" --project-local
+```
+
+The demo corpus is artificial and contains no personal data.
 
 ## Example 3: Use Explicit Config and Database Paths
 
@@ -507,10 +522,29 @@ Sources: `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py`.
 `reset-index` creates a KGFS metadata backup first when
 `metadata.auto_backup_before_reset: true`.
 
-## Example 19: Build a Package
+## Example 19: Release-Readiness Checks
 
 ```bash
-python -m pip install -e ".[package]"
+python -m pip install -e ".[dev,package]"
+python -m pytest -q --basetemp .pytest-tmp
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy
+python -m pytest --cov=kgfs --cov-report=term-missing
+python scripts/check_docs_consistency.py
+kgfs capabilities --project-local
+```
+
+Use `kgfs db check --project-local` after indexing a project-local test corpus
+to verify SQLite integrity, schema version, foreign keys, orphaned metadata, and
+vector artifact placement.
+
+Sources: `pyproject.toml`, `scripts/check_docs_consistency.py`, `kgfs/capabilities.py`, `kgfs/db/checks.py`.
+
+## Example 20: Build a Package
+
+```bash
+python -m pip install -e ".[dev,package]"
 python scripts/build_package.py --clean --mode onedir
 python scripts/smoke_test_packaged.py --package dist-packages/KGFS
 ```

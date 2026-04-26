@@ -53,7 +53,9 @@ def semantic_index_cmd(
     database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
     project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
     rebuild: bool = typer.Option(False, "--rebuild", help="Build or rebuild semantic chunks and embeddings."),
-    allow_risky_root: bool = typer.Option(False, "--allow-risky-root", help="Allow indexing risky roots during rebuild."),
+    allow_risky_root: bool = typer.Option(
+        False, "--allow-risky-root", help="Allow indexing risky roots during rebuild."
+    ),
 ) -> None:
     """Show semantic index status, optionally rebuilding local embeddings."""
 

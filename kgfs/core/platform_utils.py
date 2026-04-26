@@ -7,7 +7,7 @@ import platform
 import subprocess
 from pathlib import Path
 
-from kgfs.core.safety import risk_warning
+from kgfs.core.safety import risk_warning as risk_warning  # noqa: F401
 
 
 def normalize_path(path: Path) -> tuple[Path, str]:

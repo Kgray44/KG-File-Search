@@ -10,6 +10,10 @@ Command registration source: `kgfs/cli/app.py`.
 |---|---|---|
 | `kgfs init` | Create config and app directories without indexing. | `kgfs/cli/commands/init.py` |
 | `kgfs doctor` | Print environment/config/database diagnostics. | `kgfs/cli/commands/doctor.py` |
+| `kgfs version` / `kgfs --version` | Show the KGFS version from the single source of truth. | `kgfs/cli/commands/version.py` |
+| `kgfs quickstart` | Print a safe local-first first-run guide. | `kgfs/cli/commands/quickstart.py` |
+| `kgfs capabilities` | Summarize feature availability for this KGFS build/config. | `kgfs/cli/commands/capabilities.py` |
+| `kgfs db` / `kgfs db check` | Inspect SQLite integrity, schema, metadata references, and artifacts. | `kgfs/cli/commands/db.py` |
 | `kgfs config` | Print active config path and file contents. | `kgfs/cli/commands/config.py` |
 | `kgfs add-folder` | Add a path to `indexed_folders`. | `kgfs/cli/commands/folders.py` |
 | `kgfs remove-folder` | Remove a path from `indexed_folders`. | `kgfs/cli/commands/folders.py` |
@@ -29,11 +33,13 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs list-searches` | List saved searches. | `kgfs/cli/commands/saved_searches.py` |
 | `kgfs delete-search` | Delete a saved search. | `kgfs/cli/commands/saved_searches.py` |
 | `kgfs collection` | Manage local file collections. | `kgfs/cli/commands/collections.py` |
+| `kgfs collection list` / `kgfs collection remove` / `kgfs collection delete` | List, remove from, or delete collections. | `kgfs/cli/commands/collections.py` |
 | `kgfs tag` / `kgfs untag` / `kgfs tags` | Attach, remove, and list tags for latest result IDs. | `kgfs/cli/commands/tags.py` |
 | `kgfs tagged` / `kgfs tag-list` | Show tagged files or all tag names. | `kgfs/cli/commands/tags.py` |
 | `kgfs note` / `kgfs notes` / `kgfs note-delete` | Add, list, and delete local notes. | `kgfs/cli/commands/notes.py` |
 | `kgfs assignment` | Build a local assignment working set. | `kgfs/cli/commands/assignment.py` |
 | `kgfs project` | Manage manual local projects. | `kgfs/cli/commands/projects.py` |
+| `kgfs project list` / `kgfs project remove` / `kgfs project delete` | List, remove from, or delete manual projects. | `kgfs/cli/commands/projects.py` |
 | `kgfs duplicates` | Find exact or semantic duplicate files. | `kgfs/cli/commands/duplicates.py` |
 | `kgfs versions` / `kgfs versions-file` | Find likely file versions. | `kgfs/cli/commands/versions.py` |
 | `kgfs graph` / `kgfs graph-export` | Build or export a bounded local file/topic graph. | `kgfs/cli/commands/graph.py` |
@@ -55,6 +61,7 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs ocr test` | OCR one image without indexing it. | `kgfs/cli/commands/ocr.py` |
 | `kgfs ocr index` | Run indexing with OCR-enabled extraction. | `kgfs/cli/commands/ocr.py` |
 | `kgfs media` | Inspect, index, and clear optional local media-derived metadata. | `kgfs/cli/commands/media.py` |
+| `kgfs media captions caption` / `kgfs media audio transcribe` / `kgfs media visual similar` | Optional media scaffold actions. | `kgfs/cli/commands/media.py` |
 | `kgfs why` | Explain why a latest search result matched a query. | `kgfs/cli/commands/why.py` |
 | `kgfs open` | Open a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
 | `kgfs reveal` | Reveal a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
@@ -103,6 +110,7 @@ kgfs doctor [--config PATH] [--database PATH] [--project-local]
 
 Reports:
 
+- KGFS version
 - Platform and Python version
 - Packaged/frozen state and executable path
 - Config/data/cache/log/database paths
@@ -117,6 +125,82 @@ Reports:
 - Configured folder existence/readability/warnings
 
 Source: `kgfs/cli/commands/doctor.py`.
+
+## `version`
+
+```bash
+kgfs version
+kgfs --version
+```
+
+Prints the KGFS package version. The version string comes from
+`kgfs/version.py`, and package metadata is generated from the same source.
+
+Source: `kgfs/cli/commands/version.py`, `kgfs/version.py`.
+
+## `quickstart`
+
+```bash
+kgfs quickstart
+```
+
+Prints a safe first-run guide:
+
+```bash
+kgfs init
+kgfs doctor
+kgfs add-folder "./sample-files"
+kgfs index
+kgfs search "motor torque"
+```
+
+It also points to the artificial demo corpus under `examples/sample-corpus`.
+The guide repeats that generated config starts with `indexed_folders: []` and
+that KGFS never indexes the whole drive by default.
+
+Source: `kgfs/cli/commands/quickstart.py`, `kgfs/quickstart.py`.
+
+## `capabilities`
+
+```bash
+kgfs capabilities [--config PATH] [--database PATH] [--project-local]
+```
+
+Prints a compact release-readiness summary of feature availability:
+
+- KGFS version
+- Keyword search
+- Semantic search
+- Vector backends
+- OCR
+- Media
+- AI Assist
+- Local API
+- TUI
+- Tray and integration scaffolds
+
+The command is read-only and uses local optional dependency checks only.
+
+Source: `kgfs/cli/commands/capabilities.py`, `kgfs/capabilities.py`.
+
+## Database Checks
+
+```bash
+kgfs db check [--config PATH] [--database PATH] [--project-local]
+```
+
+Runs read-only SQLite and KGFS metadata sanity checks:
+
+- `PRAGMA integrity_check`
+- Current schema version versus the KGFS code version
+- `PRAGMA foreign_key_check`
+- Orphaned metadata rows that reference missing files
+- Vector backend artifact root sanity
+
+`kgfs db check` does not create a missing database, run migrations, delete rows,
+or modify source files.
+
+Source: `kgfs/cli/commands/db.py`, `kgfs/db/checks.py`.
 
 ## `config`
 
@@ -245,8 +329,11 @@ kgfs delete-search "circuits labs"
 
 kgfs collection create "Motor Project"
 kgfs collection add "Motor Project" 1 3 5
+kgfs collection list
+kgfs collection remove "Motor Project" 3
 kgfs collection show "Motor Project"
 kgfs collection export "Motor Project"
+kgfs collection delete "Motor Project"
 
 kgfs tag 1 circuits lab-report important
 kgfs untag 1 important
@@ -261,12 +348,15 @@ kgfs note-delete 4
 kgfs assignment "robotics motor lab"
 
 kgfs project create "Audio Crossover"
+kgfs project list
 kgfs project add "Audio Crossover" 1 3 5
+kgfs project remove "Audio Crossover" 3
 kgfs project show "Audio Crossover"
 kgfs project search "Audio Crossover" "op amp filter"
 kgfs project infer
 kgfs project candidates
 kgfs project accept-candidate 1 --name "Audio Crossover"
+kgfs project delete "Audio Crossover"
 ```
 
 Collections and projects add files by latest search result ID. Notes and tags
@@ -425,8 +515,11 @@ kgfs media index [--config PATH] [--database PATH] [--project-local]
                  [--photos] [--dry-run] [--allow-risky-root]
 kgfs media clear --yes [--config PATH] [--database PATH] [--project-local]
 kgfs media captions status [--config PATH] [--database PATH] [--project-local]
+kgfs media captions caption PATH [--config PATH] [--project-local]
 kgfs media audio status [--config PATH] [--database PATH] [--project-local]
+kgfs media audio transcribe PATH [--config PATH] [--project-local]
 kgfs media visual status [--config PATH] [--database PATH] [--project-local]
+kgfs media visual similar RESULT_ID
 ```
 
 `media status` is read-only and works when optional dependencies are missing.
@@ -565,4 +658,10 @@ Packaged smoke test:
 python scripts/smoke_test_packaged.py [--package PATH]
 ```
 
-Sources: `scripts/build_package.py`, `scripts/smoke_test_packaged.py`.
+Docs consistency check:
+
+```bash
+python scripts/check_docs_consistency.py [--root PATH]
+```
+
+Sources: `scripts/build_package.py`, `scripts/smoke_test_packaged.py`, `scripts/check_docs_consistency.py`.

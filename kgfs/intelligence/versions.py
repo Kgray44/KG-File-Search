@@ -24,7 +24,9 @@ def find_versions_for_result(conn: sqlite3.Connection, result_id: int, config: K
 
 def find_versions_for_path(conn: sqlite3.Connection, path: Path, config: KGFSConfig) -> list[VersionCandidate]:
     resolved = path.expanduser()
-    row = conn.execute("SELECT id FROM files WHERE path = ? OR normalized_path = ?", (str(resolved), str(resolved))).fetchone()
+    row = conn.execute(
+        "SELECT id FROM files WHERE path = ? OR normalized_path = ?", (str(resolved), str(resolved))
+    ).fetchone()
     if row is None:
         for candidate in conn.execute("SELECT id, path FROM files").fetchall():
             if Path(candidate["path"]) == resolved:

@@ -9,7 +9,20 @@ produced on macOS.
 Install packaging dependencies:
 
 ```bash
-python -m pip install -e ".[package]"
+python -m pip install -e ".[dev,package]"
+```
+
+Run release-readiness checks before building:
+
+```bash
+kgfs version
+python -m pytest -q --basetemp .pytest-tmp
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy
+python -m pytest --cov=kgfs --cov-report=term-missing
+python scripts/check_docs_consistency.py
+kgfs capabilities --project-local
 ```
 
 Build the default onedir package:
@@ -24,11 +37,31 @@ Run the smoke test:
 python scripts/smoke_test_packaged.py --package dist-packages/KGFS
 ```
 
+The smoke test runs command-help checks, package diagnostics, indexing/search,
+`kgfs capabilities`, and `kgfs db check` against a temporary project-local
+workspace. It must not touch user source folders.
+
 The release zip appears in `dist-packages/`:
 
 - `KGFS-windows-x64.zip` on Windows x64
 - `KGFS-macos-arm64.zip` on Apple Silicon macOS
 - `KGFS-macos-x64.zip` on Intel macOS
+
+The build also writes `dist-packages/SHA256SUMS.txt`.
+
+Verify an artifact with PowerShell:
+
+```powershell
+Get-FileHash .\dist-packages\KGFS-windows-x64.zip -Algorithm SHA256
+Get-Content .\dist-packages\SHA256SUMS.txt
+```
+
+Or with common Unix tools:
+
+```bash
+shasum -a 256 dist-packages/KGFS-macos-arm64.zip
+cat dist-packages/SHA256SUMS.txt
+```
 
 ## Included
 
@@ -39,6 +72,8 @@ The release zip appears in `dist-packages/`:
 - `LICENSE`
 - `config.example.yaml`
 - `QUICKSTART-KGFS.txt`
+- Artificial `examples/sample-corpus`
+- `SHA256SUMS.txt` beside the zip in release output
 
 ## Not Included
 
@@ -56,6 +91,24 @@ The release zip appears in `dist-packages/`:
 - Optional Textual TUI and pystray tray dependencies
 - Tesseract executable, OCR cache rows, or OCR user data
 - OpenAI SDK, unless a future AI-specific package is intentionally created
+- API keys, `.env` files, local app data, test databases, or generated index artifacts
+
+The archive writer skips common user-data, cache, log, database, and model-cache
+patterns even if they appear in staging by mistake.
+
+## GitHub Releases
+
+The package workflow runs on pushes, pull requests, manual dispatches, and tags
+matching `v*`. Tag builds produce Windows and macOS zip artifacts, generate
+checksums, then create a draft GitHub Release with:
+
+- `KGFS-windows-*.zip`
+- `KGFS-macos-*.zip`
+- `SHA256SUMS.txt`
+
+The workflow does not require signing or notarization secrets yet, and it does
+not fail just because signing secrets are absent. Signing remains a later
+release-hardening step.
 
 ## Semantic Search
 
@@ -112,3 +165,27 @@ On Windows, unsigned `.exe` files may trigger SmartScreen warnings. Future
 release work can add Authenticode signing with a code-signing certificate.
 
 Unsigned builds must remain usable for local testing and CI smoke tests.
+
+## Versioning Guidance
+
+KGFS keeps its package version in one source:
+
+- `kgfs/version.py`
+
+`pyproject.toml` uses setuptools dynamic metadata to read that version.
+
+For each release:
+
+1. Update `kgfs/version.py`.
+2. Add a dated entry to `CHANGELOG.md`.
+3. Run the release-readiness checks above.
+4. Build on each target OS.
+5. Smoke test the exact packaged artifact that will be shared.
+6. Verify the zip against `SHA256SUMS.txt`.
+7. Tag the release, for example `git tag v0.1.0 && git push origin v0.1.0`.
+
+Use semantic-version style increments:
+
+- Patch: bug fixes, docs, internal cleanup, release-readiness checks.
+- Minor: new user-visible local features or command families.
+- Major: incompatible CLI/config/database behavior.

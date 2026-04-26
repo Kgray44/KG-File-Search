@@ -9,8 +9,7 @@ from kgfs.core.config import KGFSConfig
 from kgfs.ocr.base import OCRAvailability, OCRRequest, OCRResult
 
 TESSERACT_INSTALL_HINT = (
-    "Install Tesseract locally and put it on PATH, or set ocr.tesseract.command "
-    "to the full executable path."
+    "Install Tesseract locally and put it on PATH, or set ocr.tesseract.command to the full executable path."
 )
 
 

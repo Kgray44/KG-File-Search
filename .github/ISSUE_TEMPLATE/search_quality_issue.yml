@@ -1,0 +1,30 @@
+name: Search quality issue
+description: Report ranking, snippets, OCR/media labels, or explainability problems.
+title: "[Search quality]: "
+labels: ["search-quality"]
+body:
+  - type: textarea
+    id: query
+    attributes:
+      label: Query and mode
+      description: Include the command, mode, and expected top result.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Actual output
+      description: Paste the relevant result rows or `kgfs why` output.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Search mode
+      options:
+        - keyword
+        - auto
+        - hybrid
+        - semantic
+        - deep/research/similar
+        - other

@@ -9,7 +9,7 @@ from pathlib import Path
 from kgfs.core.config import HybridSettings, KGFSConfig, SemanticSettings, VectorSettings
 from kgfs.core.models import SearchResult
 from kgfs.search.backends import get_vector_backend
-from kgfs.search.backends.base import VectorSearchHit, VectorSearchOptions
+from kgfs.search.backends.base import VectorSearchOptions
 from kgfs.search.filters import SearchFilters, row_matches_filters
 from kgfs.search.query import build_fts_query
 from kgfs.search.ranking import combine_hybrid_score, keyword_score
@@ -383,7 +383,9 @@ def _media_result(result: SearchResult) -> SearchResult | None:
     return result if source.startswith("media:") else None
 
 
-def _hybrid_metadata(extraction_source: str, keyword: SearchResult | None, semantic: SearchResult | None) -> dict[str, object]:
+def _hybrid_metadata(
+    extraction_source: str, keyword: SearchResult | None, semantic: SearchResult | None
+) -> dict[str, object]:
     for result in (keyword, semantic):
         if not result or not result.metadata:
             continue

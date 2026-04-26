@@ -22,4 +22,3 @@ def extract_docx(path: Path) -> ExtractionResult:
         return ok("\n".join(part for part in parts if part))
     except Exception as exc:
         return failed(str(exc))
-

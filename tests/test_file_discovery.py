@@ -33,4 +33,3 @@ def test_discover_files_does_not_follow_symlinks_by_default(tmp_path: Path) -> N
     config = KGFSConfig(indexed_folders=[root], follow_symlinks=False)
 
     assert list(discover_files(config)) == [root / "real.md"]
-

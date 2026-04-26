@@ -1,0 +1,28 @@
+name: Security or privacy concern
+description: Report a local-first, source-file safety, or privacy concern.
+title: "[Security/privacy]: "
+labels: ["security", "privacy"]
+body:
+  - type: textarea
+    id: concern
+    attributes:
+      label: Concern
+      description: Describe the behavior and why it may violate KGFS privacy/safety expectations.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction or evidence
+      description: Include commands, paths with sensitive parts redacted, and whether any source file was modified.
+    validations:
+      required: true
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Impact areas
+      options:
+        - label: Source file modification
+        - label: Unexpected network/cloud behavior
+        - label: Secret or personal data exposure
+        - label: Unsafe package contents

@@ -20,6 +20,7 @@ from kgfs.media.status import get_media_status
 from kgfs.ocr.status import get_ocr_status
 from kgfs.search.semantic import get_semantic_status
 from kgfs.vectors.status import get_vector_status
+from kgfs.version import __version__
 
 
 def register(app: typer.Typer) -> None:
@@ -72,12 +73,15 @@ def doctor(
             media_summary = f"unreadable ({exc})"
     else:
         ocr_status = get_ocr_status(config)
-        ocr_summary = f"enabled={ocr_status.enabled}, backend={ocr_status.backend_name}, available={ocr_status.available}"
+        ocr_summary = (
+            f"enabled={ocr_status.enabled}, backend={ocr_status.backend_name}, available={ocr_status.available}"
+        )
         media_status = get_media_status(config)
         media_summary = f"enabled={media_status.enabled}, photo_exif={media_status.photo_metadata_enabled}"
     table = Table(title="KGFS Doctor")
     table.add_column("Check")
     table.add_column("Value")
+    table.add_row("KGFS version", __version__)
     table.add_row("Platform", diagnostics["platform"])
     table.add_row("Python", sys.version.split()[0])
     table.add_row("Packaged/frozen", str(is_frozen()))

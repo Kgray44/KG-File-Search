@@ -36,7 +36,9 @@ def test_tesseract_backend_success_uses_stdout_and_does_not_modify_source(tmp_pa
     image = tmp_path / "scan.png"
     image.write_bytes(b"not a real image but not modified")
     before = image.read_bytes()
-    completed = subprocess.CompletedProcess(args=["tesseract"], returncode=0, stdout="Visible Motor Torque\n", stderr="")
+    completed = subprocess.CompletedProcess(
+        args=["tesseract"], returncode=0, stdout="Visible Motor Torque\n", stderr=""
+    )
     run = mocker.patch("kgfs.ocr.tesseract.subprocess.run", return_value=completed)
     config = KGFSConfig(
         ocr=OCRSettings(

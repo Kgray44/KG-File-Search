@@ -1,4 +1,3 @@
-import subprocess
 from pathlib import Path
 
 from kgfs.platform_utils import normalize_path, open_file, platform_diagnostics, reveal_file, risk_warning

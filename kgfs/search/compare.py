@@ -88,8 +88,4 @@ def _file_text(conn: Connection, file_id: int) -> str:
 
 
 def _terms(text: str) -> list[str]:
-    return [
-        term
-        for term in re.findall(r"\b[\w]{3,}\b", text.casefold(), flags=re.UNICODE)
-        if term not in STOPWORDS
-    ]
+    return [term for term in re.findall(r"\b[\w]{3,}\b", text.casefold(), flags=re.UNICODE) if term not in STOPWORDS]

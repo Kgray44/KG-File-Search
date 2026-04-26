@@ -10,4 +10,3 @@ from kgfs.extractors.text import extract_plain_text
 
 def extract_code(path: Path) -> ExtractionResult:
     return extract_plain_text(path)
-

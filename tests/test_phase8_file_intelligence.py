@@ -45,8 +45,10 @@ def _make_intelligence_corpus(tmp_path: Path, *, semantic: bool = False):
     audio.mkdir()
     files = {
         project / "motor torque lab draft.md": "Motor torque derivation for robotics lab with radius force current.",
-        project / "motor torque lab final.md": "Motor torque derivation for robotics lab with radius force current and final notes.",
-        project / "motor torque lab copy.md": "Motor torque derivation for robotics lab with radius force current and final notes.",
+        project
+        / "motor torque lab final.md": "Motor torque derivation for robotics lab with radius force current and final notes.",
+        project
+        / "motor torque lab copy.md": "Motor torque derivation for robotics lab with radius force current and final notes.",
         project / "motor data.csv": "time,torque\n1,2\n",
         audio / "speaker crossover notes.md": "Speaker crossover filter design and op amp buffers.",
         audio / "speaker crossover copy.md": "Speaker crossover filter design and op amp buffers.",
@@ -101,7 +103,10 @@ def test_exact_and_semantic_duplicates_are_local_and_non_destructive(tmp_path: P
     exact = find_exact_duplicates(conn)
     semantic = find_semantic_duplicates(conn, config, min_score=0.9)
 
-    assert any({"motor torque lab final.md", "motor torque lab copy.md"}.issubset({item.file_name for item in group.items}) for group in exact.groups)
+    assert any(
+        {"motor torque lab final.md", "motor torque lab copy.md"}.issubset({item.file_name for item in group.items})
+        for group in exact.groups
+    )
     assert exact.groups[0].reclaimable_size > 0
     assert any(group.score >= 0.9 for group in semantic.groups)
     assert {path: path.read_bytes() for path in root.rglob("*") if path.is_file()} == before
@@ -196,7 +201,15 @@ def test_graph_health_and_metadata_roundtrip(tmp_path: Path) -> None:
     assert get_collection_items(restored, "Motor Project")
     counts_before_second_import = {
         table: restored.execute(f"SELECT COUNT(*) AS count FROM {table}").fetchone()["count"]
-        for table in ("saved_searches", "collections", "collection_items", "tags", "file_tags", "file_notes", "projects")
+        for table in (
+            "saved_searches",
+            "collections",
+            "collection_items",
+            "tags",
+            "file_tags",
+            "file_notes",
+            "projects",
+        )
     }
 
     second_summary = import_metadata(restored, payload, yes=True)
@@ -228,16 +241,51 @@ def test_phase8_cli_commands_project_local_workflow(tmp_path: Path) -> None:
         assert result.exit_code == 0
 
     assert runner.invoke(app, ["index", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["search", "motor torque", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
+    assert (
+        runner.invoke(
+            app, ["search", "motor torque", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
     assert runner.invoke(app, ["duplicates", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["versions", "1", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["project", "infer", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["project", "candidates", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
-    assert runner.invoke(app, ["graph", "motor torque", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
+    assert (
+        runner.invoke(app, ["versions", "1", "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
+    )
+    assert (
+        runner.invoke(app, ["project", "infer", "--config", str(config_path), "--database", str(db_path)]).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["project", "candidates", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            app, ["graph", "motor torque", "--config", str(config_path), "--database", str(db_path)]
+        ).exit_code
+        == 0
+    )
     health_result = runner.invoke(app, ["health", "--json", "--config", str(config_path), "--database", str(db_path)])
     assert health_result.exit_code == 0
     assert "indexed_files" in health_result.output
-    assert runner.invoke(app, ["metadata", "export", "--output", str(export_path), "--config", str(config_path), "--database", str(db_path)]).exit_code == 0
+    assert (
+        runner.invoke(
+            app,
+            [
+                "metadata",
+                "export",
+                "--output",
+                str(export_path),
+                "--config",
+                str(config_path),
+                "--database",
+                str(db_path),
+            ],
+        ).exit_code
+        == 0
+    )
 
     assert export_path.exists()
     assert {path.name: path.read_bytes() for path in root.iterdir()} == before

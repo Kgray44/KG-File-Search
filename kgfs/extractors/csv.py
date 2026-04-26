@@ -21,4 +21,3 @@ def extract_csv(path: Path) -> ExtractionResult:
             return failed(str(exc))
     except (OSError, csv.Error) as exc:
         return failed(str(exc))
-

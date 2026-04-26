@@ -1,0 +1,4 @@
+sample,topic,value,units
+1,motor torque,0.42,N m
+2,op amp gain,-4.7,V/V
+3,crossover frequency,2400,Hz

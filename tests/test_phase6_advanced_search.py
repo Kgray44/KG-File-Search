@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -180,7 +179,9 @@ def test_timeline_search_sorts_results_by_modified_time_and_respects_filters(tmp
     assert report.items
     assert report.items == sorted(report.items, key=lambda item: item.modified_time)
     assert report.groups
-    assert all("crossover" in item.snippet.casefold() or "crossover" in item.file_name.casefold() for item in report.items)
+    assert all(
+        "crossover" in item.snippet.casefold() or "crossover" in item.file_name.casefold() for item in report.items
+    )
 
 
 def test_research_query_returns_local_citations_terms_and_followups_without_ai(tmp_path: Path, mocker) -> None:
@@ -232,10 +233,16 @@ def test_advanced_cli_help_and_project_local_workflow(tmp_path: Path) -> None:
 
     index_result = runner.invoke(app, ["index", "--config", str(config_path), "--database", str(db_path)])
     deep_result = runner.invoke(app, ["deep", "motor torque", "--config", str(config_path), "--database", str(db_path)])
-    search_result = runner.invoke(app, ["search", "motor torque", "--config", str(config_path), "--database", str(db_path)])
+    search_result = runner.invoke(
+        app, ["search", "motor torque", "--config", str(config_path), "--database", str(db_path)]
+    )
     similar_result = runner.invoke(app, ["similar", "1", "--config", str(config_path), "--database", str(db_path)])
-    timeline_result = runner.invoke(app, ["timeline", "motor", "--config", str(config_path), "--database", str(db_path)])
-    research_result = runner.invoke(app, ["research", "motor torque", "--config", str(config_path), "--database", str(db_path)])
+    timeline_result = runner.invoke(
+        app, ["timeline", "motor", "--config", str(config_path), "--database", str(db_path)]
+    )
+    research_result = runner.invoke(
+        app, ["research", "motor torque", "--config", str(config_path), "--database", str(db_path)]
+    )
 
     assert index_result.exit_code == 0
     assert deep_result.exit_code == 0

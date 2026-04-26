@@ -32,7 +32,9 @@ def test_sqlite_vec_rebuild_missing_dependency_is_helpful(tmp_path: Path) -> Non
         SqliteVecVectorBackend().rebuild(_context(tmp_path), model_name="fake-local-model")
 
 
-@pytest.mark.skipif(importlib.util.find_spec("sqlite_vec") is None, reason="sqlite-vec optional dependency is not installed")
+@pytest.mark.skipif(
+    importlib.util.find_spec("sqlite_vec") is None, reason="sqlite-vec optional dependency is not installed"
+)
 def test_sqlite_vec_rebuild_search_and_clear_when_dependency_installed(tmp_path: Path) -> None:
     context, source = _indexed_context(tmp_path)
     before_text = source.read_text(encoding="utf-8")

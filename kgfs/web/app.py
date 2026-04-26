@@ -103,7 +103,9 @@ def create_app(
                         filters=filters,
                         highlight=config.search.highlight_matches,
                     )
-                    execution = build_default_search_registry().search(q, options, SearchContext(conn=conn, config=config))
+                    execution = build_default_search_registry().search(
+                        q, options, SearchContext(conn=conn, config=config)
+                    )
                     results = execution.results
                     mode_used = execution.mode_used.value
                     warnings = execution.warnings

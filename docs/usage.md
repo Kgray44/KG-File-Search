@@ -54,11 +54,19 @@ Sources: `pyproject.toml`, `README.md`.
 
 ## First Run
 
+Check the version and print the built-in quickstart:
+
+```bash
+kgfs version
+kgfs quickstart
+```
+
 Create a config:
 
 ```bash
 kgfs init
 kgfs doctor
+kgfs capabilities
 ```
 
 Add a folder deliberately:
@@ -94,11 +102,14 @@ Project-local mode stores config and data under `.kgfs/` in the current director
 
 ```bash
 kgfs init --project-local
-kgfs add-folder "./sample-files" --project-local
+kgfs add-folder "./examples/sample-corpus" --project-local
 kgfs index --project-local
-kgfs search "sample query" --project-local
+kgfs search "motor torque" --project-local
 kgfs stats --project-local
+kgfs db check --project-local
 ```
+
+`examples/sample-corpus` is artificial and safe for first-run testing.
 
 Sources: `kgfs/core/app_dirs.py`, `tests/test_app_dirs.py`.
 
@@ -722,7 +733,19 @@ Sources: `kgfs/cli/commands/maintenance.py`, `kgfs/indexing/prune.py`, `kgfs/res
 Install packaging dependencies:
 
 ```bash
-python -m pip install -e ".[package]"
+python -m pip install -e ".[dev,package]"
+```
+
+Run release-readiness checks:
+
+```bash
+python -m pytest -q --basetemp .pytest-tmp
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy
+python -m pytest --cov=kgfs --cov-report=term-missing
+python scripts/check_docs_consistency.py
+kgfs capabilities --project-local
 ```
 
 Build and smoke test:
@@ -733,6 +756,13 @@ python scripts/smoke_test_packaged.py --package dist-packages/KGFS
 ```
 
 The zip name is generated as `KGFS-<os>-<arch>.zip`.
+The build also writes `SHA256SUMS.txt` beside the zip. Compare the checksum
+against the zip before sharing or installing a release artifact:
+
+```bash
+shasum -a 256 dist-packages/KGFS-macos-arm64.zip
+cat dist-packages/SHA256SUMS.txt
+```
 
 Sources: `scripts/build_package.py`, `scripts/smoke_test_packaged.py`, `packaging/README-packaging.md`.
 

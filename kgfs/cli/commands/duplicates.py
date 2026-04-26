@@ -25,7 +25,11 @@ def duplicates_cmd(
 ) -> None:
     _, _, _, config, conn = connect_runtime(config_path, database_path, project_local)
     try:
-        report = find_semantic_duplicates(conn, config, min_score=min_score) if semantic and not exact else find_exact_duplicates(conn)
+        report = (
+            find_semantic_duplicates(conn, config, min_score=min_score)
+            if semantic and not exact
+            else find_exact_duplicates(conn)
+        )
         table = Table(title="Duplicate Files")
         table.add_column("Group")
         table.add_column("Kind")

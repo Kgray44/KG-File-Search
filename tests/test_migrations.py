@@ -21,4 +21,3 @@ def test_database_initialization_is_idempotent(tmp_path: Path) -> None:
 
     assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
     assert conn.execute("SELECT COUNT(*) AS count FROM schema_version").fetchone()["count"] == 1
-

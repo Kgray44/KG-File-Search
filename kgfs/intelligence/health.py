@@ -105,7 +105,9 @@ def build_health_report(
                 suggestion="kgfs ocr advanced-status",
             )
         )
-    return HealthReport(summary=summary, issues=issues, workflow_counts=workflow_counts, suggestions=_unique(suggestions))
+    return HealthReport(
+        summary=summary, issues=issues, workflow_counts=workflow_counts, suggestions=_unique(suggestions)
+    )
 
 
 def _workflow_counts(conn: sqlite3.Connection) -> dict[str, int]:

@@ -62,7 +62,8 @@ def media_counts(conn: sqlite3.Connection) -> dict[str, int]:
         "media_metadata": _count_table(conn, "media_metadata"),
         "media_text": _count_table(conn, "media_text"),
         "media_embeddings": _count_table(conn, "media_embeddings"),
-        "cache_size_bytes": _sum_length(conn, "media_text", "text") + _sum_length(conn, "media_metadata", "metadata_json"),
+        "cache_size_bytes": _sum_length(conn, "media_text", "text")
+        + _sum_length(conn, "media_metadata", "metadata_json"),
     }
 
 

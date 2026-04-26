@@ -58,8 +58,12 @@ def why_cmd(
 
         result = _find_matching_result(execution.results, latest.file_id, latest.file_path)
         if result is None:
-            result = _load_latest_file_as_result(conn, latest.file_id, result_id, query, config.search.highlight_matches)
-            notes.append("The result did not appear in a fresh search rerun; showing the saved file with best available local context.")
+            result = _load_latest_file_as_result(
+                conn, latest.file_id, result_id, query, config.search.highlight_matches
+            )
+            notes.append(
+                "The result did not appear in a fresh search rerun; showing the saved file with best available local context."
+            )
         else:
             result = _with_result_id(result, result_id)
 

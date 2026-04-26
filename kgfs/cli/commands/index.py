@@ -22,11 +22,17 @@ def index(
     database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
     project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Discover files without writing to the database."),
-    rebuild_embeddings: bool = typer.Option(False, "--rebuild-embeddings", help="Rebuild semantic chunks and embeddings."),
+    rebuild_embeddings: bool = typer.Option(
+        False, "--rebuild-embeddings", help="Rebuild semantic chunks and embeddings."
+    ),
     force: bool = typer.Option(False, "--force", help="Re-extract and re-index files even if metadata is unchanged."),
-    verify_hashes: bool = typer.Option(False, "--verify-hashes", help="Hash-check files even when size and mtime look unchanged."),
+    verify_hashes: bool = typer.Option(
+        False, "--verify-hashes", help="Hash-check files even when size and mtime look unchanged."
+    ),
     prune: bool = typer.Option(False, "--prune", help="Remove stale KGFS database records after indexing."),
-    allow_risky_root: bool = typer.Option(False, "--allow-risky-root", help="Allow indexing risky roots like /, C:\\, or your home folder."),
+    allow_risky_root: bool = typer.Option(
+        False, "--allow-risky-root", help="Allow indexing risky roots like /, C:\\, or your home folder."
+    ),
 ) -> None:
     """Index configured folders."""
 

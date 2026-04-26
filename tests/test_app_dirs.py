@@ -24,7 +24,10 @@ def test_database_path_prefers_cli_then_env_then_config(tmp_path: Path, monkeypa
     )
     monkeypatch.setenv("KGFS_DATABASE_PATH", str(tmp_path / "env.sqlite3"))
 
-    assert resolve_database_path(app_paths, tmp_path / "cli.sqlite3", tmp_path / "config.sqlite3") == tmp_path / "cli.sqlite3"
+    assert (
+        resolve_database_path(app_paths, tmp_path / "cli.sqlite3", tmp_path / "config.sqlite3")
+        == tmp_path / "cli.sqlite3"
+    )
     assert resolve_database_path(app_paths, None, tmp_path / "config.sqlite3") == tmp_path / "env.sqlite3"
 
     monkeypatch.delenv("KGFS_DATABASE_PATH")

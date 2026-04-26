@@ -49,4 +49,3 @@ def test_rebuild_resets_database_then_indexes(tmp_path: Path) -> None:
     conn = connect_database(db_path)
     assert summary.indexed == 1
     assert conn.execute("SELECT COUNT(*) AS count FROM files").fetchone()["count"] == 1
-

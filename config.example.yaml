@@ -105,6 +105,7 @@ ocr:
   # Local Tesseract OCR is disabled by default. When enabled, OCR text is
   # stored in the KGFS index/cache only; source images and PDFs are not changed.
   enabled: false
+  default_backend: "tesseract"
   backend: "tesseract"
   include_extensions:
     - ".png"
@@ -127,9 +128,15 @@ ocr:
     languages:
       - "en"
     gpu: false
+    model_storage_directory: null
+    download_enabled: false
   paddle:
     enabled: false
     language: "en"
+    use_angle_cls: true
+    use_gpu: false
+    model_dir: null
+    download_enabled: false
   # Cloud OCR fallback is scaffolded only. KGFS will not upload files unless
   # a future provider is explicitly configured, previewed, and confirmed.
   cloud_fallback:
@@ -162,6 +169,7 @@ media:
     backend: "none"
     model_name: null
     local_files_only: true
+    download_enabled: false
     max_images_per_run: 50
   audio:
     enabled: false
@@ -175,12 +183,20 @@ media:
       - ".flac"
     model_name: null
     local_files_only: true
+    download_enabled: false
     max_audio_minutes_per_file: 60
   visual:
     enabled: false
     backend: "none"
     model_name: null
     local_files_only: true
+    download_enabled: false
+
+models:
+  cache_dir: null
+  local_files_only: true
+  max_batch_size: 8
+  benchmark_sample_size: 10
 
 semantic:
   enabled: false

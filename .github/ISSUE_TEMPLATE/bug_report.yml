@@ -24,7 +24,46 @@ body:
     validations:
       required: true
   - type: input
-    id: version
+    id: os
+    attributes:
+      label: OS
+      placeholder: Windows 11, macOS 15, Ubuntu 24.04
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+      placeholder: python --version
+  - type: input
+    id: kgfs_version
     attributes:
       label: KGFS version
       description: Run `kgfs version`.
+  - type: dropdown
+    id: install_type
+    attributes:
+      label: Install type
+      options:
+        - Editable/source install
+        - Packaged executable
+        - pip install
+        - Other
+  - type: textarea
+    id: command
+    attributes:
+      label: Command run
+      description: Paste the exact command and output.
+  - type: textarea
+    id: doctor_output
+    attributes:
+      label: kgfs doctor output, redacted
+      description: Remove paths, usernames, secrets, and private file names as needed.
+  - type: textarea
+    id: capabilities_output
+    attributes:
+      label: kgfs capabilities output, redacted
+      description: Remove paths, usernames, secrets, and private file names as needed.
+  - type: textarea
+    id: optional_dependencies
+    attributes:
+      label: Optional dependencies installed
+      description: List extras/backends such as semantic, OCR, EasyOCR, FAISS, TUI, or OpenAI.

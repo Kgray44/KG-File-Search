@@ -105,6 +105,8 @@ class EasyOCRSettings(BaseModel):
     enabled: bool = False
     languages: list[str] = Field(default_factory=lambda: ["en"])
     gpu: bool = False
+    model_storage_directory: Path | None = None
+    download_enabled: bool = False
 
     @field_validator("languages", mode="before")
     @classmethod
@@ -114,16 +116,34 @@ class EasyOCRSettings(BaseModel):
         languages = [str(item).strip().lower() for item in value if str(item).strip()]
         return languages or ["en"]
 
+    @field_validator("model_storage_directory", mode="before")
+    @classmethod
+    def _model_storage_directory(cls, value: Any) -> Path | None:
+        if value in (None, ""):
+            return None
+        return _expand_path(value)
+
 
 class PaddleOCRSettings(BaseModel):
     enabled: bool = False
     language: str = "en"
+    use_angle_cls: bool = True
+    use_gpu: bool = False
+    model_dir: Path | None = None
+    download_enabled: bool = False
 
     @field_validator("language", mode="before")
     @classmethod
     def _language(cls, value: Any) -> str:
         text = str(value or "en").strip().lower()
         return text or "en"
+
+    @field_validator("model_dir", mode="before")
+    @classmethod
+    def _model_dir(cls, value: Any) -> Path | None:
+        if value in (None, ""):
+            return None
+        return _expand_path(value)
 
 
 class CloudOCRFallbackSettings(BaseModel):
@@ -151,6 +171,7 @@ class CloudOCRFallbackSettings(BaseModel):
 
 class OCRSettings(BaseModel):
     enabled: bool = False
+    default_backend: str = "tesseract"
     backend: str = "tesseract"
     include_extensions: list[str] = Field(default_factory=lambda: [".png", ".jpg", ".jpeg", ".tiff", ".bmp"])
     max_image_size_mb: float = 15
@@ -163,6 +184,19 @@ class OCRSettings(BaseModel):
     easyocr: EasyOCRSettings = Field(default_factory=EasyOCRSettings)
     paddle: PaddleOCRSettings = Field(default_factory=PaddleOCRSettings)
     cloud_fallback: CloudOCRFallbackSettings = Field(default_factory=CloudOCRFallbackSettings)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _default_backend_alias(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "default_backend" in data and "backend" not in data:
+            data = dict(data)
+            data["backend"] = data["default_backend"]
+        return data
+
+    @field_validator("default_backend", "backend", mode="before")
+    @classmethod
+    def _backend_name(cls, value: Any) -> str:
+        return str(value or "tesseract").strip().lower() or "tesseract"
 
     @field_validator("include_extensions", mode="before")
     @classmethod
@@ -259,6 +293,7 @@ class CaptionSettings(BaseModel):
     backend: str = "none"
     model_name: str | None = None
     local_files_only: bool = True
+    download_enabled: bool = False
     max_images_per_run: int = 50
 
     @field_validator("backend", mode="before")
@@ -283,6 +318,7 @@ class AudioSettings(BaseModel):
     include_extensions: list[str] = Field(default_factory=lambda: [".m4a", ".mp3", ".wav", ".aac", ".flac"])
     model_name: str | None = None
     local_files_only: bool = True
+    download_enabled: bool = False
     max_audio_minutes_per_file: int = 60
 
     @field_validator("backend", mode="before")
@@ -310,6 +346,7 @@ class VisualSettings(BaseModel):
     backend: str = "none"
     model_name: str | None = None
     local_files_only: bool = True
+    download_enabled: bool = False
 
     @field_validator("backend", mode="before")
     @classmethod
@@ -338,6 +375,30 @@ class MediaSettings(BaseModel):
     @property
     def max_media_file_size_bytes(self) -> int:
         return int(self.max_media_file_size_mb * 1024 * 1024)
+
+
+class ModelSettings(BaseModel):
+    cache_dir: Path | None = None
+    local_files_only: bool = True
+    max_batch_size: int = 8
+    benchmark_sample_size: int = 10
+
+    @field_validator("cache_dir", mode="before")
+    @classmethod
+    def _cache_dir(cls, value: Any) -> Path | None:
+        if value in (None, ""):
+            return None
+        return _expand_path(value)
+
+    @field_validator("max_batch_size", "benchmark_sample_size", mode="before")
+    @classmethod
+    def _positive_int(cls, value: Any, info) -> int:
+        defaults = {"max_batch_size": 8, "benchmark_sample_size": 10}
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return defaults[info.field_name]
+        return number if number > 0 else defaults[info.field_name]
 
 
 class SemanticSettings(BaseModel):
@@ -716,6 +777,7 @@ class KGFSConfig(BaseModel):
     extraction: ExtractionSettings = Field(default_factory=ExtractionSettings)
     ocr: OCRSettings = Field(default_factory=OCRSettings)
     media: MediaSettings = Field(default_factory=MediaSettings)
+    models: ModelSettings = Field(default_factory=ModelSettings)
     semantic: SemanticSettings = Field(default_factory=SemanticSettings)
     search: SearchSettings = Field(default_factory=SearchSettings)
     deep_search: DeepSearchSettings = Field(default_factory=DeepSearchSettings)
@@ -884,6 +946,7 @@ ocr:
   # OCR is local-only and disabled by default. Enable only for folders you
   # explicitly configure above. KGFS never modifies images or PDFs.
   enabled: false
+  default_backend: "tesseract"
   backend: "tesseract"
   include_extensions:
     - ".png"
@@ -905,9 +968,15 @@ ocr:
     languages:
       - "en"
     gpu: false
+    model_storage_directory: null
+    download_enabled: false
   paddle:
     enabled: false
     language: "en"
+    use_angle_cls: true
+    use_gpu: false
+    model_dir: null
+    download_enabled: false
   cloud_fallback:
     enabled: false
     provider: null
@@ -936,6 +1005,7 @@ media:
     backend: "none"
     model_name: null
     local_files_only: true
+    download_enabled: false
     max_images_per_run: 50
   audio:
     enabled: false
@@ -949,12 +1019,20 @@ media:
       - ".flac"
     model_name: null
     local_files_only: true
+    download_enabled: false
     max_audio_minutes_per_file: 60
   visual:
     enabled: false
     backend: "none"
     model_name: null
     local_files_only: true
+    download_enabled: false
+
+models:
+  cache_dir: null
+  local_files_only: true
+  max_batch_size: 8
+  benchmark_sample_size: 10
 
 semantic:
   enabled: false

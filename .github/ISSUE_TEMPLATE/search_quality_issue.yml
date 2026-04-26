@@ -1,30 +1,56 @@
 name: Search quality issue
-description: Report ranking, snippets, OCR/media labels, or explainability problems.
-title: "[Search quality]: "
-labels: ["search-quality"]
+description: Report confusing, missing, or poorly ranked local search results.
+title: "[Search Quality]: "
+labels: ["search"]
 body:
   - type: textarea
-    id: query
+    id: summary
     attributes:
-      label: Query and mode
-      description: Include the command, mode, and expected top result.
+      label: Summary
+      description: What query/result behavior seems wrong?
     validations:
       required: true
   - type: textarea
-    id: output
+    id: corpus
     attributes:
-      label: Actual output
-      description: Paste the relevant result rows or `kgfs why` output.
-    validations:
-      required: true
+      label: Tiny artificial reproduction corpus
+      description: If possible, describe fake files/text that reproduce the result.
+  - type: input
+    id: os
+    attributes:
+      label: OS
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+  - type: input
+    id: kgfs_version
+    attributes:
+      label: KGFS version
   - type: dropdown
-    id: mode
+    id: install_type
     attributes:
-      label: Search mode
+      label: Install type
       options:
-        - keyword
-        - auto
-        - hybrid
-        - semantic
-        - deep/research/similar
-        - other
+        - Editable/source install
+        - Packaged executable
+        - pip install
+        - Other
+  - type: textarea
+    id: command
+    attributes:
+      label: Command run
+      description: Include query, mode, filters, and result output.
+  - type: textarea
+    id: doctor_output
+    attributes:
+      label: kgfs doctor output, redacted
+  - type: textarea
+    id: capabilities_output
+    attributes:
+      label: kgfs capabilities output, redacted
+  - type: textarea
+    id: optional_dependencies
+    attributes:
+      label: Optional dependencies installed
+      description: Include semantic/vector/OCR/media backend details.

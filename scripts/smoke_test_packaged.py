@@ -74,7 +74,17 @@ def smoke_test(executable: Path) -> None:
             ["integrations", "--help"],
             ["tray", "--help"],
             ["media", "--help"],
+            ["models", "--help"],
+            ["models", "status", "--project-local"],
+            ["models", "doctor", "--project-local"],
+            ["models", "paths", "--project-local"],
+            ["models", "validate", "--project-local"],
+            ["models", "config-snippet", "easyocr"],
+            ["ocr", "backends", "--project-local"],
             ["ocr", "advanced-status", "--project-local"],
+            ["media", "captions", "status", "--project-local"],
+            ["media", "audio", "status", "--project-local"],
+            ["media", "visual", "status", "--project-local"],
         ):
             run_command(executable, args, cwd=workspace)
         run_command(executable, ["doctor", "--project-local"], cwd=workspace)

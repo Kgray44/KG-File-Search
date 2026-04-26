@@ -22,6 +22,12 @@ class PaddleOCRBackend:
             return OCRAvailability(
                 False, "PaddleOCR is not installed.", 'Install with python -m pip install -e ".[ocr-paddle]".'
             )
+        if not config.ocr.paddle.download_enabled and config.ocr.paddle.model_dir is None:
+            return OCRAvailability(
+                False,
+                "PaddleOCR downloads are disabled and ocr.paddle.model_dir is not set.",
+                "Set ocr.paddle.model_dir to local PaddleOCR model files or explicitly enable downloads.",
+            )
         return OCRAvailability(True, "PaddleOCR is available.")
 
     def extract_image(self, request: OCRRequest) -> OCRResult:
@@ -35,8 +41,26 @@ class PaddleOCRBackend:
         except ImportError:
             return OCRResult("", "error", "PaddleOCR is not installed.", backend=self.name)
         try:
-            engine = PaddleOCR(lang=request.config.ocr.paddle.language, show_log=False)
-            rows = engine.ocr(str(request.path), cls=False)
+            engine_kwargs: dict[str, object] = {
+                "lang": request.config.ocr.paddle.language,
+                "use_angle_cls": request.config.ocr.paddle.use_angle_cls,
+                "use_gpu": request.config.ocr.paddle.use_gpu,
+                "download_enabled": request.config.ocr.paddle.download_enabled,
+                "show_log": False,
+            }
+            if request.config.ocr.paddle.model_dir is not None:
+                model_dir = str(request.config.ocr.paddle.model_dir)
+                engine_kwargs["det_model_dir"] = model_dir
+                engine_kwargs["rec_model_dir"] = model_dir
+                engine_kwargs["cls_model_dir"] = model_dir
+            try:
+                engine = PaddleOCR(**engine_kwargs)
+            except TypeError as exc:
+                if "download_enabled" not in str(exc):
+                    raise
+                engine_kwargs.pop("download_enabled", None)
+                engine = PaddleOCR(**engine_kwargs)
+            rows = engine.ocr(str(request.path), cls=request.config.ocr.paddle.use_angle_cls)
         except Exception as exc:  # pragma: no cover - optional dependency behavior varies
             return OCRResult("", "error", f"PaddleOCR failed: {exc}", backend=self.name)
         text_parts: list[str] = []

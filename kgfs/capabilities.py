@@ -10,6 +10,7 @@ from kgfs.core.config import KGFSConfig
 from kgfs.db.schema import check_fts5_available, initialize_database
 from kgfs.integrations.status import get_integration_status
 from kgfs.media.status import get_media_status
+from kgfs.models.registry import collect_model_statuses
 from kgfs.ocr.status import get_ocr_status
 from kgfs.search.backends import list_vector_backend_names
 from kgfs.search.semantic import get_semantic_status
@@ -41,6 +42,9 @@ def collect_capabilities(config: KGFSConfig) -> list[CapabilityRow]:
     openai_available = find_spec("openai") is not None
     integrations = get_integration_status()
     supported_integrations = [item.name for item in integrations if item.supported and item.scaffold_available]
+    model_statuses = collect_model_statuses(config)
+    ready_models = [f"{item.kind}:{item.name}" for item in model_statuses if item.available]
+    configured_models = [f"{item.kind}:{item.name}" for item in model_statuses if item.enabled]
 
     return [
         CapabilityRow(
@@ -75,6 +79,11 @@ def collect_capabilities(config: KGFSConfig) -> list[CapabilityRow]:
                 f"Photo EXIF: {media_status.photo_metadata_enabled}; captions/audio/visual: "
                 f"{media_status.caption_backend}/{media_status.audio_backend}/{media_status.visual_backend}."
             ),
+        ),
+        CapabilityRow(
+            "Local model backends",
+            "configured" if configured_models else "disabled",
+            f"Ready: {', '.join(ready_models) or 'none'}; downloads disabled by default.",
         ),
         CapabilityRow(
             "AI Assist",

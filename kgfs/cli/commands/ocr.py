@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 
 import typer
+from rich.markup import escape
 from rich.table import Table
 
 from kgfs.cli.shared import console, optional_config_runtime, runtime
@@ -59,13 +60,14 @@ def status_cmd(
     table.add_row("OCR indexed files", str(status.indexed_file_count))
     table.add_row("OCR failures", str(status.failure_count))
     if status.install_hint:
-        table.add_row("Install hint", status.install_hint)
+        table.add_row("Install hint", escape(status.install_hint))
     console.print(table)
 
 
 @ocr_app.command("test")
 def test_cmd(
     image_path: Path = typer.Argument(..., help="Image file to OCR without indexing it."),
+    backend_name: str | None = typer.Option(None, "--backend", help="OCR backend to use for this test."),
     config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
     database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
     project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
@@ -76,7 +78,7 @@ def test_cmd(
     path = image_path.expanduser()
     if not path.exists():
         raise typer.BadParameter(f"Image does not exist: {path}")
-    backend = get_ocr_backend(config.ocr.backend)
+    backend = get_ocr_backend(backend_name or config.ocr.default_backend or config.ocr.backend)
     result = backend.extract_image(OCRRequest(path=path, config=config, source_kind="image"))
     console.print(f"OCR backend: [bold]{result.backend}[/bold]")
     console.print(f"Status: [bold]{result.status}[/bold]")
@@ -85,6 +87,34 @@ def test_cmd(
     if result.text:
         console.print("[bold]Text preview[/bold]")
         console.print(result.text[:2000])
+
+
+@ocr_app.command("backends")
+def backends_cmd(
+    config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
+    database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
+    project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
+) -> None:
+    """List local OCR backends and dependency status."""
+
+    _, _, _, config = optional_config_runtime(config_path, database_path, project_local)
+    table = Table(title="KGFS OCR Backends")
+    table.add_column("Backend")
+    table.add_column("Enabled")
+    table.add_column("Available")
+    table.add_column("Message")
+    table.add_column("Install hint")
+    for name in list_ocr_backends():
+        backend = get_ocr_backend(name)
+        availability = backend.available(config)
+        table.add_row(
+            name,
+            str(_advanced_backend_enabled(name, config)),
+            str(availability.available),
+            escape(availability.message),
+            escape(availability.install_hint or ""),
+        )
+    console.print(table)
 
 
 @ocr_app.command("advanced-status")
@@ -110,8 +140,8 @@ def advanced_status_cmd(
             _display_ocr_backend_name(name),
             str(enabled),
             str(availability.available),
-            availability.message,
-            availability.install_hint or "",
+            escape(availability.message),
+            escape(availability.install_hint or ""),
         )
     cloud = config.ocr.cloud_fallback
     table.add_row(
@@ -131,6 +161,7 @@ def index_cmd(
     config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
     database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
     project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
+    backend_name: str | None = typer.Option(None, "--backend", help="OCR backend to use for this indexing run."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Discover OCR-capable files without writing."),
     force: bool = typer.Option(False, "--force", help="Re-extract even if KGFS metadata is unchanged."),
     allow_risky_root: bool = typer.Option(False, "--allow-risky-root", help="Allow risky root folders."),
@@ -138,6 +169,15 @@ def index_cmd(
     """Run normal indexing with OCR-capable extraction enabled by config."""
 
     _, _, resolved_database_path, config = runtime(config_path, database_path, project_local)
+    if backend_name:
+        get_ocr_backend(backend_name)
+        config = config.model_copy(
+            update={
+                "ocr": config.ocr.model_copy(
+                    update={"backend": backend_name.strip().lower(), "default_backend": backend_name.strip().lower()}
+                )
+            }
+        )
     if not config.ocr.enabled:
         console.print("OCR is disabled. Set ocr.enabled: true in config.yaml, then rerun this command.")
         raise typer.Exit(code=2)

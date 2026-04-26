@@ -39,7 +39,13 @@ class EasyOCRBackend:
         except ImportError:
             return OCRResult("", "error", "EasyOCR is not installed.", backend=self.name)
         try:
-            reader = easyocr.Reader(request.config.ocr.easyocr.languages, gpu=request.config.ocr.easyocr.gpu)
+            reader_kwargs: dict[str, object] = {
+                "gpu": request.config.ocr.easyocr.gpu,
+                "download_enabled": request.config.ocr.easyocr.download_enabled,
+            }
+            if request.config.ocr.easyocr.model_storage_directory is not None:
+                reader_kwargs["model_storage_directory"] = str(request.config.ocr.easyocr.model_storage_directory)
+            reader = easyocr.Reader(request.config.ocr.easyocr.languages, **reader_kwargs)
             rows = reader.readtext(str(request.path), detail=1)
         except Exception as exc:  # pragma: no cover - optional dependency behavior varies
             return OCRResult("", "error", f"EasyOCR failed: {exc}", backend=self.name)

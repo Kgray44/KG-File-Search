@@ -1,28 +1,56 @@
-name: Security or privacy concern
-description: Report a local-first, source-file safety, or privacy concern.
-title: "[Security/privacy]: "
+name: Security/privacy concern
+description: Report a safety, privacy, local-first, or data-handling concern.
+title: "[Security/Privacy]: "
 labels: ["security", "privacy"]
 body:
   - type: textarea
-    id: concern
+    id: summary
     attributes:
-      label: Concern
-      description: Describe the behavior and why it may violate KGFS privacy/safety expectations.
+      label: Summary
+      description: Describe the concern without sharing secrets or private file contents.
     validations:
       required: true
   - type: textarea
-    id: reproduction
+    id: data_boundary
     attributes:
-      label: Reproduction or evidence
-      description: Include commands, paths with sensitive parts redacted, and whether any source file was modified.
-    validations:
-      required: true
-  - type: checkboxes
-    id: impact
+      label: Data boundary
+      description: What data/path/cache/network boundary is involved?
+  - type: input
+    id: os
     attributes:
-      label: Impact areas
+      label: OS
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+  - type: input
+    id: kgfs_version
+    attributes:
+      label: KGFS version
+  - type: dropdown
+    id: install_type
+    attributes:
+      label: Install type
       options:
-        - label: Source file modification
-        - label: Unexpected network/cloud behavior
-        - label: Secret or personal data exposure
-        - label: Unsafe package contents
+        - Editable/source install
+        - Packaged executable
+        - pip install
+        - Other
+  - type: textarea
+    id: command
+    attributes:
+      label: Command run
+      description: Include only redacted commands/output.
+  - type: textarea
+    id: doctor_output
+    attributes:
+      label: kgfs doctor output, redacted
+  - type: textarea
+    id: capabilities_output
+    attributes:
+      label: kgfs capabilities output, redacted
+  - type: textarea
+    id: optional_dependencies
+    attributes:
+      label: Optional dependencies installed
+      description: Include AI/OCR/media/API extras if relevant.

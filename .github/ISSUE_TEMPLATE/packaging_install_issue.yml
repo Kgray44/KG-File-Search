@@ -1,29 +1,57 @@
-name: Packaging or install issue
-description: Report install, packaged build, or smoke-test trouble.
+name: Packaging/install issue
+description: Report package, executable, dependency, or install trouble.
 title: "[Packaging]: "
 labels: ["packaging"]
 body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What failed during install, launch, packaging, or smoke testing?
+    validations:
+      required: true
   - type: input
     id: os
     attributes:
-      label: OS and architecture
-      placeholder: Windows x64, macOS arm64, etc.
-    validations:
-      required: true
+      label: OS
+      placeholder: Windows 11, macOS 15
   - type: input
-    id: version
+    id: python_version
     attributes:
-      label: KGFS version or artifact name
-      placeholder: v0.1.0 / KGFS-windows-x64.zip
+      label: Python version
+  - type: input
+    id: kgfs_version
+    attributes:
+      label: KGFS version
+  - type: dropdown
+    id: install_type
+    attributes:
+      label: Install type
+      options:
+        - Editable/source install
+        - Packaged executable
+        - pip install
+        - Other
   - type: textarea
     id: command
     attributes:
-      label: Command and output
-      description: Include the exact command, error text, and whether this was pip or packaged KGFS.
-    validations:
-      required: true
+      label: Command run
+      description: Include build_package/smoke_test_packaged commands if relevant.
   - type: textarea
-    id: checksums
+    id: doctor_output
     attributes:
-      label: Artifact verification
-      description: If relevant, include whether SHA256 verification matched `SHA256SUMS.txt`.
+      label: kgfs doctor output, redacted
+  - type: textarea
+    id: capabilities_output
+    attributes:
+      label: kgfs capabilities output, redacted
+  - type: textarea
+    id: optional_dependencies
+    attributes:
+      label: Optional dependencies installed
+      description: Include extras such as package, semantic, OCR, TUI, tray, or OpenAI.
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Artifact/checksum details
+      description: Include artifact name and SHA256 verification result if this is a release package issue.

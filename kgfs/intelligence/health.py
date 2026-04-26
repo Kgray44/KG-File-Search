@@ -9,6 +9,7 @@ from kgfs.core.config import KGFSConfig
 from kgfs.db.stats import get_database_stats
 from kgfs.intelligence.duplicates import find_exact_duplicates
 from kgfs.intelligence.models import HealthIssue, HealthReport
+from kgfs.models.registry import collect_model_statuses
 
 
 def build_health_report(
@@ -21,6 +22,12 @@ def build_health_report(
     duplicate_report = find_exact_duplicates(conn)
     workflow_counts = _workflow_counts(conn)
     project_candidates = _count(conn, "project_candidates")
+    model_statuses = collect_model_statuses(config)
+    model_ready = [f"{item.kind}:{item.name}" for item in model_statuses if item.available]
+    model_downloads_enabled = [f"{item.kind}:{item.name}" for item in model_statuses if item.download_enabled]
+    model_unavailable_enabled = [
+        f"{item.kind}:{item.name}" for item in model_statuses if item.enabled and not item.available
+    ]
     summary = {
         "indexed_files": stats["total_files"],
         "stale_records": stats["stale_records"],
@@ -36,6 +43,8 @@ def build_health_report(
         "database_size": stats["database_size"],
         "schema_version": stats["schema_version"],
         "ai_enabled": bool(config.ai.enabled),
+        "model_backends_ready": model_ready,
+        "model_downloads_enabled": model_downloads_enabled,
     }
     issues: list[HealthIssue] = []
     suggestions: list[str] = ["kgfs metadata export --output kgfs-metadata-backup.json"]
@@ -103,6 +112,26 @@ def build_health_report(
                 title="Cloud OCR fallback configured",
                 detail="Cloud OCR remains scaffolded and requires explicit confirmation; verify privacy settings before use.",
                 suggestion="kgfs ocr advanced-status",
+            )
+        )
+    if model_unavailable_enabled:
+        issues.append(
+            HealthIssue(
+                severity="warning",
+                title="Configured local model backend unavailable",
+                detail=", ".join(model_unavailable_enabled),
+                suggestion="kgfs models status",
+            )
+        )
+        suggestions.append("kgfs models status")
+    if model_downloads_enabled:
+        issues.append(
+            HealthIssue(
+                severity="warning",
+                title="Model downloads enabled",
+                detail="KGFS defaults to local files only; review these explicit download opt-ins: "
+                + ", ".join(model_downloads_enabled),
+                suggestion="kgfs models status",
             )
         )
     return HealthReport(

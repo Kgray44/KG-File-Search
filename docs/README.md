@@ -85,6 +85,9 @@ python -m pip install -e ".[openai]"
 - [Architecture](architecture.md): internal module layout, data flows, and extension points.
 - [Data Model](data-model.md): SQLite schema, dataclasses, and stored file formats.
 - [Integrations](integrations.md): SQLite FTS5, platformdirs, document/OCR parsers, vector backends, FastAPI, Textual, launcher scaffolds, PyInstaller, sentence-transformers, and OpenAI.
+- [Local Models](local-models.md): optional local OCR/media model setup, validation, paths, snippets, and no-download guardrails.
+- [Optional Dependencies](optional-dependencies.md): extras, install commands, package inclusion, readiness level, and troubleshooting notes.
+- [Known Limitations](known-limitations.md): v0.1 release-candidate boundaries and non-goals.
 - [Security](security.md): privacy, local-first behavior, indexing safety, AI boundaries, and web dashboard exposure.
 - [Development](development.md): setup, tests, packaging, and extension guidance.
 - [Troubleshooting](troubleshooting.md): common failures, causes, and debug commands.

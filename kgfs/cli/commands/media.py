@@ -11,13 +11,13 @@ from rich.table import Table
 from kgfs.cli.shared import console, format_bytes, optional_config_runtime, runtime
 from kgfs.db import connect_database, initialize_database
 from kgfs.indexing import index_configured_folders
-from kgfs.media.audio import get_audio_status, transcribe_audio
+from kgfs.media.audio import get_audio_status, index_existing_transcripts, transcribe_audio
 from kgfs.media.cache import clear_media_data
-from kgfs.media.captions import caption_image, get_caption_status
+from kgfs.media.captions import caption_image, get_caption_status, index_existing_captions
 from kgfs.media.exif import extract_exif_metadata, photo_metadata_text
 from kgfs.media.metadata import index_existing_photo_metadata
 from kgfs.media.status import get_media_status
-from kgfs.media.visual import get_visual_status
+from kgfs.media.visual import find_visual_similar, get_visual_status, index_existing_visual_embeddings
 
 media_app = typer.Typer(help="Inspect and manage optional local media metadata.")
 captions_app = typer.Typer(help="Image caption scaffold commands.")
@@ -119,6 +119,9 @@ def index_cmd(
     database_path: Path | None = typer.Option(None, "--database", help="Override database path."),
     project_local: bool = typer.Option(False, "--project-local", help="Use .kgfs project-local paths."),
     photos: bool = typer.Option(False, "--photos", help="Index photo/EXIF metadata for indexed media files."),
+    captions: bool = typer.Option(False, "--captions", help="Generate captions for indexed images."),
+    audio: bool = typer.Option(False, "--audio", help="Transcribe indexed audio files."),
+    visual: bool = typer.Option(False, "--visual", help="Generate visual embeddings for indexed images."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Discover/index without writing when supported."),
     allow_risky_root: bool = typer.Option(False, "--allow-risky-root", help="Allow risky root folders."),
 ) -> None:
@@ -133,14 +136,79 @@ def index_cmd(
     try:
         summary = index_configured_folders(config, conn, dry_run=dry_run, allow_risky_root=allow_risky_root)
         photo_indexed = photo_failed = 0
+        caption_indexed = caption_failed = 0
+        audio_indexed = audio_failed = 0
+        visual_indexed = visual_failed = 0
         if not dry_run and (photos or config.media.photos.enabled):
             photo_indexed, photo_failed = index_existing_photo_metadata(conn, config)
+        if not dry_run and (captions or config.media.captions.enabled):
+            caption_indexed, caption_failed = index_existing_captions(conn, config)
+        if not dry_run and (audio or config.media.audio.transcription_enabled):
+            audio_indexed, audio_failed = index_existing_transcripts(conn, config)
+        if not dry_run and (visual or config.media.visual.enabled):
+            visual_indexed, visual_failed = index_existing_visual_embeddings(conn, config)
     finally:
         conn.close()
     console.print(
         f"Discovered {summary.discovered}, indexed {summary.indexed}, skipped unchanged {summary.skipped_unchanged}, "
-        f"failures {summary.failed}; photo metadata indexed {photo_indexed}, failures {photo_failed}."
+        f"failures {summary.failed}; photo metadata indexed {photo_indexed}, failures {photo_failed}; "
+        f"captions indexed {caption_indexed}, failures {caption_failed}; "
+        f"transcripts indexed {audio_indexed}, failures {audio_failed}; "
+        f"visual embeddings indexed {visual_indexed}, failures {visual_failed}."
     )
+
+
+@media_app.command("caption")
+def caption_top_cmd(
+    path: Path,
+    config_path: Path | None = typer.Option(None, "--config"),
+    project_local: bool = typer.Option(False, "--project-local"),
+) -> None:
+    """Caption one image with the configured local caption backend."""
+
+    _, _, _, config = optional_config_runtime(config_path, None, project_local)
+    result = caption_image(path.expanduser(), config)
+    console.print(result.text or result.error or result.status)
+
+
+@media_app.command("transcribe")
+def transcribe_top_cmd(
+    path: Path,
+    config_path: Path | None = typer.Option(None, "--config"),
+    project_local: bool = typer.Option(False, "--project-local"),
+) -> None:
+    """Transcribe one audio file with the configured local transcription backend."""
+
+    _, _, _, config = optional_config_runtime(config_path, None, project_local)
+    result = transcribe_audio(path.expanduser(), config)
+    console.print(result.text or result.error or result.status)
+
+
+@media_app.command("visual-similar")
+def visual_similar_top_cmd(
+    file_id: int = typer.Argument(..., help="Indexed file ID with a stored visual embedding."),
+    config_path: Path | None = typer.Option(None, "--config"),
+    database_path: Path | None = typer.Option(None, "--database"),
+    project_local: bool = typer.Option(False, "--project-local"),
+    limit: int = typer.Option(10, "--limit", min=1),
+) -> None:
+    """Find visually similar indexed files using stored local media embeddings."""
+
+    _, _, resolved_database_path, config = runtime(config_path, database_path, project_local)
+    conn = connect_database(resolved_database_path)
+    initialize_database(conn)
+    try:
+        results = find_visual_similar(conn, file_id, config, limit=limit)
+    finally:
+        conn.close()
+    table = Table(title="KGFS Visual Similarity")
+    table.add_column("ID", justify="right")
+    table.add_column("File")
+    table.add_column("Score", justify="right")
+    table.add_column("Snippet")
+    for result in results:
+        table.add_row(str(result.result_id), result.file_name, f"{result.score:.3f}", result.snippet)
+    console.print(table)
 
 
 @captions_app.command("status")
@@ -167,6 +235,22 @@ def caption_cmd(
     console.print(result.text or result.error or result.status)
 
 
+@captions_app.command("index")
+def captions_index_cmd(
+    config_path: Path | None = typer.Option(None, "--config"),
+    database_path: Path | None = typer.Option(None, "--database"),
+    project_local: bool = typer.Option(False, "--project-local"),
+) -> None:
+    _, _, resolved_database_path, config = runtime(config_path, database_path, project_local)
+    conn = connect_database(resolved_database_path)
+    initialize_database(conn)
+    try:
+        indexed, failed = index_existing_captions(conn, config)
+    finally:
+        conn.close()
+    console.print(f"Caption rows indexed {indexed}, failures {failed}.")
+
+
 @audio_app.command("status")
 def audio_status_cmd(
     config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
@@ -191,6 +275,22 @@ def transcribe_cmd(
     console.print(result.text or result.error or result.status)
 
 
+@audio_app.command("index")
+def audio_index_cmd(
+    config_path: Path | None = typer.Option(None, "--config"),
+    database_path: Path | None = typer.Option(None, "--database"),
+    project_local: bool = typer.Option(False, "--project-local"),
+) -> None:
+    _, _, resolved_database_path, config = runtime(config_path, database_path, project_local)
+    conn = connect_database(resolved_database_path)
+    initialize_database(conn)
+    try:
+        indexed, failed = index_existing_transcripts(conn, config)
+    finally:
+        conn.close()
+    console.print(f"Transcript rows indexed {indexed}, failures {failed}.")
+
+
 @visual_app.command("status")
 def visual_status_cmd(
     config_path: Path | None = typer.Option(None, "--config", help="Override config path."),
@@ -205,8 +305,30 @@ def visual_status_cmd(
 
 
 @visual_app.command("similar")
-def visual_similar_cmd(result_id: int) -> None:
-    console.print(f"Visual similar search for result {result_id} requires a configured local visual embedding backend.")
+def visual_similar_cmd(
+    file_id: int,
+    config_path: Path | None = typer.Option(None, "--config"),
+    database_path: Path | None = typer.Option(None, "--database"),
+    project_local: bool = typer.Option(False, "--project-local"),
+    limit: int = typer.Option(10, "--limit", min=1),
+) -> None:
+    visual_similar_top_cmd(file_id, config_path, database_path, project_local, limit)
+
+
+@visual_app.command("index")
+def visual_index_cmd(
+    config_path: Path | None = typer.Option(None, "--config"),
+    database_path: Path | None = typer.Option(None, "--database"),
+    project_local: bool = typer.Option(False, "--project-local"),
+) -> None:
+    _, _, resolved_database_path, config = runtime(config_path, database_path, project_local)
+    conn = connect_database(resolved_database_path)
+    initialize_database(conn)
+    try:
+        indexed, failed = index_existing_visual_embeddings(conn, config)
+    finally:
+        conn.close()
+    console.print(f"Visual embeddings indexed {indexed}, failures {failed}.")
 
 
 def _connect_if_exists(path: Path) -> sqlite3.Connection | None:

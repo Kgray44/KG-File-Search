@@ -93,10 +93,15 @@ python -m pip install -e ".[package]"
 kgfs version
 python scripts/build_package.py --clean
 python scripts/smoke_test_packaged.py --package dist-packages/KGFS
+python scripts/generate_checksums.py dist-packages
 cat dist-packages/SHA256SUMS.txt
 ```
 
-Sources: `scripts/build_package.py`, `scripts/smoke_test_packaged.py`, `packaging/README-packaging.md`.
+`python scripts/release_check.py --dry-run` prints the full local release ladder,
+including package build, smoke test, checksum generation, and dirty-worktree
+summary.
+
+Sources: `scripts/build_package.py`, `scripts/smoke_test_packaged.py`, `scripts/generate_checksums.py`, `scripts/release_check.py`, `packaging/README-packaging.md`.
 
 ## Repository Conventions
 

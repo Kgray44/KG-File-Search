@@ -57,6 +57,9 @@ jobs:
       - name: Build packaged executable
         run: python scripts/build_package.py --clean --mode onedir --name KGFS --dist-dir dist-packages
 
+      - name: Generate package checksums
+        run: python scripts/generate_checksums.py dist-packages
+
       - name: Smoke test packaged executable
         run: python scripts/smoke_test_packaged.py --package dist-packages/KGFS
 
@@ -87,21 +90,7 @@ jobs:
           merge-multiple: true
 
       - name: Generate aggregate SHA256SUMS
-        run: |
-          python - <<'PY'
-          from hashlib import sha256
-          from pathlib import Path
-
-          root = Path("release-assets")
-          zips = sorted(root.glob("KGFS-*.zip"))
-          if not zips:
-              raise SystemExit("No KGFS zip artifacts found")
-          lines = []
-          for path in zips:
-              digest = sha256(path.read_bytes()).hexdigest()
-              lines.append(f"{digest}  {path.name}")
-          (root / "SHA256SUMS.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
-          PY
+        run: python scripts/generate_checksums.py release-assets
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

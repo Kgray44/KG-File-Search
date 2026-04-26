@@ -172,7 +172,7 @@ Tests: `tests/test_ocr_backend.py`, `tests/test_ocr_indexing.py`, `tests/test_oc
 Purpose:
 
 - Read local photo/EXIF metadata.
-- Provide lazy optional backend points for EasyOCR, PaddleOCR, captions, audio transcription, and visual embeddings.
+- Provide lazy optional local adapters/contracts for EasyOCR, PaddleOCR, captions, audio transcription, and visual embeddings.
 
 Source:
 
@@ -180,6 +180,7 @@ Source:
 - `kgfs/ocr/easyocr.py`
 - `kgfs/ocr/paddle.py`
 - `kgfs/ocr/cloud.py`
+- `kgfs/models/*.py`
 - `pyproject.toml`
 
 Install:
@@ -188,6 +189,9 @@ Install:
 python -m pip install -e ".[media]"
 python -m pip install -e ".[ocr-easyocr]"
 python -m pip install -e ".[ocr-paddle]"
+python -m pip install -e ".[captions]"
+python -m pip install -e ".[audio]"
+python -m pip install -e ".[visual]"
 ```
 
 Behavior:
@@ -195,11 +199,12 @@ Behavior:
 - Media features are disabled by default.
 - Pillow is optional and used only when EXIF metadata is read.
 - EasyOCR/PaddleOCR are imported only when their backends are selected/enabled.
-- Caption/audio/visual backends default to `none`.
+- Caption/audio/visual backends default to `none`; generated text and embeddings stay in KGFS DB/cache paths when a backend is enabled.
+- `kgfs models doctor`, `kgfs models validate`, and `kgfs models config-snippet BACKEND` help users configure optional local backends without editing config automatically or downloading model files.
 - Cloud OCR fallback is disabled and scaffolded to refuse upload in this phase.
 - Generated metadata/text lives in KGFS database/cache paths only.
 
-Tests: `tests/test_phase10_media.py`.
+Tests: `tests/test_phase10_media.py`, `tests/test_phase10_1_local_models.py`, `tests/test_phase10_2_local_model_setup.py`.
 
 ## python-docx
 

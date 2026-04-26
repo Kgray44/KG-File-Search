@@ -338,8 +338,6 @@ KGFS stores OCR text in its local database/cache and never writes back to the im
 
 Sources: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`, `tests/test_ocr_*.py`.
 
-## Example 13: AI Preview Without API Call
-
 ## Example 13: Optional Media Metadata
 
 Enable photo metadata without storing GPS/location:
@@ -377,7 +375,38 @@ images are not modified and no sidecars are created.
 
 Sources: `kgfs/media/*.py`, `kgfs/cli/commands/media.py`, `tests/test_phase10_media.py`.
 
-## Example 14: AI Preview Without API Call
+## Example 14: Local Model Setup Checks
+
+Inspect optional model readiness without importing heavy backends at startup:
+
+```bash
+kgfs models status
+kgfs models doctor
+kgfs models paths
+kgfs models validate
+```
+
+Generate copy-paste config snippets:
+
+```bash
+kgfs models config-snippet easyocr
+kgfs models config-snippet faster-whisper
+kgfs models config-snippet clip-visual
+```
+
+Test one configured backend on one local file without indexing it:
+
+```bash
+kgfs models test metadata-caption ./photos/lab-bench.jpg
+kgfs models test easyocr ./screenshots/circuit-label.png
+```
+
+Snippets keep `download_enabled: false` and local-only settings. KGFS warns if a
+configured model path sits inside an indexed folder.
+
+Sources: `kgfs/cli/commands/models.py`, `kgfs/models/*.py`, `docs/local-models.md`.
+
+## Example 15: AI Preview Without API Call
 
 Enable AI in config for preview:
 
@@ -404,7 +433,7 @@ No API call is made when `--preview-ai-context` is used.
 
 Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/search.py`, `tests/test_cli.py`.
 
-## Example 15: OpenAI Answer Synthesis
+## Example 16: OpenAI Answer Synthesis
 
 Install OpenAI dependency:
 

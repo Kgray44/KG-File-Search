@@ -51,6 +51,7 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | `extraction` | object | See below | No | `ExtractionSettings` fields | Extractors/indexer | Defaults applied. | Pydantic type validation. |
 | `ocr` | object | See below | No | `OCRSettings` fields | Image/PDF extraction, OCR commands, doctor/stats | Defaults disabled. | Image extensions are normalized; source-file modification is forced off in this phase. |
 | `media` | object | See below | No | `MediaSettings` fields | media status/indexing, EXIF storage, media search labels, health/stats | Defaults disabled. | Extension lists are normalized; non-positive sizes fall back to safe defaults; exact location storage is off by default. |
+| `models` | object | See below | No | `ModelSettings` fields | `kgfs models`, local model cache helpers | Defaults local-only with downloads disabled in backend settings. | Non-positive numeric values fall back to safe defaults. |
 | `semantic` | object | See below | No | `SemanticSettings` fields | Indexer/search/doctor | Defaults disabled. | Some invalid numeric values are clamped in `chunk_text()` rather than rejected. |
 | `search` | object | See below | No | `SearchSettings` fields | CLI search | Defaults applied. | Invalid mode is detected when creating `SearchOptions`, not at config load. |
 | `deep_search` | object | See below | No | `DeepSearchSettings` fields | `kgfs deep`, `kgfs research` | Defaults enabled for local-only multi-pass search. | Non-positive numeric values fall back to safe defaults. |
@@ -161,6 +162,7 @@ OCR is local-only and disabled by default. The first backend is Tesseract, which
 | Key | Type | Default | Read from | Behavior |
 |---|---|---:|---|---|
 | `enabled` | bool | `false` | filters, extractors, OCR CLI | Enables indexing configured image extensions through OCR. |
+| `default_backend` | str | `tesseract` | OCR CLI | Default backend used by `kgfs ocr test` when `--backend` is omitted. |
 | `backend` | str | `tesseract` | `kgfs/ocr/registry.py` | Selects OCR backend. Tesseract remains the default; EasyOCR and PaddleOCR are optional/lazy advanced backends. |
 | `include_extensions` | list | `.png`, `.jpg`, `.jpeg`, `.tiff`, `.bmp` | file filters | These image extensions are indexable only when OCR is enabled. |
 | `max_image_size_mb` | float | `15` | file filters | Separate size cap for OCR images. Invalid/non-positive values fall back to 15 MB. |
@@ -174,8 +176,14 @@ OCR is local-only and disabled by default. The first backend is Tesseract, which
 | `easyocr.enabled` | bool | `false` | EasyOCR backend | Enables the optional EasyOCR backend only when its extra is installed. |
 | `easyocr.languages` | list | `["en"]` | EasyOCR backend | Local EasyOCR language list. |
 | `easyocr.gpu` | bool | `false` | EasyOCR backend | Passed to EasyOCR when installed. |
+| `easyocr.model_storage_directory` | path or null | `null` | EasyOCR backend | Optional local EasyOCR model directory. |
+| `easyocr.download_enabled` | bool | `false` | EasyOCR backend | Passed to EasyOCR so KGFS does not silently download models by default. |
 | `paddle.enabled` | bool | `false` | PaddleOCR backend | Enables the optional PaddleOCR backend scaffold only when installed. |
 | `paddle.language` | str | `en` | PaddleOCR backend | Local PaddleOCR language code. |
+| `paddle.use_angle_cls` | bool | `true` | PaddleOCR backend | Passed to PaddleOCR and OCR calls. |
+| `paddle.use_gpu` | bool | `false` | PaddleOCR backend | Passed to PaddleOCR when installed. |
+| `paddle.model_dir` | path or null | `null` | PaddleOCR backend | Optional local model directory used for Paddle detection/recognition/classifier model dirs. |
+| `paddle.download_enabled` | bool | `false` | PaddleOCR backend | Download guard passed to PaddleOCR when supported. |
 | `cloud_fallback.enabled` | bool | `false` | Cloud OCR planner | Scaffold only; uploads are refused unless future provider, explicit allow-cloud, preview, and confirmation gates exist. |
 | `cloud_fallback.provider` | str or null | `null` | Cloud OCR planner | No provider is enabled by default and API keys are not stored in config. |
 | `cloud_fallback.require_confirmation` | bool | `true` | Cloud OCR planner | Confirmation gate for any future cloud OCR path. |
@@ -201,23 +209,46 @@ written into source files or sidecars.
 | `photos.store_location_metadata` | bool | `false` | EXIF storage | Exact/coarse GPS text is not stored unless explicitly enabled. |
 | `photos.location_precision` | str | `none` | EXIF storage | `none`, `coarse`, or `exact`; forced to `none` when location storage is disabled. |
 | `photos.generate_captions` | bool | `false` | reserved | Caption generation remains separate and disabled by default. |
-| `captions.enabled` | bool | `false` | caption scaffold | Captioning is disabled unless a future/local backend is configured. |
-| `captions.backend` | str | `none` | caption scaffold | `none` is the only built-in backend in this phase. |
-| `captions.model_name` | str or null | `null` | caption scaffold | Optional future local model name. |
-| `captions.local_files_only` | bool | `true` | caption scaffold | Future local model loading should avoid downloads by default. |
-| `captions.max_images_per_run` | int | `50` | caption scaffold | Positive cap; invalid values fall back to 50. |
-| `audio.enabled` | bool | `false` | audio scaffold | Audio media features are disabled by default. |
-| `audio.transcription_enabled` | bool | `false` | audio scaffold | Transcription is disabled by default. |
-| `audio.backend` | str | `none` | audio scaffold | `none` is the only built-in backend in this phase. |
-| `audio.include_extensions` | list | `.m4a`, `.mp3`, `.wav`, `.aac`, `.flac` | audio scaffold | Audio extensions reserved for optional transcription. |
-| `audio.max_audio_minutes_per_file` | int | `60` | audio scaffold | Positive cap; invalid values fall back to 60. |
-| `visual.enabled` | bool | `false` | visual scaffold | Visual embedding/search is disabled by default. |
-| `visual.backend` | str | `none` | visual scaffold | `none` is the only built-in backend in this phase. |
-| `visual.model_name` | str or null | `null` | visual scaffold | Optional future local visual model name. |
+| `captions.enabled` | bool | `false` | caption backend registry | Captioning is disabled unless a local backend is configured. |
+| `captions.backend` | str | `none` | caption backend registry | `none`, `metadata`, or optional `transformers`; unknown backends fail helpfully. |
+| `captions.model_name` | str or null | `null` | caption backend registry | Optional local caption model path/name. |
+| `captions.local_files_only` | bool | `true` | caption backend registry | Prevents silent model downloads by default. |
+| `captions.download_enabled` | bool | `false` | caption backend registry | Documents explicit opt-in for model downloads; KGFS defaults off. |
+| `captions.max_images_per_run` | int | `50` | caption index | Positive cap; invalid values fall back to 50. |
+| `audio.enabled` | bool | `false` | audio backend registry | Audio media features are disabled by default. |
+| `audio.transcription_enabled` | bool | `false` | audio backend registry | Transcription is disabled by default. |
+| `audio.backend` | str | `none` | audio backend registry | `none` or optional `faster_whisper`; unknown backends fail helpfully. |
+| `audio.include_extensions` | list | `.m4a`, `.mp3`, `.wav`, `.aac`, `.flac` | audio index | Audio extensions eligible for optional transcription. |
+| `audio.local_files_only` | bool | `true` | audio backend registry | Prevents silent model downloads by default. |
+| `audio.download_enabled` | bool | `false` | audio backend registry | Documents explicit opt-in for model downloads; KGFS defaults off. |
+| `audio.max_audio_minutes_per_file` | int | `60` | audio backend registry | Positive cap; invalid values fall back to 60. |
+| `visual.enabled` | bool | `false` | visual backend registry | Visual embedding/search is disabled by default. |
+| `visual.backend` | str | `none` | visual backend registry | `none`, deterministic local `bytehash`, or optional `clip`. |
+| `visual.model_name` | str or null | `null` | visual backend registry | Optional local visual model path/name. |
+| `visual.local_files_only` | bool | `true` | visual backend registry | Prevents silent model downloads by default. |
+| `visual.download_enabled` | bool | `false` | visual backend registry | Documents explicit opt-in for model downloads; KGFS defaults off. |
 
 EXIF-derived text is stored in `media_text` and searched alongside `files_fts`
 with an explicit `media:exif` result label. Semantic chunks can include
 media-derived text when semantic indexing is enabled.
+
+### `models`
+
+The `models` section controls local model cache/reporting defaults used by
+`kgfs models`. Individual heavy backends remain disabled in `ocr` or `media`
+sections and their download guards default false.
+
+Use `kgfs models doctor`, `kgfs models paths`, `kgfs models validate`, and
+`kgfs models config-snippet BACKEND` to inspect local model setup without
+creating directories, editing config, or downloading model files. See
+`docs/local-models.md` for backend-specific setup notes.
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `cache_dir` | path or null | `null` | `kgfs/models/storage.py` | Null uses the KGFS cache/app-data model directory. |
+| `local_files_only` | bool | `true` | model status/recommend helpers | Documents the local-only default across model backends. |
+| `max_batch_size` | int | `8` | model helpers | Positive cap for future bounded model batches. |
+| `benchmark_sample_size` | int | `10` | `kgfs models benchmark` | Positive cap for benchmark sample sizing. |
 
 ### `semantic`
 
@@ -522,6 +553,7 @@ extraction:
 
 ocr:
   enabled: false
+  default_backend: "tesseract"
   backend: "tesseract"
   include_extensions:
     - ".png"
@@ -543,9 +575,15 @@ ocr:
     languages:
       - "en"
     gpu: false
+    model_storage_directory: null
+    download_enabled: false
   paddle:
     enabled: false
     language: "en"
+    use_angle_cls: true
+    use_gpu: false
+    model_dir: null
+    download_enabled: false
   cloud_fallback:
     enabled: false
     provider: null
@@ -574,6 +612,7 @@ media:
     backend: "none"
     model_name: null
     local_files_only: true
+    download_enabled: false
     max_images_per_run: 50
   audio:
     enabled: false
@@ -587,12 +626,20 @@ media:
       - ".flac"
     model_name: null
     local_files_only: true
+    download_enabled: false
     max_audio_minutes_per_file: 60
   visual:
     enabled: false
     backend: "none"
     model_name: null
     local_files_only: true
+    download_enabled: false
+
+models:
+  cache_dir: null
+  local_files_only: true
+  max_batch_size: 8
+  benchmark_sample_size: 10
 
 semantic:
   enabled: false

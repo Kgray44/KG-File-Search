@@ -8,6 +8,7 @@ from pathlib import Path
 
 from kgfs.core.config import KGFSConfig
 from kgfs.db.migrations import CURRENT_SCHEMA_VERSION, get_schema_version
+from kgfs.models.storage import model_cache_dir
 from kgfs.vectors.storage import vector_backends_root
 
 FILE_REFERENCE_COLUMNS = (
@@ -102,12 +103,32 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
 
 def _check_artifact_sanity(config: KGFSConfig) -> str:
     root = vector_backends_root(config)
+    notes: list[str] = []
     if not root.exists():
-        return "ok: no vector backend artifacts found"
+        notes.append("no vector backend artifacts found")
+    else:
+        if config.database_path is not None:
+            expected_parent = config.database_path.expanduser().parent.resolve()
+            resolved = root.resolve()
+            if expected_parent != resolved and expected_parent not in resolved.parents:
+                return f"warning: vector artifact root is outside the database directory ({resolved})"
+        artifact_count = sum(1 for item in root.rglob("*") if item.is_file())
+        notes.append(f"{artifact_count} vector backend artifact file(s)")
+    model_root = model_cache_dir(config, _dummy_app_paths(config))
+    if model_root.exists():
+        notes.append(f"{sum(1 for item in model_root.rglob('*') if item.is_file())} model cache file(s)")
+    else:
+        notes.append("no model cache artifacts found")
+    return "ok: " + "; ".join(notes)
+
+
+def _dummy_app_paths(config: KGFSConfig):
+    class _Paths:
+        cache_dir: Path
+
+    paths = _Paths()
     if config.database_path is not None:
-        expected_parent = config.database_path.expanduser().parent.resolve()
-        resolved = root.resolve()
-        if expected_parent != resolved and expected_parent not in resolved.parents:
-            return f"warning: vector artifact root is outside the database directory ({resolved})"
-    artifact_count = sum(1 for item in root.rglob("*") if item.is_file())
-    return f"ok: {artifact_count} vector backend artifact file(s)"
+        paths.cache_dir = config.database_path.expanduser().parent / "cache"
+    else:
+        paths.cache_dir = Path(".kgfs") / "cache"
+    return paths

@@ -39,6 +39,7 @@ def test_github_actions_package_builds_windows_and_macos_artifacts() -> None:
     assert "python -m mypy" in commands
     assert "python scripts/check_docs_consistency.py" in commands
     assert "python scripts/build_package.py --clean --mode onedir" in commands
+    assert "python scripts/generate_checksums.py dist-packages" in commands
     assert "python scripts/smoke_test_packaged.py --package dist-packages/KGFS" in commands
     assert upload_steps
     assert "dist-packages/KGFS-${{ matrix.artifact-os }}-*.zip" in upload_steps[0]["with"]["path"]
@@ -48,4 +49,5 @@ def test_github_actions_package_builds_windows_and_macos_artifacts() -> None:
     assert "startsWith(github.ref, 'refs/tags/v')" in release_job["if"]
     release_steps = "\n".join(str(step) for step in release_job["steps"])
     assert "SHA256SUMS.txt" in release_steps
+    assert "python scripts/generate_checksums.py release-assets" in release_steps
     assert "softprops/action-gh-release" in release_steps

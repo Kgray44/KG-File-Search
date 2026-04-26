@@ -519,21 +519,37 @@ kgfs search "TestCam photo"
 kgfs why 1 "TestCam photo"
 ```
 
-Scaffold/status commands:
+Local model/backend commands:
 
 ```bash
+kgfs models status
+kgfs models doctor
+kgfs models validate
+kgfs models config-snippet easyocr
+kgfs models recommend
+kgfs ocr backends
+kgfs ocr test ./screenshot.png --backend easyocr
+kgfs media caption ./photo.jpg
+kgfs media transcribe ./lecture.m4a
 kgfs ocr advanced-status
 kgfs media captions status
 kgfs media audio status
 kgfs media visual status
+kgfs media visual-similar 3
 ```
 
 Captioning, audio transcription, visual embeddings, EasyOCR, PaddleOCR, and
-cloud OCR fallback are optional/lazy. The built-in cloud fallback scaffold is
-no-upload by default and returns a not-implemented message even after explicit
-confirmation in this phase.
+cloud OCR fallback are optional/lazy. EasyOCR and PaddleOCR are real local
+adapters when their optional extras and model files are present. Caption/audio
+and visual features use backend contracts; generated text/embeddings are stored
+only in KGFS DB/cache paths. Model downloads and cloud OCR uploads are disabled
+by default.
 
-Sources: `kgfs/cli/commands/media.py`, `kgfs/media/*.py`, `kgfs/ocr/cloud.py`, `tests/test_phase10_media.py`.
+Use `kgfs models paths` to check where local model directories are configured.
+KGFS warns if a model path sits inside an indexed folder because model caches
+should stay in KGFS app/cache or project-local `.kgfs/cache` paths.
+
+Sources: `kgfs/cli/commands/models.py`, `kgfs/cli/commands/media.py`, `kgfs/media/*.py`, `kgfs/ocr/cloud.py`, `tests/test_phase10_media.py`, `tests/test_phase10_1_local_models.py`, `tests/test_phase10_2_local_model_setup.py`.
 
 ## AI Assist
 
@@ -739,6 +755,7 @@ python -m pip install -e ".[dev,package]"
 Run release-readiness checks:
 
 ```bash
+python scripts/release_check.py --dry-run
 python -m pytest -q --basetemp .pytest-tmp
 python -m ruff check .
 python -m ruff format --check .
@@ -753,6 +770,7 @@ Build and smoke test:
 ```bash
 python scripts/build_package.py --clean
 python scripts/smoke_test_packaged.py --package dist-packages/KGFS
+python scripts/generate_checksums.py dist-packages
 ```
 
 The zip name is generated as `KGFS-<os>-<arch>.zip`.
@@ -764,7 +782,14 @@ shasum -a 256 dist-packages/KGFS-macos-arm64.zip
 cat dist-packages/SHA256SUMS.txt
 ```
 
-Sources: `scripts/build_package.py`, `scripts/smoke_test_packaged.py`, `packaging/README-packaging.md`.
+On Windows:
+
+```powershell
+Get-FileHash .\dist-packages\KGFS-windows-x64.zip -Algorithm SHA256
+Get-Content .\dist-packages\SHA256SUMS.txt
+```
+
+Sources: `scripts/build_package.py`, `scripts/smoke_test_packaged.py`, `scripts/generate_checksums.py`, `scripts/release_check.py`, `packaging/README-packaging.md`.
 
 ## Python Module Usage
 

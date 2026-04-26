@@ -54,6 +54,20 @@ ocr-paddle = [
 multimodal = [
   "pillow>=10",
 ]
+captions = [
+  "pillow>=10",
+  "transformers>=4.40",
+]
+audio = [
+  "faster-whisper>=1.0",
+]
+visual = [
+  "pillow>=10",
+  "sentence-transformers>=2.7",
+]
+local-models = [
+  "pillow>=10",
+]
 sqlite-vec = [
   "sqlite-vec>=0.1.6",
 ]
@@ -126,6 +140,8 @@ files = [
   "kgfs/capabilities.py",
   "kgfs/db/checks.py",
   "scripts/check_docs_consistency.py",
+  "scripts/generate_checksums.py",
+  "scripts/release_check.py",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"

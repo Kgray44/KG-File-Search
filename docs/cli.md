@@ -57,11 +57,13 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs vector benchmark` | Benchmark available vector backends against existing local vectors. | `kgfs/cli/commands/vector.py` |
 | `kgfs vector recommend` | Recommend a vector backend based on local index size and availability. | `kgfs/cli/commands/vector.py` |
 | `kgfs ocr status` | Show OCR config and Tesseract availability. | `kgfs/cli/commands/ocr.py` |
+| `kgfs ocr backends` | List Tesseract, EasyOCR, and PaddleOCR local backend availability. | `kgfs/cli/commands/ocr.py` |
 | `kgfs ocr advanced-status` | Show optional EasyOCR/PaddleOCR/cloud OCR scaffold status. | `kgfs/cli/commands/ocr.py` |
 | `kgfs ocr test` | OCR one image without indexing it. | `kgfs/cli/commands/ocr.py` |
 | `kgfs ocr index` | Run indexing with OCR-enabled extraction. | `kgfs/cli/commands/ocr.py` |
 | `kgfs media` | Inspect, index, and clear optional local media-derived metadata. | `kgfs/cli/commands/media.py` |
-| `kgfs media captions caption` / `kgfs media audio transcribe` / `kgfs media visual similar` | Optional media scaffold actions. | `kgfs/cli/commands/media.py` |
+| `kgfs media captions caption` / `kgfs media audio transcribe` / `kgfs media visual similar` | Optional media model actions. | `kgfs/cli/commands/media.py` |
+| `kgfs models` | Inspect optional local model/OCR/media backend availability. | `kgfs/cli/commands/models.py` |
 | `kgfs why` | Explain why a latest search result matched a query. | `kgfs/cli/commands/why.py` |
 | `kgfs open` | Open a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
 | `kgfs reveal` | Reveal a file from latest search results. | `kgfs/cli/commands/open_reveal.py` |
@@ -492,13 +494,16 @@ Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/index_manager.py`, `kgfs/v
 
 ```bash
 kgfs ocr status [--config PATH] [--database PATH] [--project-local]
+kgfs ocr backends [--config PATH] [--database PATH] [--project-local]
 kgfs ocr advanced-status [--config PATH] [--database PATH] [--project-local]
-kgfs ocr test IMAGE_PATH [--config PATH] [--project-local]
+kgfs ocr test IMAGE_PATH [--backend tesseract|easyocr|paddle] [--config PATH] [--project-local]
 kgfs ocr index [--config PATH] [--database PATH] [--project-local]
-               [--dry-run] [--force] [--allow-risky-root]
+               [--backend tesseract|easyocr|paddle] [--dry-run] [--force] [--allow-risky-root]
 ```
 
 `ocr status` reports whether OCR is enabled, the configured backend, Tesseract command/language, supported image extensions, cache settings, and install hints when Tesseract is missing.
+
+`ocr backends` lists Tesseract, EasyOCR, and PaddleOCR without importing heavy optional dependencies at normal startup.
 
 `ocr test` runs local OCR on one image and prints a preview. It does not add the image to the index and does not create a database.
 
@@ -512,14 +517,20 @@ Source: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`.
 kgfs media status [--config PATH] [--database PATH] [--project-local]
 kgfs media exif PATH [--config PATH] [--project-local]
 kgfs media index [--config PATH] [--database PATH] [--project-local]
-                 [--photos] [--dry-run] [--allow-risky-root]
+                 [--photos] [--captions] [--audio] [--visual] [--dry-run] [--allow-risky-root]
 kgfs media clear --yes [--config PATH] [--database PATH] [--project-local]
+kgfs media caption PATH [--config PATH] [--project-local]
+kgfs media transcribe PATH [--config PATH] [--project-local]
+kgfs media visual-similar FILE_ID [--config PATH] [--database PATH] [--project-local]
 kgfs media captions status [--config PATH] [--database PATH] [--project-local]
 kgfs media captions caption PATH [--config PATH] [--project-local]
+kgfs media captions index [--config PATH] [--database PATH] [--project-local]
 kgfs media audio status [--config PATH] [--database PATH] [--project-local]
 kgfs media audio transcribe PATH [--config PATH] [--project-local]
+kgfs media audio index [--config PATH] [--database PATH] [--project-local]
 kgfs media visual status [--config PATH] [--database PATH] [--project-local]
 kgfs media visual similar RESULT_ID
+kgfs media visual index [--config PATH] [--database PATH] [--project-local]
 ```
 
 `media status` is read-only and works when optional dependencies are missing.
@@ -530,11 +541,46 @@ media/photos are enabled. `media clear --yes` deletes KGFS media metadata,
 media text, and media embedding rows only; it does not delete source files,
 file records, OCR cache rows, vectors, or keyword FTS rows.
 
-Caption, audio, and visual commands are local scaffold/status surfaces in this
-phase. Missing or disabled backends report helpful messages rather than
-pretending to understand media.
+Caption, audio, and visual commands use optional local backend contracts. Built-in
+defaults are disabled and do not download models. Generated captions,
+transcripts, and visual embeddings are stored in KGFS DB/cache tables only.
 
 Source: `kgfs/cli/commands/media.py`, `kgfs/media/*.py`.
+
+## Model Commands
+
+```bash
+kgfs models [COMMAND]
+kgfs models status [--config PATH] [--database PATH] [--project-local]
+kgfs models list [--config PATH] [--database PATH] [--project-local]
+kgfs models benchmark [--config PATH] [--database PATH] [--project-local]
+kgfs models recommend [--config PATH] [--database PATH] [--project-local]
+kgfs models doctor [--config PATH] [--database PATH] [--project-local]
+kgfs models paths [--config PATH] [--database PATH] [--project-local]
+kgfs models validate [BACKEND] [--config PATH] [--database PATH] [--project-local]
+kgfs models config-snippet BACKEND
+kgfs models test BACKEND PATH [--config PATH] [--database PATH] [--project-local]
+```
+
+`models status` summarizes optional OCR, caption, audio transcription, and visual
+embedding backend readiness. `models benchmark` is bounded and does not run heavy
+model inference by default. `models recommend` explains the safe local default:
+keep advanced model backends disabled unless the matching optional extra and
+local model files are intentionally configured.
+
+`models doctor` gives the same readiness model with path/privacy warnings.
+`models paths` shows the KGFS model cache path and configured backend model
+paths without creating directories. `models validate` checks dependency
+availability, configured model paths, local-only/download guard state, and
+whether a model path appears to sit inside an indexed folder. `models
+config-snippet` prints YAML only; it does not edit config. `models test` runs one
+bounded local backend operation against a single file without indexing it,
+modifying it, or creating source sidecars.
+
+Readiness states are `disabled`, `ready`, `missing_dependency`, `missing_model`,
+`configuration_needed`, `scaffold`, and `error`.
+
+Source: `kgfs/cli/commands/models.py`, `kgfs/models/*.py`.
 
 ## Open and Reveal
 

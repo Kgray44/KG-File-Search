@@ -161,17 +161,17 @@ This page inventories features implemented in the repository state at this commi
 - Sources: `kgfs/media/*.py`, `kgfs/cli/commands/media.py`, `kgfs/search/keyword.py`.
 - Tests: `tests/test_phase10_media.py`.
 
-### Advanced OCR and Multimodal Scaffolds
+### Local Model Backends
 
-- What it does: adds lazy, optional backend scaffolds for EasyOCR, PaddleOCR, image captions, audio transcription, visual embeddings, and cloud OCR planning.
-- Use it with: `kgfs ocr advanced-status`, `kgfs media captions status`, `kgfs media audio status`, and `kgfs media visual status`.
-- Inputs: config only unless a future/local backend is installed and enabled.
-- Outputs: helpful availability/status messages; no fake caption/transcript/visual understanding.
-- Settings: `ocr.easyocr.*`, `ocr.paddle.*`, `ocr.cloud_fallback.*`, `media.captions.*`, `media.audio.*`, `media.visual.*`.
-- Edge cases: cloud OCR fallback is disabled by default and the current scaffold still refuses upload after confirmation because no provider is implemented.
+- What it does: adds lazy optional adapters for EasyOCR and PaddleOCR plus local caption, audio transcription, and visual embedding backend contracts.
+- Use it with: `kgfs models status`, `kgfs models doctor`, `kgfs models validate`, `kgfs models config-snippet BACKEND`, `kgfs models test BACKEND PATH`, `kgfs ocr backends`, `kgfs ocr test IMAGE --backend easyocr`, `kgfs media caption IMAGE`, `kgfs media transcribe AUDIO`, and `kgfs media visual-similar FILE_ID`.
+- Inputs: explicitly selected local files and enabled local backend config. Model downloads are disabled by default.
+- Outputs: OCR text, captions, transcripts, and visual embeddings stored in KGFS DB/cache tables; caption/transcript text is searchable through normal KGFS search.
+- Settings: `models.*`, `ocr.easyocr.*`, `ocr.paddle.*`, `ocr.cloud_fallback.*`, `media.captions.*`, `media.audio.*`, `media.visual.*`.
+- Edge cases: EasyOCR/PaddleOCR/model packages are optional; missing dependencies report install hints. Local model path validation warns when model caches are configured inside indexed source folders. Cloud OCR fallback remains disabled and no-upload.
 - Safety: no cloud uploads happen by default or in tests; heavy dependencies are optional and lazy.
-- Sources: `kgfs/ocr/easyocr.py`, `kgfs/ocr/paddle.py`, `kgfs/ocr/cloud.py`, `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py`.
-- Tests: `tests/test_phase10_media.py`.
+- Sources: `kgfs/models/*.py`, `kgfs/ocr/easyocr.py`, `kgfs/ocr/paddle.py`, `kgfs/ocr/cloud.py`, `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py`.
+- Tests: `tests/test_phase10_media.py`, `tests/test_phase10_1_local_models.py`, `tests/test_phase10_2_local_model_setup.py`.
 
 ### Incremental Indexing
 
@@ -572,14 +572,14 @@ This page inventories features implemented in the repository state at this commi
 
 ### Release-Readiness Checks
 
-- What it does: provides dev-only lint, format, scoped typecheck, coverage, docs consistency, capability, and database integrity checks.
-- Use it with: `python -m ruff check .`, `python -m ruff format --check .`, `python -m mypy`, `python -m pytest --cov=kgfs --cov-report=term-missing`, `python scripts/check_docs_consistency.py`, `kgfs capabilities`, and `kgfs db check`.
+- What it does: provides dev-only lint, format, scoped typecheck, coverage, docs consistency, package, checksum, capability, and database integrity checks.
+- Use it with: `python scripts/release_check.py --dry-run`, `python -m ruff check .`, `python -m ruff format --check .`, `python -m mypy`, `python -m pytest --cov=kgfs --cov-report=term-missing`, `python scripts/check_docs_consistency.py`, `python scripts/generate_checksums.py dist-packages`, `kgfs capabilities`, and `kgfs db check`.
 - Inputs: repository files, active KGFS config, and existing KGFS database for DB checks.
 - Outputs: release-readiness reports and nonzero exits for failures.
 - Settings: dev-only tooling in `pyproject.toml`; no runtime feature settings are changed.
 - Edge cases: mypy is intentionally scoped to release-readiness modules for this pass and can be expanded later.
 - Safety: checks do not modify indexed source files; `kgfs db check` is read-only and does not create missing databases.
-- Sources: `pyproject.toml`, `kgfs/capabilities.py`, `kgfs/db/checks.py`, `scripts/check_docs_consistency.py`.
+- Sources: `pyproject.toml`, `kgfs/capabilities.py`, `kgfs/db/checks.py`, `scripts/check_docs_consistency.py`, `scripts/release_check.py`, `scripts/generate_checksums.py`.
 - Tests: `tests/test_release_readiness.py`.
 
 ### GitHub Actions CI
@@ -589,7 +589,7 @@ This page inventories features implemented in the repository state at this commi
 - Inputs: GitHub workflow events.
 - Outputs: test runs and uploaded package artifacts.
 - Settings: workflow YAML.
-- Edge cases: no GitHub Release publishing workflow is implemented.
+- Edge cases: GitHub Release creation is draft-only for `v*` tags and does not require signing/notarization secrets.
 - Sources: `.github/workflows/ci.yml`, `.github/workflows/package.yml`.
 - Tests: `tests/test_ci_workflow.py`.
 

@@ -1,0 +1,56 @@
+name: Optional model/backend issue
+description: Report local OCR, media, vector, TUI, tray, or model backend setup trouble.
+title: "[Optional Backend]: "
+labels: ["optional-backend"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Which optional backend is failing and what happened?
+    validations:
+      required: true
+  - type: input
+    id: backend
+    attributes:
+      label: Backend name
+      placeholder: easyocr, paddle, faster-whisper, clip-visual, hnsw, faiss, textual
+  - type: input
+    id: os
+    attributes:
+      label: OS
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+  - type: input
+    id: kgfs_version
+    attributes:
+      label: KGFS version
+  - type: dropdown
+    id: install_type
+    attributes:
+      label: Install type
+      options:
+        - Editable/source install
+        - Packaged executable
+        - pip install
+        - Other
+  - type: textarea
+    id: command
+    attributes:
+      label: Command run
+      description: Include `kgfs models validate BACKEND` or backend status output if applicable.
+  - type: textarea
+    id: doctor_output
+    attributes:
+      label: kgfs doctor output, redacted
+  - type: textarea
+    id: capabilities_output
+    attributes:
+      label: kgfs capabilities output, redacted
+  - type: textarea
+    id: optional_dependencies
+    attributes:
+      label: Optional dependencies installed
+      description: Include extras, package versions, local model paths, and whether downloads are disabled.

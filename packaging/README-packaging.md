@@ -15,15 +15,12 @@ python -m pip install -e ".[dev,package]"
 Run release-readiness checks before building:
 
 ```bash
-kgfs version
-python -m pytest -q --basetemp .pytest-tmp
-python -m ruff check .
-python -m ruff format --check .
-python -m mypy
-python -m pytest --cov=kgfs --cov-report=term-missing
-python scripts/check_docs_consistency.py
-kgfs capabilities --project-local
+python scripts/release_check.py --dry-run
 ```
+
+Remove `--dry-run` to run the whole local release ladder. Use
+`--skip-package` if you want the test/lint/type/docs/coverage checks without
+building PyInstaller artifacts.
 
 Build the default onedir package:
 
@@ -48,6 +45,12 @@ The release zip appears in `dist-packages/`:
 - `KGFS-macos-x64.zip` on Intel macOS
 
 The build also writes `dist-packages/SHA256SUMS.txt`.
+
+Regenerate checksums for existing release zips:
+
+```bash
+python scripts/generate_checksums.py dist-packages
+```
 
 Verify an artifact with PowerShell:
 

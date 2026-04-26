@@ -36,7 +36,9 @@ Sources: `kgfs/cli/commands/doctor.py`, `kgfs/cli/commands/stats.py`.
 | `kgfs db check` says the database is missing | The selected config/database path has not been indexed yet, or the wrong path flags were used. | Run `kgfs index`, or pass the intended `--database` / `--project-local` flags. | `kgfs/db/checks.py`, `kgfs/cli/commands/db.py` |
 | `kgfs db check` reports foreign key or orphaned metadata problems | Database rows reference missing file records, usually from manual DB editing or an interrupted old workflow. | Back up metadata with `kgfs metadata backup`, then inspect/prune/rebuild the KGFS database. | `kgfs/db/checks.py`, `kgfs/intelligence/export.py` |
 | GPS data does not appear in media metadata | Exact/coarse location storage is disabled by default. | This is intentional. Set `media.photos.store_location_metadata: true` and choose `location_precision` only if you accept the privacy tradeoff. | `kgfs/media/exif.py`, `docs/security.md` |
-| Caption/audio/visual commands say unavailable | These are scaffolded local extension points with backend `none` by default. | Keep using metadata/OCR search, or add a future local backend; KGFS does not fake captions/transcripts/visual search. | `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py` |
+| Caption/audio/visual commands say unavailable | These local backend contracts use backend `none` by default and heavy deps are optional. | Run `kgfs models status`, install only the needed optional extra, and configure a local backend/model path. KGFS does not fake captions/transcripts/visual search. | `kgfs/models/*.py`, `kgfs/media/captions.py`, `kgfs/media/audio.py`, `kgfs/media/visual.py` |
+| `kgfs models validate` says `missing_model` | Downloads are disabled and the backend has no local model path or the configured path does not exist. | Run `kgfs models config-snippet BACKEND`, stage local model files under a KGFS cache path such as `.kgfs/cache/models`, then update config. | `kgfs/models/validation.py`, `kgfs/models/snippets.py`, `docs/local-models.md` |
+| `kgfs models paths` warns about an indexed folder | A configured model directory sits inside one of your searchable source folders. | Move the model files to app-data/cache or `.kgfs/cache/models`; do not keep model caches in source folders. | `kgfs/models/paths.py`, `docs/local-models.md` |
 | Cloud OCR fallback refuses to upload | Cloud fallback is disabled and scaffolded to refuse upload by default. | This is intentional; no provider upload path is implemented in this phase. | `kgfs/ocr/cloud.py` |
 | `kgfs ocr status` says Tesseract is missing | The configured Tesseract command is not on PATH or the command path is wrong. | Install Tesseract locally and set `ocr.tesseract.command` to `tesseract` or a full executable path. | `kgfs/ocr/tesseract.py` |
 | OCR result is an extraction error | Tesseract could not read the image or exited non-zero. | Try `kgfs ocr test PATH`; check language and command settings. | `kgfs/cli/commands/ocr.py`, `kgfs/ocr/tesseract.py` |
@@ -145,6 +147,8 @@ Check media state:
 ```bash
 kgfs media status
 kgfs media exif ./photo.jpg
+kgfs models status
+kgfs ocr backends
 kgfs media captions status
 kgfs media audio status
 kgfs media visual status
@@ -238,10 +242,10 @@ Sources: `kgfs/core/app_dirs.py`, `kgfs/cli/commands/doctor.py`.
 - The TUI is an optional minimal launcher scaffold at this commit.
 - Integration scaffolds are generated for manual installation; KGFS does not auto-install them.
 - No structured logging pipeline is implemented.
-- No lint/typecheck tooling is configured.
+- Ruff lint/format and scoped mypy checks are configured for release readiness.
 - AI query expansion has a config key (`ai.allow_query_expansion`) but no implemented command path was found.
 - Backend selection is exposed for vector management commands, but `kgfs search` does not expose a `--backend` flag at this commit.
 - Base packaged builds exclude semantic dependencies, optional vector backend dependencies, optional TUI/tray dependencies, OCR helper dependencies, and OpenAI SDK.
 - Base packaged builds exclude optional media/model dependencies such as Pillow, EasyOCR, PaddleOCR, Whisper, and CLIP-style stacks.
 - OCR PDF rasterization is scaffolded; scanned/image-only PDFs are detected and reported, while image OCR is implemented through Tesseract.
-- Captioning, audio transcription, visual semantic search, and cloud OCR fallback are scaffolded/status-only unless a future local backend/provider is implemented.
+- Captioning, audio transcription, and visual semantic search require explicitly configured optional local backends; cloud OCR fallback remains no-upload.

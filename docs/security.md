@@ -199,7 +199,7 @@ Default OCR behavior:
 - `ocr.enabled: false`
 - Backend: local `tesseract` executable.
 - No cloud OCR calls.
-- No EasyOCR, PaddleOCR, image captioning, or multimodal embeddings.
+- EasyOCR, PaddleOCR, image captioning, audio transcription, and visual embeddings remain disabled unless explicitly configured.
 - Source images and PDFs are never modified.
 - OCR sidecar files are not created next to source files.
 - OCR cache rows are stored in the KGFS SQLite database/app data/project-local paths.
@@ -220,6 +220,7 @@ Default media behavior:
 - caption, audio, and visual backends are `none`
 - EasyOCR and PaddleOCR are disabled and lazy
 - cloud OCR fallback is disabled and scaffolded to refuse upload
+- local model downloads are disabled by default
 
 When photo metadata indexing is enabled, KGFS stores safe EXIF/image metadata in
 SQLite tables. GPS/location fields are omitted by default, and exact location
@@ -227,11 +228,16 @@ storage requires explicit config. Generated media text is labeled, for example
 `media:exif`, so search and `kgfs why` can show that a result came from
 media-derived metadata.
 
+When optional local model backends are enabled, OCR text, captions,
+transcripts, and visual embeddings are stored only in KGFS database/cache paths.
+KGFS does not write model output into image/audio/PDF source files or create
+source-folder sidecars.
+
 The cloud OCR fallback scaffold does not upload files in this phase. A future
 provider path must pass config enablement, explicit allow-cloud intent, preview,
 and confirmation before any upload can be considered.
 
-Sources: `kgfs/media/*.py`, `kgfs/ocr/easyocr.py`, `kgfs/ocr/paddle.py`, `kgfs/ocr/cloud.py`, `tests/test_phase10_media.py`.
+Sources: `kgfs/models/*.py`, `kgfs/media/*.py`, `kgfs/ocr/easyocr.py`, `kgfs/ocr/paddle.py`, `kgfs/ocr/cloud.py`, `tests/test_phase10_media.py`, `tests/test_phase10_1_local_models.py`.
 
 ## Web Dashboard Exposure
 

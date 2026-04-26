@@ -108,6 +108,7 @@ def test_release_candidate_support_files_exist_and_are_safe() -> None:
         "packaging_install_issue.yml",
         "search_quality_issue.yml",
         "security_privacy_concern.yml",
+        "optional_model_backend_issue.yml",
     ):
         assert (issue_template_dir / name).exists()
 

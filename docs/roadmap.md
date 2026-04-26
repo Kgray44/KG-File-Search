@@ -47,7 +47,7 @@ The following are not implemented as user-facing KGFS features at this commit:
 - Structured file logging or telemetry backend.
 - Encrypted index storage.
 - Docker, Kubernetes, or cloud deployment manifests.
-- Release publishing workflow that creates GitHub Releases from package artifacts.
+- Signing/notarization for release artifacts; the current `v*` workflow creates draft GitHub Releases without requiring signing secrets.
 - AI-driven query expansion, despite the `ai.allow_query_expansion` config key. Local deep-search query variants are implemented.
 - Search-time backend selection in CLI/web, despite the `SearchOptions.backend` runtime field. Vector management commands expose `--backend`.
 - Generic `--explain` search flag, despite the `SearchOptions.explain` runtime field. Use `kgfs why` for implemented result explanations.

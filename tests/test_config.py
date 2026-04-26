@@ -90,6 +90,13 @@ def test_default_config_serializes_valid_yaml(tmp_path: Path) -> None:
     assert loaded.vectors.faiss.enabled is False
     assert loaded.vectors.faiss.index_type == "flat"
     assert loaded.vectors.faiss.use_gpu is False
+    assert loaded.deep_search.enabled is True
+    assert loaded.deep_search.max_passes == 3
+    assert loaded.deep_search.max_candidates == 50
+    assert loaded.research.max_files == 12
+    assert loaded.research.max_chunks == 20
+    assert loaded.similar.default_limit == 10
+    assert loaded.timeline.default_limit == 50
     assert loaded.ai.enabled is False
     assert loaded.ai.api_key_env == "OPENAI_API_KEY"
     assert loaded.ai.send_file_paths is False
@@ -124,3 +131,7 @@ def test_existing_config_without_hybrid_section_uses_defaults(tmp_path: Path) ->
     assert config.hybrid.keyword_weight == 0.35
     assert config.hybrid.semantic_weight == 0.45
     assert config.hybrid.candidate_limit_multiplier == 5
+    assert config.deep_search.enabled is True
+    assert config.research.max_files == 12
+    assert config.similar.default_limit == 10
+    assert config.timeline.default_limit == 50

@@ -315,6 +315,18 @@ This page inventories features implemented in the repository state at this commi
 - Sources: `kgfs/db/latest_results.py`, `kgfs/cli/commands/search.py`, `kgfs/web/app.py`.
 - Tests: `tests/test_search.py`, `tests/test_web.py`, `tests/test_cli.py`.
 
+### Advanced Local Investigation Commands
+
+- What it does: adds CLI-first local investigation flows on top of the existing search kernel: multi-pass deep search, similar-file search, result comparison, chronological timeline search, and local research briefs.
+- Use it with: `kgfs deep QUERY`, `kgfs similar RESULT_ID`, `kgfs similar-file PATH`, `kgfs compare A B`, `kgfs timeline QUERY`, and `kgfs research QUERY`.
+- Inputs: existing KGFS file records, extracted text, latest result IDs, snippets, optional local vectors, and search filters.
+- Outputs: normal `SearchResult` rows, local citations, shared/unique terms, timeline groups, follow-up suggestions, and research notes.
+- Settings: `deep_search.*`, `research.*`, `similar.*`, `timeline.*`, `search.default_mode`, `search.save_latest_results`.
+- Edge cases: these commands do not call AI by default; similar search falls back to term overlap when vectors are missing; `similar-file` requires an already indexed path and never silently indexes arbitrary files.
+- Safety: no command modifies source files or creates sidecars beside indexed files.
+- Sources: `kgfs/search/deep.py`, `kgfs/search/similar.py`, `kgfs/search/compare.py`, `kgfs/search/timeline.py`, `kgfs/search/research.py`, `kgfs/search/citations.py`, `kgfs/cli/commands/deep.py`, `kgfs/cli/commands/similar.py`, `kgfs/cli/commands/compare.py`, `kgfs/cli/commands/timeline.py`, `kgfs/cli/commands/research.py`.
+- Tests: `tests/test_phase6_advanced_search.py`, `tests/test_cli.py`, `tests/test_config.py`.
+
 ### Result Explanations
 
 - What it does: explains why a saved latest search result matched a query, including score breakdown and snippet.
@@ -422,7 +434,7 @@ This page inventories features implemented in the repository state at this commi
 
 ### AI Answer Synthesis
 
-- What it does: sends local result snippets to OpenAI and prints an answer constrained by prompt text.
+- What it does: sends local result snippets with KGFS result citations to OpenAI and prints an answer constrained by prompt text.
 - Use it with: `kgfs ask "question"` after enabling AI.
 - Inputs: question and local search results.
 - Outputs: `AIResult` and console answer.

@@ -73,7 +73,31 @@ kgfs why 1 "op amp gain"
 `kgfs why` uses the latest search result IDs and prints the local score
 breakdown and snippet. It does not call AI.
 
-## Example 5: Reindex When Metadata Is Not Enough
+## Example 5: Local Investigation Commands
+
+After a normal search saves latest result IDs:
+
+```bash
+kgfs search "speaker crossover"
+kgfs deep "active crossover design"
+kgfs similar 1
+kgfs compare 1 2
+kgfs timeline "speaker crossover" --group month
+kgfs research "amplifier noise floor"
+```
+
+Search from an already indexed path:
+
+```bash
+kgfs similar-file ./notes/speaker-crossover.md
+```
+
+These commands reuse local indexed text and optional local vectors. They do not
+modify source files, create sidecars, or call AI by default.
+
+Sources: `kgfs/cli/commands/deep.py`, `kgfs/cli/commands/similar.py`, `kgfs/cli/commands/compare.py`, `kgfs/cli/commands/timeline.py`, `kgfs/cli/commands/research.py`.
+
+## Example 6: Reindex When Metadata Is Not Enough
 
 If a file changed but size and modified time look unchanged:
 
@@ -89,7 +113,7 @@ kgfs index --force
 
 Sources: `kgfs/indexing/indexer.py`, `tests/test_indexing.py`.
 
-## Example 6: Prune Deleted Files
+## Example 7: Prune Deleted Files
 
 Show stale database records without changing the DB:
 
@@ -105,7 +129,7 @@ kgfs prune
 
 Source: `kgfs/indexing/prune.py`.
 
-## Example 7: Semantic Search
+## Example 8: Semantic Search
 
 Install semantic support:
 
@@ -154,7 +178,7 @@ hybrid:
 
 Sources: `kgfs/cli/commands/semantic.py`, `kgfs/search/semantic.py`.
 
-## Example 8: Vector Backend Lab
+## Example 9: Vector Backend Lab
 
 After enabling semantic search and indexing files:
 
@@ -182,7 +206,7 @@ index rows.
 
 Sources: `kgfs/cli/commands/vector.py`, `kgfs/vectors/*.py`, `tests/test_vector_commands.py`, `tests/test_vector_benchmark.py`, `tests/test_vector_recommend.py`.
 
-## Example 9: Local OCR for Images
+## Example 10: Local OCR for Images
 
 Install optional light OCR Python dependencies if you want future preprocessing support, then install Tesseract separately for your OS:
 
@@ -220,7 +244,7 @@ KGFS stores OCR text in its local database/cache and never writes back to the im
 
 Sources: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`, `tests/test_ocr_*.py`.
 
-## Example 10: AI Preview Without API Call
+## Example 11: AI Preview Without API Call
 
 Enable AI in config for preview:
 
@@ -247,7 +271,7 @@ No API call is made when `--preview-ai-context` is used.
 
 Sources: `kgfs/cli/shared.py`, `kgfs/cli/commands/search.py`, `tests/test_cli.py`.
 
-## Example 11: OpenAI Answer Synthesis
+## Example 12: OpenAI Answer Synthesis
 
 Install OpenAI dependency:
 
@@ -280,7 +304,7 @@ kgfs ask "What do my notes say about motor torque?"
 
 Source: `kgfs/ai.py`.
 
-## Example 12: Start Web Dashboard
+## Example 13: Start Web Dashboard
 
 ```bash
 kgfs web
@@ -296,7 +320,7 @@ Use `/search?q=pid&ext=.pdf` for a filtered search URL.
 
 Sources: `kgfs/cli/commands/web.py`, `kgfs/web/app.py`.
 
-## Example 13: Reset and Rebuild
+## Example 14: Reset and Rebuild
 
 Dry-run reset:
 
@@ -318,7 +342,7 @@ kgfs rebuild --yes
 
 Sources: `kgfs/reset.py`, `kgfs/cli/commands/maintenance.py`.
 
-## Example 14: Build a Package
+## Example 15: Build a Package
 
 ```bash
 python -m pip install -e ".[package]"

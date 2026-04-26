@@ -100,7 +100,7 @@ Default AI privacy settings:
 When enabled, AI Assist:
 
 1. Runs local search first.
-2. Builds a bounded context from result snippets by default.
+2. Builds a bounded context from result snippets and KGFS local citations by default.
 3. Omits file paths unless configured otherwise.
 4. Redacts home path variants.
 5. Limits results and characters.
@@ -114,6 +114,18 @@ kgfs search "query" --ai-rerank --preview-ai-context
 ```
 
 Sources: `kgfs/ai.py`, `kgfs/cli/shared.py`, `tests/test_ai.py`.
+
+## Advanced Search Privacy
+
+`kgfs deep`, `kgfs similar`, `kgfs similar-file`, `kgfs compare`,
+`kgfs timeline`, and `kgfs research` operate on local KGFS database rows,
+snippets, latest-result IDs, and optional local vectors. They do not call cloud
+services and do not write annotations or sidecar files beside source files.
+
+`similar-file` requires the target path to already be indexed. It does not
+silently index arbitrary files.
+
+Sources: `kgfs/search/deep.py`, `kgfs/search/similar.py`, `kgfs/search/compare.py`, `kgfs/search/timeline.py`, `kgfs/search/research.py`, `tests/test_phase6_advanced_search.py`.
 
 ## Secrets
 

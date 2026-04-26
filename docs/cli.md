@@ -17,6 +17,12 @@ Command registration source: `kgfs/cli/app.py`.
 | `kgfs index` | Index configured folders. | `kgfs/cli/commands/index.py` |
 | `kgfs search` | Search indexed files, optionally AI-rerank. | `kgfs/cli/commands/search.py` |
 | `kgfs ask` | Ask OpenAI using local search snippets. | `kgfs/cli/commands/search.py` |
+| `kgfs deep` | Run deterministic multi-pass local search. | `kgfs/cli/commands/deep.py` |
+| `kgfs similar` | Find files similar to a latest result ID. | `kgfs/cli/commands/similar.py` |
+| `kgfs similar-file` | Find files similar to an already indexed file path. | `kgfs/cli/commands/similar.py` |
+| `kgfs compare` | Compare two latest result IDs. | `kgfs/cli/commands/compare.py` |
+| `kgfs timeline` | Show matching files chronologically. | `kgfs/cli/commands/timeline.py` |
+| `kgfs research` | Build a local citation-backed research brief. | `kgfs/cli/commands/research.py` |
 | `kgfs semantic` | Semantic-only search. | `kgfs/cli/commands/semantic.py` |
 | `kgfs semantic-index` | Show semantic status or rebuild semantic chunks. | `kgfs/cli/commands/semantic.py` |
 | `kgfs vector status` | Show semantic vector backend/chunk readiness. | `kgfs/cli/commands/vector.py` |
@@ -170,6 +176,32 @@ The CLI saves latest result IDs when `search.save_latest_results` is true.
 
 Sources: `kgfs/cli/commands/search.py`, `kgfs/search/filters.py`, `kgfs/search/registry.py`.
 
+## Advanced Local Search
+
+These commands are CLI-first local investigation tools. They reuse the existing KGFS index, search registry, snippets, latest-result IDs, and optional local vectors. They do not call AI or cloud services.
+
+```bash
+kgfs deep QUERY [--limit N] [--mode MODE] [--passes N]
+                [--ext EXT] [--folder TEXT] [--after YYYY-MM-DD] [--before YYYY-MM-DD]
+kgfs similar RESULT_ID [--limit N] [--include-self]
+kgfs similar-file PATH [--limit N] [--include-self]
+kgfs compare RESULT_ID_A RESULT_ID_B
+kgfs timeline QUERY [--limit N] [--group day|month|year] [--mode MODE]
+kgfs research QUERY [--limit N] [--mode MODE]
+```
+
+`deep` creates deterministic local query variants, runs multiple searches, fuses duplicate candidates by file ID, saves latest results, and suggests follow-up searches.
+
+`similar` starts from the latest result table. It uses stored chunk vectors when available and falls back to local term overlap when semantic data is missing. `similar-file` only works for files already in the KGFS index; it does not silently index arbitrary paths.
+
+`compare` shows shared terms, terms unique to each file, text similarity, and semantic similarity when local vectors exist.
+
+`timeline` runs local search and sorts/group matches by file modified time.
+
+`research` runs local deep search, prints best files/snippets, related terms, suggested follow-ups, and KGFS local citations like `[1] notes.md`.
+
+Sources: `kgfs/search/deep.py`, `kgfs/search/similar.py`, `kgfs/search/compare.py`, `kgfs/search/timeline.py`, `kgfs/search/research.py`, `kgfs/search/citations.py`.
+
 ## `why`
 
 ```bash
@@ -196,7 +228,7 @@ kgfs ask QUESTION [--config PATH] [--database PATH] [--project-local]
                   [--preview-ai-context]
 ```
 
-Runs local keyword search, builds AI context from local snippets, optionally previews/confirms, then asks OpenAI.
+Runs local keyword search, builds AI context from local snippets and KGFS result citations, optionally previews/confirms, then asks OpenAI.
 
 Requirements:
 

@@ -5,7 +5,9 @@ from __future__ import annotations
 import typer
 
 from kgfs.cli.commands import (
+    compare,
     config,
+    deep,
     doctor,
     folders,
     index,
@@ -15,7 +17,10 @@ from kgfs.cli.commands import (
     ocr,
     search,
     semantic,
+    similar,
     stats,
+    timeline,
+    research,
     vector,
     web,
     why,
@@ -31,6 +36,11 @@ def _register_commands() -> None:
         config,
         index,
         search,
+        deep,
+        similar,
+        compare,
+        timeline,
+        research,
         semantic,
         maintenance,
         folders,

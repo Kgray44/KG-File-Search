@@ -185,7 +185,23 @@ The explanation command reruns local search, prints the score breakdown and
 matched snippet, and notes when the saved result no longer appears in the fresh
 rerun. It does not call AI.
 
-Sources: `kgfs/cli/commands/search.py`, `kgfs/search/filters.py`, `kgfs/search/registry.py`, `tests/test_search_filters.py`, `tests/test_search_kernel.py`.
+Advanced local investigation commands:
+
+```bash
+kgfs deep "active crossover design"
+kgfs similar 1
+kgfs similar-file ./notes.md
+kgfs compare 1 2
+kgfs timeline "speaker crossover" --group month
+kgfs research "amplifier noise floor"
+```
+
+`deep` runs deterministic local query variants and fuses candidates. `similar`
+uses local vectors when present and falls back to text-term overlap. `similar-file`
+requires the file to already be indexed. `compare`, `timeline`, and `research`
+stay local and do not call AI.
+
+Sources: `kgfs/cli/commands/search.py`, `kgfs/cli/commands/deep.py`, `kgfs/cli/commands/similar.py`, `kgfs/cli/commands/compare.py`, `kgfs/cli/commands/timeline.py`, `kgfs/cli/commands/research.py`, `kgfs/search/filters.py`, `kgfs/search/registry.py`, `tests/test_search_filters.py`, `tests/test_search_kernel.py`, `tests/test_phase6_advanced_search.py`.
 
 ## Semantic Search
 
@@ -343,7 +359,7 @@ Sources: `kgfs/cli/commands/ocr.py`, `kgfs/ocr/*.py`, `kgfs/extractors/image_ocr
 
 ## AI Assist
 
-AI Assist is optional and disabled by default. It runs local search first, builds a bounded context from snippets, and calls OpenAI only after AI is enabled and the command path requests it.
+AI Assist is optional and disabled by default. It runs local search first, builds a bounded context from snippets and KGFS local citations, and calls OpenAI only after AI is enabled and the command path requests it.
 
 Install optional dependency:
 

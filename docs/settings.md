@@ -49,6 +49,10 @@ KGFS settings come from YAML config, CLI flags, environment variables, and runti
 | `ocr` | object | See below | No | `OCRSettings` fields | Image/PDF extraction, OCR commands, doctor/stats | Defaults disabled. | Image extensions are normalized; source-file modification is forced off in this phase. |
 | `semantic` | object | See below | No | `SemanticSettings` fields | Indexer/search/doctor | Defaults disabled. | Some invalid numeric values are clamped in `chunk_text()` rather than rejected. |
 | `search` | object | See below | No | `SearchSettings` fields | CLI search | Defaults applied. | Invalid mode is detected when creating `SearchOptions`, not at config load. |
+| `deep_search` | object | See below | No | `DeepSearchSettings` fields | `kgfs deep`, `kgfs research` | Defaults enabled for local-only multi-pass search. | Non-positive numeric values fall back to safe defaults. |
+| `research` | object | See below | No | `ResearchSettings` fields | `kgfs research` | Defaults applied. | Non-positive numeric values fall back to safe defaults. |
+| `similar` | object | See below | No | `SimilarSettings` fields | `kgfs similar`, `kgfs similar-file` | Defaults applied. | Limit is clamped positive; minimum score is clamped non-negative. |
+| `timeline` | object | See below | No | `TimelineSettings` fields | `kgfs timeline` | Defaults applied. | Non-positive limit falls back to the default. |
 | `vectors` | object | See below | No | `VectorSettings` fields | Semantic/hybrid search and vector commands | Defaults applied. | Unknown backend names make semantic/hybrid unavailable and vector rebuild/clear fail with known-backend guidance. |
 | `hybrid` | object | See below | No | `HybridSettings` fields | Hybrid ranking | Defaults applied. | Numeric weights are coerced; invalid/negative values are made safe at runtime. |
 | `ai` | object | See below | No | `AISettings` fields | CLI ask/rerank and `kgfs/ai.py` | Defaults disabled. | Unsupported provider raises `AIError` when AI is used. |
@@ -177,6 +181,40 @@ OCR results are stored in `files.extracted_text` so keyword, semantic, hybrid, s
 | `default_limit` | int | `10` | `>= 1` at search runtime | CLI search | Used when `--limit` is omitted. `SearchOptions` rejects values below 1. |
 | `highlight_matches` | bool | `true` | bool | CLI search | Adds Rich `[bold]` markup in snippets. |
 | `save_latest_results` | bool | `true` | bool | CLI search | Saves latest result IDs for `open` and `reveal`. |
+
+### `deep_search`
+
+Deep search is local-only. It expands the query deterministically, runs several KGFS searches, fuses candidates by file ID, and saves latest results for follow-up commands.
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `enabled` | bool | `true` | `kgfs deep` | Disables the command when false. |
+| `max_passes` | int | `3` | `kgfs/search/deep.py` | Maximum local query variants used by default. |
+| `max_candidates` | int | `50` | `kgfs/search/deep.py` | Candidate pool per query variant. |
+| `rerank_top_n` | int | `20` | Config only at this commit | Reserved for future local reranking. |
+| `query_expansion` | bool | `true` | `kgfs/search/deep.py` | Enables deterministic phrase/token/plural-ish variants. |
+| `suggest_followups` | bool | `true` | `kgfs/search/deep.py` | Prints local follow-up search suggestions. |
+
+### `research`
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `max_files` | int | `12` | `kgfs/search/research.py` | Default number of files included in the local research brief. |
+| `max_chunks` | int | `20` | Config only at this commit | Reserved for future chunk-level research summaries. |
+| `suggest_related_terms` | bool | `true` | `kgfs/search/research.py` | Extracts related local terms from filenames/snippets. |
+
+### `similar`
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `default_limit` | int | `10` | `kgfs/search/similar.py` | Default number of similar files. |
+| `min_score` | float | `0.0` | `kgfs/search/similar.py` | Minimum local similarity score for fallback term-overlap results. |
+
+### `timeline`
+
+| Key | Type | Default | Read from | Behavior |
+|---|---|---:|---|---|
+| `default_limit` | int | `50` | `kgfs/search/timeline.py` | Default maximum timeline items. |
 
 ### `vectors`
 
@@ -338,6 +376,26 @@ search:
   default_limit: 10
   highlight_matches: true
   save_latest_results: true
+
+deep_search:
+  enabled: true
+  max_passes: 3
+  max_candidates: 50
+  rerank_top_n: 20
+  query_expansion: true
+  suggest_followups: true
+
+research:
+  max_files: 12
+  max_chunks: 20
+  suggest_related_terms: true
+
+similar:
+  default_limit: 10
+  min_score: 0.0
+
+timeline:
+  default_limit: 50
 
 vectors:
   backend: "sqlite_scan"

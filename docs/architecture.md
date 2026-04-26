@@ -13,7 +13,7 @@ kgfs/
   indexing/            Discovery, filters, hashing, indexing, pruning
   extractors/          Text extraction by file type
   ocr/                 Optional local OCR backend, cache, status, and PDF fallback helpers
-  search/              Query parsing, filters, ranking, snippets, keyword/semantic/hybrid search, engines
+  search/              Query parsing, filters, ranking, snippets, citations, keyword/semantic/hybrid search, and advanced local investigation helpers
   search/backends/     Vector backend interfaces, registry, sqlite_scan, and optional accelerated backends
   search/modes/        Registry engine wrappers for keyword, semantic, hybrid, and auto fallback
   vectors/             Vector status, chunk lifecycle, and rebuild helpers
@@ -136,6 +136,33 @@ Search has two layers:
 The CLI search command uses the registry. The web dashboard currently calls direct keyword `search()` and does not expose semantic/hybrid modes.
 
 Sources: `kgfs/cli/commands/search.py`, `kgfs/search/keyword.py`, `kgfs/search/registry.py`, `kgfs/search/modes/*.py`, `kgfs/web/app.py`, `tests/test_search_kernel.py`, `tests/test_web.py`.
+
+## Advanced Local Investigation Lifecycle
+
+Phase 6 commands are built above the search kernel rather than as separate
+indexing systems:
+
+```mermaid
+flowchart TD
+    Query["User query or latest result ID"] --> Local["Local search helpers"]
+    Local --> Deep["deep_search()\nquery variants + candidate fusion"]
+    Local --> Similar["similar search\nvectors or term overlap"]
+    Local --> Compare["compare_results()\nshared and unique terms"]
+    Local --> Timeline["timeline_search()\nmodified-time ordering"]
+    Local --> Research["research_query()\nlocal citations + followups"]
+    Deep --> Results["SearchResult list"]
+    Similar --> Results
+    Compare --> Output["CLI reports"]
+    Timeline --> Results
+    Research --> Results
+    Results --> Latest["latest_results for open/reveal/why"]
+```
+
+These helpers use extracted text, snippets, latest-result IDs, and optional
+local vectors. They do not call AI by default, do not index arbitrary paths
+silently, and do not modify source files.
+
+Sources: `kgfs/search/deep.py`, `kgfs/search/similar.py`, `kgfs/search/compare.py`, `kgfs/search/timeline.py`, `kgfs/search/research.py`, `kgfs/search/citations.py`, `tests/test_phase6_advanced_search.py`.
 
 ## Result Explanation Lifecycle
 
@@ -263,7 +290,7 @@ AI Assist is downstream of local search:
 
 ```mermaid
 flowchart LR
-    Local["Local search results"] --> Context["Bounded/redacted context\nkgfs/ai.py"]
+    Local["Local search results"] --> Context["Bounded/redacted snippets + citations\nkgfs/ai.py"]
     Context --> Preview["Preview/confirmation\nkgfs/cli/shared.py"]
     Preview --> OpenAI["OpenAI Responses API\noptional"]
     OpenAI --> Output["Answer or reranked result IDs"]

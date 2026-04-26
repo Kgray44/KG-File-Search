@@ -32,6 +32,7 @@ kgfs search "sample query" --project-local
 - Local vector backend registry with the default `sqlite_scan` backend, optional accelerated backends, and vector benchmark/recommend commands.
 - Optional local Tesseract OCR for image files and scanned-PDF detection, disabled by default.
 - Result explanations with `kgfs why`.
+- Local investigation commands: `kgfs deep`, `kgfs similar`, `kgfs similar-file`, `kgfs compare`, `kgfs timeline`, and `kgfs research`.
 - Optional OpenAI AI Assist for answer synthesis and reranking after local search.
 - Typer CLI and a local FastAPI dashboard.
 - PyInstaller packaging scripts and GitHub Actions workflows.
@@ -119,6 +120,19 @@ kgfs ocr index
 kgfs search "text from screenshot"
 kgfs why 1 "text from screenshot"
 ```
+
+Local investigation commands stay grounded in indexed KGFS data and do not call AI:
+
+```bash
+kgfs deep "active crossover design"
+kgfs similar 3
+kgfs similar-file ./notes.md
+kgfs compare 3 7
+kgfs timeline "speaker crossover"
+kgfs research "amplifier noise floor"
+```
+
+`kgfs ask` remains optional AI Assist. It now includes local KGFS result citations such as `[1] notes.md` in the bounded snippet context, while keeping AI disabled by default.
 
 Build a packaged executable:
 

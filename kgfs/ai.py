@@ -16,6 +16,7 @@ from typing import Protocol
 
 from kgfs.core.config import AISettings
 from kgfs.core.models import SearchResult
+from kgfs.search.citations import format_citation
 
 
 class AIError(RuntimeError):
@@ -157,6 +158,7 @@ def _result_context_block(result: SearchResult, settings: AISettings) -> str:
     lines = [
         f"Result ID: {result.result_id}",
         f"File name: {result.file_name}",
+        f"Citation: {format_citation(result)}",
         f"Score: {result.score:.3f}",
     ]
     if settings.send_file_paths:

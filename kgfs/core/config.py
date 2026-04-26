@@ -181,6 +181,77 @@ class SearchSettings(BaseModel):
     save_latest_results: bool = True
 
 
+class DeepSearchSettings(BaseModel):
+    enabled: bool = True
+    max_passes: int = 3
+    max_candidates: int = 50
+    rerank_top_n: int = 20
+    query_expansion: bool = True
+    suggest_followups: bool = True
+
+    @field_validator("max_passes", "max_candidates", "rerank_top_n", mode="before")
+    @classmethod
+    def _positive_int(cls, value: Any, info) -> int:
+        defaults = {"max_passes": 3, "max_candidates": 50, "rerank_top_n": 20}
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return defaults[info.field_name]
+        return number if number > 0 else defaults[info.field_name]
+
+
+class ResearchSettings(BaseModel):
+    max_files: int = 12
+    max_chunks: int = 20
+    suggest_related_terms: bool = True
+
+    @field_validator("max_files", "max_chunks", mode="before")
+    @classmethod
+    def _positive_int(cls, value: Any, info) -> int:
+        defaults = {"max_files": 12, "max_chunks": 20}
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return defaults[info.field_name]
+        return number if number > 0 else defaults[info.field_name]
+
+
+class SimilarSettings(BaseModel):
+    default_limit: int = 10
+    min_score: float = 0.0
+
+    @field_validator("default_limit", mode="before")
+    @classmethod
+    def _positive_limit(cls, value: Any) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return 10
+        return number if number > 0 else 10
+
+    @field_validator("min_score", mode="before")
+    @classmethod
+    def _nonnegative_score(cls, value: Any) -> float:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return 0.0
+        return max(0.0, number)
+
+
+class TimelineSettings(BaseModel):
+    default_limit: int = 50
+
+    @field_validator("default_limit", mode="before")
+    @classmethod
+    def _positive_limit(cls, value: Any) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            return 50
+        return number if number > 0 else 50
+
+
 class SqliteVecSettings(BaseModel):
     enabled: bool = False
     experimental: bool = True
@@ -296,6 +367,10 @@ class KGFSConfig(BaseModel):
     ocr: OCRSettings = Field(default_factory=OCRSettings)
     semantic: SemanticSettings = Field(default_factory=SemanticSettings)
     search: SearchSettings = Field(default_factory=SearchSettings)
+    deep_search: DeepSearchSettings = Field(default_factory=DeepSearchSettings)
+    research: ResearchSettings = Field(default_factory=ResearchSettings)
+    similar: SimilarSettings = Field(default_factory=SimilarSettings)
+    timeline: TimelineSettings = Field(default_factory=TimelineSettings)
     vectors: VectorSettings = Field(default_factory=VectorSettings)
     hybrid: HybridSettings = Field(default_factory=HybridSettings)
     ai: AISettings = Field(default_factory=AISettings)
@@ -475,6 +550,26 @@ search:
   default_limit: 10
   highlight_matches: true
   save_latest_results: true
+
+deep_search:
+  enabled: true
+  max_passes: 3
+  max_candidates: 50
+  rerank_top_n: 20
+  query_expansion: true
+  suggest_followups: true
+
+research:
+  max_files: 12
+  max_chunks: 20
+  suggest_related_terms: true
+
+similar:
+  default_limit: 10
+  min_score: 0.0
+
+timeline:
+  default_limit: 50
 
 vectors:
   backend: "sqlite_scan"

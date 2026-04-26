@@ -35,6 +35,12 @@ def test_cli_exposes_required_mvp_commands() -> None:
         "vector",
         "why",
         "ocr",
+        "deep",
+        "similar",
+        "similar-file",
+        "compare",
+        "timeline",
+        "research",
     }.issubset(command.commands.keys())
 
 

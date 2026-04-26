@@ -77,6 +77,7 @@ python -m pip install -e ".[openai]"
 
 ## Documentation Map
 
+- [Overview](overview.md): short user-friendly tour of what KGFS does, why it is useful, and where it fits.
 - [Features](features.md): complete feature inventory with implementation and test references.
 - [KGFS vs OS Search](kgfs-vs-os-search.md): positioning against Windows Search, Copilot+ improved search, and macOS Spotlight/Finder.
 - [Settings](settings.md): config keys, environment variables, CLI flags, runtime options, defaults, and validation behavior.
@@ -95,6 +96,8 @@ python -m pip install -e ".[openai]"
 - [Examples](examples.md): end-to-end workflows.
 - [Roadmap](roadmap.md): implemented vs planned behavior.
 - [Changelog](../CHANGELOG.md): release notes, versioning guidance, and release checklist.
+
+[Features](features.md) remains the full detailed feature inventory. [Overview](overview.md) is intentionally shorter and more user-facing.
 
 ## High-Level Architecture
 

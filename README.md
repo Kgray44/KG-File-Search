@@ -85,6 +85,7 @@ kgfs quickstart
 
 The full documentation hub is [docs/README.md](docs/README.md). Start there for:
 
+- [Overview](docs/overview.md)
 - [Features](docs/features.md)
 - [KGFS vs OS Search](docs/kgfs-vs-os-search.md)
 - [Settings](docs/settings.md)
@@ -99,6 +100,8 @@ The full documentation hub is [docs/README.md](docs/README.md). Start there for:
 - [Development](docs/development.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Examples](docs/examples.md)
+
+[docs/features.md](docs/features.md) remains the full detailed feature inventory; [docs/overview.md](docs/overview.md) is the shorter "what KGFS does and why it is useful" tour.
 
 ## Roadmap
 

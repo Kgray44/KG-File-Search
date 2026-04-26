@@ -414,6 +414,13 @@ Validate API settings without starting a server:
 kgfs serve --dry-run
 ```
 
+Query the API:
+
+```bash
+curl -H "Authorization: Bearer $KGFS_API_TOKEN" \
+  "http://127.0.0.1:8766/search?q=motor%20torque&mode=keyword"
+```
+
 Check the optional TUI dependency:
 
 ```bash
@@ -432,9 +439,9 @@ kgfs integrations explorer scaffold --output ./kgfs-explorer
 kgfs tray scaffold --output ./kgfs-tray
 ```
 
-These commands do not edit system settings or install OS integrations.
+These commands do not edit system settings, install OS integrations, or modify indexed source files. API open/reveal actions stay disabled unless `api.allow_file_actions: true`.
 
-Sources: `kgfs/api/*.py`, `kgfs/tui/*.py`, `kgfs/integrations/*.py`.
+Sources: `kgfs/api/*.py`, `kgfs/tui/*.py`, `kgfs/integrations/*.py`, `tests/test_phase9_ux_integrations.py`.
 
 ## Example 17: Reset and Rebuild
 

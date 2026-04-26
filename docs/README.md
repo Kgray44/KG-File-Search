@@ -104,7 +104,7 @@ flowchart LR
     OCR --> DB
     Indexer --> Semantic["Optional local embeddings\nkgfs/search/semantic.py"]
     Semantic --> DB
-    Search --> DB
+    Search["Local search\nkeyword / semantic / hybrid"] --> DB
     CLI --> Registry["Search registry\nkgfs/search/registry.py"]
     Registry --> Search
     CLI --> Workflows["Workflows and intelligence\nkgfs/workflows\nkgfs/intelligence"]
@@ -118,7 +118,7 @@ flowchart LR
 - `kgfs init` creates config and app directories but does not index.
 - `kgfs index` refuses risky roots unless `--allow-risky-root` is passed.
 - Prune and reset operations remove only KGFS database/index data, never source files.
-- Vector clear removes only KGFS chunk/vector data for the configured model.
+- Vector clear removes only KGFS chunk/vector data or optional backend artifacts.
 - Workflow and intelligence metadata is stored in KGFS database/app-data/project-local paths, never in source files or sidecars.
 - OCR is disabled by default, local-only, and never writes back to source images/PDFs.
 - Semantic search is local and optional.

@@ -51,6 +51,8 @@ The release zip appears in `dist-packages/`:
 - Test fixtures
 - Downloaded semantic embedding model caches
 - Optional advanced vector backend packages such as sqlite-vec, hnswlib, FAISS, and their caches/artifacts
+- Optional OCR Python helper packages such as Pillow/pytesseract/EasyOCR/PaddleOCR, unless a future OCR-specific package opts in
+- Optional Textual TUI and pystray tray dependencies
 - Tesseract executable, OCR cache rows, or OCR user data
 - OpenAI SDK, unless a future AI-specific package is intentionally created
 
@@ -78,6 +80,15 @@ bundled. Users who enable OCR must install Tesseract locally and configure
 `ocr.tesseract.command` if it is not on PATH. `kgfs ocr status` should explain a
 missing command cleanly. Packaged builds must not include user OCR caches or
 indexed image/PDF data.
+
+## Local API, TUI, and Integration Scaffolds
+
+The base package includes the local web dashboard, token-gated local JSON API
+code, and integration scaffold writers. Optional Textual TUI and tray runtime
+dependencies are excluded from the base package; `kgfs tui --check` and scaffold
+commands should fail/report cleanly when those optional dependencies are not
+present. Scaffold commands must not install OS integrations or modify system
+settings during packaging smoke tests.
 
 ## Signing
 

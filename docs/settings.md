@@ -253,11 +253,11 @@ Each profile can define:
 | Key | Type | Default | Read from | Behavior |
 |---|---|---:|---|---|
 | `default_limit` | int | `20` | `kgfs/workflows/projects.py` | Default project search result limit. |
-| `infer_from_folders` | bool | `false` | config only at this commit | Reserved for future project inference; Phase 7 uses manual projects only. |
+| `infer_from_folders` | bool | `false` | config only at this commit | Reserved; implemented project inference currently runs through `kgfs project infer` and `intelligence.project_min_score`. |
 
 ### `intelligence`
 
-Phase 8 file intelligence is local and read-only against source files. It uses
+File intelligence is local and read-only against source files. It uses
 indexed metadata, hashes, extracted text, workflow metadata, and existing local
 semantic chunks when available.
 
